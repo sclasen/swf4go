@@ -1,0 +1,15 @@
+{
+    "nextPageToken": "string",
+    "typeInfos": [
+        {
+            "creationDate": "number",
+            "deprecationDate": "number",
+            "description": "string",
+            "status": "string",
+            "workflowType": {
+                "name": "string",
+                "version": "string"
+            }
+        }
+    ]
+}

@@ -9,7 +9,7 @@ import (
 func TestJson(t *testing.T) {
 
 	request := &StartWorkflowRequest{
-		domain: "foo",
+		Domain: "foo",
 	}
 
 	var b bytes.Buffer
@@ -19,7 +19,7 @@ func TestJson(t *testing.T) {
 	decoded := &StartWorkflowRequest{}
 	json.NewDecoder(bytes.NewReader(b.Bytes())).Decode(decoded)
 
-	if decoded.domain != "foo" {
+	if decoded.Domain != "foo" {
 		t.Errorf("not foo")
 	}
 }

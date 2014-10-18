@@ -12,9 +12,12 @@ import (
 	"unicode"
 )
 
+
+
 type WorkflowClient interface {
 	StartWorkflow(request StartWorkflowRequest) (*StartWorkflowResponse, error)
 	SignalWorkflow(request SignalWorkflowRequest) error
+	ListWorkflowTypes(request ListWorkflowTypesRequest) (*ListWorkflowTypesResponse, error)
 }
 
 type DecisionWorkerClient interface {
@@ -24,6 +27,7 @@ type DecisionWorkerClient interface {
 
 type ActivityWorkerClient interface {
 	PollForActivityTask(request PollForActivityTaskRequest) (*PollForActivityTaskResponse, error)
+	RecordActivityTaskHeartbeat(request RecordActivityTaskHeartbeatRequest) (*RecordActivityTaskHeartbeatResponse, error)
 	RespondActivityTaskCompleted(request RespondActivityTaskCompletedRequest) error
 	RespondActivityTaskFailed(request RespondActivityTaskFailedRequest) error
 	RespondActivityTaskCanceled(request RespondActivityTaskFailedRequest) error
@@ -60,13 +64,19 @@ func (c *Client) Service() *Service {
 
 func (c *Client) StartWorkflow(request StartWorkflowRequest) (*StartWorkflowResponse, error) {
 	resp := &StartWorkflowResponse{}
-	err := c.swfReqWithResponse("SStartWorkflowExecution", request, resp)
+	err := c.swfReqWithResponse("StartWorkflowExecution", request, resp)
 	return resp, err
 }
 
 func (c *Client) SignalWorkflow(request SignalWorkflowRequest) error {
 	err := c.swfReqNoResponse("SignalWorkflowExecution", request)
 	return err
+}
+
+func (c *Client) ListWorkflowTypes(request ListWorkflowTypesRequest) (*ListWorkflowTypesResponse, error) {
+	resp := &ListWorkflowTypesResponse{}
+	err := c.swfReqWithResponse("ListWorkflowTypes", request, resp)
+	return resp, err
 }
 
 func (c *Client) PollForDecisionTask(request PollForDecisionTaskRequest) (*PollForDecisionTaskResponse, error) {
@@ -100,6 +110,13 @@ func (c *Client) RespondActivityTaskCanceled(request RespondActivityTaskFailedRe
 	err := c.swfReqNoResponse("RespondActivityTaskCanceled", request)
 	return err
 }
+
+func (c *Client) RecordActivityTaskHeartbeat(request RecordActivityTaskHeartbeatRequest) (*RecordActivityTaskHeartbeatResponse, error){
+	resp := &RecordActivityTaskHeartbeatResponse{}
+	err := c.swfReqWithResponse("RecordActivityTaskHeartbeat", request, resp)
+	return resp, err
+}
+
 
 func (c *Client) swfReqWithResponse(operation string, request interface{}, response interface{}) error {
 	var b bytes.Buffer

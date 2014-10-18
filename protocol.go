@@ -509,6 +509,16 @@ type RespondActivityTaskCanceledRequest struct {
 	TaskToken string `json:"taskToken"`
 }
 
+type RecordActivityTaskHeartbeatRequest struct {
+	Details   string `json:"details"`
+	TaskToken string `json:"taskToken"`
+}
+
+type RecordActivityTaskHeartbeatResponse struct {
+	CancelRequested string `json:"cancelRequested"`
+}
+
+
 type SignalWorkflowRequest struct {
 	Domain     string `json:"domain"`
 	Input      string `json:"input"`
@@ -533,4 +543,27 @@ type WorkflowExecution struct {
 type ActivityType struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
+}
+
+type ListWorkflowTypesRequest  struct {
+	Domain             string `json:"domain"`
+	MaximumPageSize    string `json:"maximumPageSize"`
+	Name               string `json:"name"`
+	NextPageToken      string `json:"nextPageToken"`
+	RegistrationStatus string `json:"registrationStatus"`
+	ReverseOrder       string `json:"reverseOrder"`
+}
+
+
+type ListWorkflowTypesResponse  struct {
+	NextPageToken string `json:"nextPageToken"`
+	TypeInfos     []TypeInfo `json:"typeInfos"`
+}
+
+type TypeInfo struct {
+	CreationDate    string `json:"creationDate"`
+	DeprecationDate string `json:"deprecationDate"`
+	Description     string `json:"description"`
+	Status          string `json:"status"`
+	WorkflowType    WorkflowType
 }
