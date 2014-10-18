@@ -1,0 +1,19 @@
+{
+    "childPolicy": "string",
+    "domain": "string",
+    "executionStartToCloseTimeout": "string",
+    "input": "string",
+    "tagList": [
+        "string"
+    ],
+    "taskList": {
+        "name": "string"
+    },
+    "taskStartToCloseTimeout": "string",
+    "workflowId": "string",
+    "workflowType": {
+        "name": "string",
+        "version": "string"
+    }
+}
+	

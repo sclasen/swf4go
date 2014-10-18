@@ -1,0 +1,7 @@
+{
+    "domain": "string",
+    "input": "string",
+    "runId": "string",
+    "signalName": "string",
+    "workflowId": "string"
+}

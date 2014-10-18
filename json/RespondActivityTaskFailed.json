@@ -1,0 +1,5 @@
+{
+    "details": "string",
+    "reason": "string",
+    "taskToken": "string"
+}

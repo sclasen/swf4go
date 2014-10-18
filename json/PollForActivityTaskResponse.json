@@ -1,0 +1,14 @@
+{
+    "activityId": "string",
+    "activityType": {
+        "name": "string",
+        "version": "string"
+    },
+    "input": "string",
+    "startedEventId": "number",
+    "taskToken": "string",
+    "workflowExecution": {
+        "runId": "string",
+        "workflowId": "string"
+    }
+}

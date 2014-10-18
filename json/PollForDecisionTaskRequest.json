@@ -1,0 +1,10 @@
+{
+    "domain": "string",
+    "identity": "string",
+    "maximumPageSize": "number",
+    "nextPageToken": "string",
+    "reverseOrder": "boolean",
+    "taskList": {
+        "name": "string"
+    }
+}

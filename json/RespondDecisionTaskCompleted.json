@@ -1,0 +1,93 @@
+{
+    "decisions": [
+        {
+            "cancelTimerDecisionAttributes": {
+                "timerId": "string"
+            },
+            "cancelWorkflowExecutionDecisionAttributes": {
+                "details": "string"
+            },
+            "completeWorkflowExecutionDecisionAttributes": {
+                "result": "string"
+            },
+            "continueAsNewWorkflowExecutionDecisionAttributes": {
+                "childPolicy": "string",
+                "executionStartToCloseTimeout": "string",
+                "input": "string",
+                "tagList": [
+                    "string"
+                ],
+                "taskList": {
+                    "name": "string"
+                },
+                "taskStartToCloseTimeout": "string",
+                "workflowTypeVersion": "string"
+            },
+            "decisionType": "string",
+            "failWorkflowExecutionDecisionAttributes": {
+                "details": "string",
+                "reason": "string"
+            },
+            "recordMarkerDecisionAttributes": {
+                "details": "string",
+                "markerName": "string"
+            },
+            "requestCancelActivityTaskDecisionAttributes": {
+                "activityId": "string"
+            },
+            "requestCancelExternalWorkflowExecutionDecisionAttributes": {
+                "control": "string",
+                "runId": "string",
+                "workflowId": "string"
+            },
+            "scheduleActivityTaskDecisionAttributes": {
+                "activityId": "string",
+                "activityType": {
+                    "name": "string",
+                    "version": "string"
+                },
+                "control": "string",
+                "heartbeatTimeout": "string",
+                "input": "string",
+                "scheduleToCloseTimeout": "string",
+                "scheduleToStartTimeout": "string",
+                "startToCloseTimeout": "string",
+                "taskList": {
+                    "name": "string"
+                }
+            },
+            "signalExternalWorkflowExecutionDecisionAttributes": {
+                "control": "string",
+                "input": "string",
+                "runId": "string",
+                "signalName": "string",
+                "workflowId": "string"
+            },
+            "startChildWorkflowExecutionDecisionAttributes": {
+                "childPolicy": "string",
+                "control": "string",
+                "executionStartToCloseTimeout": "string",
+                "input": "string",
+                "tagList": [
+                    "string"
+                ],
+                "taskList": {
+                    "name": "string"
+                },
+                "taskStartToCloseTimeout": "string",
+                "workflowId": "string",
+                "workflowType": {
+                    "name": "string",
+                    "version": "string"
+                }
+            },
+            "startTimerDecisionAttributes": {
+                "control": "string",
+                "startToFireTimeout": "string",
+                "timerId": "string"
+            }
+        }
+    ],
+    "executionContext": "string",
+    "taskToken": "string"
+}

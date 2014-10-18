@@ -1,0 +1,384 @@
+{
+    "events": [
+        {
+            "activityTaskCancelRequestedEventAttributes": {
+                "activityId": "string",
+                "decisionTaskCompletedEventId": "number"
+            },
+            "activityTaskCanceledEventAttributes": {
+                "details": "string",
+                "latestCancelRequestedEventId": "number",
+                "scheduledEventId": "number",
+                "startedEventId": "number"
+            },
+            "activityTaskCompletedEventAttributes": {
+                "result": "string",
+                "scheduledEventId": "number",
+                "startedEventId": "number"
+            },
+            "activityTaskFailedEventAttributes": {
+                "details": "string",
+                "reason": "string",
+                "scheduledEventId": "number",
+                "startedEventId": "number"
+            },
+            "activityTaskScheduledEventAttributes": {
+                "activityId": "string",
+                "activityType": {
+                    "name": "string",
+                    "version": "string"
+                },
+                "control": "string",
+                "decisionTaskCompletedEventId": "number",
+                "heartbeatTimeout": "string",
+                "input": "string",
+                "scheduleToCloseTimeout": "string",
+                "scheduleToStartTimeout": "string",
+                "startToCloseTimeout": "string",
+                "taskList": {
+                    "name": "string"
+                }
+            },
+            "activityTaskStartedEventAttributes": {
+                "identity": "string",
+                "scheduledEventId": "number"
+            },
+            "activityTaskTimedOutEventAttributes": {
+                "details": "string",
+                "scheduledEventId": "number",
+                "startedEventId": "number",
+                "timeoutType": "string"
+            },
+            "cancelTimerFailedEventAttributes": {
+                "cause": "string",
+                "decisionTaskCompletedEventId": "number",
+                "timerId": "string"
+            },
+            "cancelWorkflowExecutionFailedEventAttributes": {
+                "cause": "string",
+                "decisionTaskCompletedEventId": "number"
+            },
+            "childWorkflowExecutionCanceledEventAttributes": {
+                "details": "string",
+                "initiatedEventId": "number",
+                "startedEventId": "number",
+                "workflowExecution": {
+                    "runId": "string",
+                    "workflowId": "string"
+                },
+                "workflowType": {
+                    "name": "string",
+                    "version": "string"
+                }
+            },
+            "childWorkflowExecutionCompletedEventAttributes": {
+                "initiatedEventId": "number",
+                "result": "string",
+                "startedEventId": "number",
+                "workflowExecution": {
+                    "runId": "string",
+                    "workflowId": "string"
+                },
+                "workflowType": {
+                    "name": "string",
+                    "version": "string"
+                }
+            },
+            "childWorkflowExecutionFailedEventAttributes": {
+                "details": "string",
+                "initiatedEventId": "number",
+                "reason": "string",
+                "startedEventId": "number",
+                "workflowExecution": {
+                    "runId": "string",
+                    "workflowId": "string"
+                },
+                "workflowType": {
+                    "name": "string",
+                    "version": "string"
+                }
+            },
+            "childWorkflowExecutionStartedEventAttributes": {
+                "initiatedEventId": "number",
+                "workflowExecution": {
+                    "runId": "string",
+                    "workflowId": "string"
+                },
+                "workflowType": {
+                    "name": "string",
+                    "version": "string"
+                }
+            },
+            "childWorkflowExecutionTerminatedEventAttributes": {
+                "initiatedEventId": "number",
+                "startedEventId": "number",
+                "workflowExecution": {
+                    "runId": "string",
+                    "workflowId": "string"
+                },
+                "workflowType": {
+                    "name": "string",
+                    "version": "string"
+                }
+            },
+            "childWorkflowExecutionTimedOutEventAttributes": {
+                "initiatedEventId": "number",
+                "startedEventId": "number",
+                "timeoutType": "string",
+                "workflowExecution": {
+                    "runId": "string",
+                    "workflowId": "string"
+                },
+                "workflowType": {
+                    "name": "string",
+                    "version": "string"
+                }
+            },
+            "completeWorkflowExecutionFailedEventAttributes": {
+                "cause": "string",
+                "decisionTaskCompletedEventId": "number"
+            },
+            "continueAsNewWorkflowExecutionFailedEventAttributes": {
+                "cause": "string",
+                "decisionTaskCompletedEventId": "number"
+            },
+            "decisionTaskCompletedEventAttributes": {
+                "executionContext": "string",
+                "scheduledEventId": "number",
+                "startedEventId": "number"
+            },
+            "decisionTaskScheduledEventAttributes": {
+                "startToCloseTimeout": "string",
+                "taskList": {
+                    "name": "string"
+                }
+            },
+            "decisionTaskStartedEventAttributes": {
+                "identity": "string",
+                "scheduledEventId": "number"
+            },
+            "decisionTaskTimedOutEventAttributes": {
+                "scheduledEventId": "number",
+                "startedEventId": "number",
+                "timeoutType": "string"
+            },
+            "eventId": "number",
+            "eventTimestamp": "number",
+            "eventType": "string",
+            "externalWorkflowExecutionCancelRequestedEventAttributes": {
+                "initiatedEventId": "number",
+                "workflowExecution": {
+                    "runId": "string",
+                    "workflowId": "string"
+                }
+            },
+            "externalWorkflowExecutionSignaledEventAttributes": {
+                "initiatedEventId": "number",
+                "workflowExecution": {
+                    "runId": "string",
+                    "workflowId": "string"
+                }
+            },
+            "failWorkflowExecutionFailedEventAttributes": {
+                "cause": "string",
+                "decisionTaskCompletedEventId": "number"
+            },
+            "markerRecordedEventAttributes": {
+                "decisionTaskCompletedEventId": "number",
+                "details": "string",
+                "markerName": "string"
+            },
+            "recordMarkerFailedEventAttributes": {
+                "cause": "string",
+                "decisionTaskCompletedEventId": "number",
+                "markerName": "string"
+            },
+            "requestCancelActivityTaskFailedEventAttributes": {
+                "activityId": "string",
+                "cause": "string",
+                "decisionTaskCompletedEventId": "number"
+            },
+            "requestCancelExternalWorkflowExecutionFailedEventAttributes": {
+                "cause": "string",
+                "control": "string",
+                "decisionTaskCompletedEventId": "number",
+                "initiatedEventId": "number",
+                "runId": "string",
+                "workflowId": "string"
+            },
+            "requestCancelExternalWorkflowExecutionInitiatedEventAttributes": {
+                "control": "string",
+                "decisionTaskCompletedEventId": "number",
+                "runId": "string",
+                "workflowId": "string"
+            },
+            "scheduleActivityTaskFailedEventAttributes": {
+                "activityId": "string",
+                "activityType": {
+                    "name": "string",
+                    "version": "string"
+                },
+                "cause": "string",
+                "decisionTaskCompletedEventId": "number"
+            },
+            "signalExternalWorkflowExecutionFailedEventAttributes": {
+                "cause": "string",
+                "control": "string",
+                "decisionTaskCompletedEventId": "number",
+                "initiatedEventId": "number",
+                "runId": "string",
+                "workflowId": "string"
+            },
+            "signalExternalWorkflowExecutionInitiatedEventAttributes": {
+                "control": "string",
+                "decisionTaskCompletedEventId": "number",
+                "input": "string",
+                "runId": "string",
+                "signalName": "string",
+                "workflowId": "string"
+            },
+            "startChildWorkflowExecutionFailedEventAttributes": {
+                "cause": "string",
+                "control": "string",
+                "decisionTaskCompletedEventId": "number",
+                "initiatedEventId": "number",
+                "workflowId": "string",
+                "workflowType": {
+                    "name": "string",
+                    "version": "string"
+                }
+            },
+            "startChildWorkflowExecutionInitiatedEventAttributes": {
+                "childPolicy": "string",
+                "control": "string",
+                "decisionTaskCompletedEventId": "number",
+                "executionStartToCloseTimeout": "string",
+                "input": "string",
+                "tagList": [
+                    "string"
+                ],
+                "taskList": {
+                    "name": "string"
+                },
+                "taskStartToCloseTimeout": "string",
+                "workflowId": "string",
+                "workflowType": {
+                    "name": "string",
+                    "version": "string"
+                }
+            },
+            "startTimerFailedEventAttributes": {
+                "cause": "string",
+                "decisionTaskCompletedEventId": "number",
+                "timerId": "string"
+            },
+            "timerCanceledEventAttributes": {
+                "decisionTaskCompletedEventId": "number",
+                "startedEventId": "number",
+                "timerId": "string"
+            },
+            "timerFiredEventAttributes": {
+                "startedEventId": "number",
+                "timerId": "string"
+            },
+            "timerStartedEventAttributes": {
+                "control": "string",
+                "decisionTaskCompletedEventId": "number",
+                "startToFireTimeout": "string",
+                "timerId": "string"
+            },
+            "workflowExecutionCancelRequestedEventAttributes": {
+                "cause": "string",
+                "externalInitiatedEventId": "number",
+                "externalWorkflowExecution": {
+                    "runId": "string",
+                    "workflowId": "string"
+                }
+            },
+            "workflowExecutionCanceledEventAttributes": {
+                "decisionTaskCompletedEventId": "number",
+                "details": "string"
+            },
+            "workflowExecutionCompletedEventAttributes": {
+                "decisionTaskCompletedEventId": "number",
+                "result": "string"
+            },
+            "workflowExecutionContinuedAsNewEventAttributes": {
+                "childPolicy": "string",
+                "decisionTaskCompletedEventId": "number",
+                "executionStartToCloseTimeout": "string",
+                "input": "string",
+                "newExecutionRunId": "string",
+                "tagList": [
+                    "string"
+                ],
+                "taskList": {
+                    "name": "string"
+                },
+                "taskStartToCloseTimeout": "string",
+                "workflowType": {
+                    "name": "string",
+                    "version": "string"
+                }
+            },
+            "workflowExecutionFailedEventAttributes": {
+                "decisionTaskCompletedEventId": "number",
+                "details": "string",
+                "reason": "string"
+            },
+            "workflowExecutionSignaledEventAttributes": {
+                "externalInitiatedEventId": "number",
+                "externalWorkflowExecution": {
+                    "runId": "string",
+                    "workflowId": "string"
+                },
+                "input": "string",
+                "signalName": "string"
+            },
+            "workflowExecutionStartedEventAttributes": {
+                "childPolicy": "string",
+                "continuedExecutionRunId": "string",
+                "executionStartToCloseTimeout": "string",
+                "input": "string",
+                "parentInitiatedEventId": "number",
+                "parentWorkflowExecution": {
+                    "runId": "string",
+                    "workflowId": "string"
+                },
+                "tagList": [
+                    "string"
+                ],
+                "taskList": {
+                    "name": "string"
+                },
+                "taskStartToCloseTimeout": "string",
+                "workflowType": {
+                    "name": "string",
+                    "version": "string"
+                }
+            },
+            "workflowExecutionTerminatedEventAttributes": {
+                "cause": "string",
+                "childPolicy": "string",
+                "details": "string",
+                "reason": "string"
+            },
+            "workflowExecutionTimedOutEventAttributes": {
+                "childPolicy": "string",
+                "timeoutType": "string"
+            }
+        }
+    ],
+    "nextPageToken": "string",
+    "previousStartedEventId": "number",
+    "startedEventId": "number",
+    "taskToken": "string",
+    "workflowExecution": {
+        "runId": "string",
+        "workflowId": "string"
+    },
+    "workflowType": {
+        "name": "string",
+        "version": "string"
+    }
+}
