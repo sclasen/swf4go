@@ -41,7 +41,7 @@ type ListWorkflowTypesRequest struct {
 }
 
 type ListWorkflowTypesResponse struct {
-	NextPageToken string     `json:"nextPageToken"`
+	NextPageToken *string    `json:"nextPageToken"`
 	TypeInfos     []TypeInfo `json:"typeInfos"`
 }
 
@@ -592,6 +592,61 @@ type RegisterWorkflowType struct {
 	Version                             string   `json:"version"`
 }
 
+/*WorkflowInfoProtocol*/
+type CountClosedWorkflowExecutionsRequest struct {
+	CloseStatusFilter StatusFilter    `json:"closeStatusFilter"`
+	CloseTimeFilter   TimeFilter      `json:"closeTimeFilter"`
+	Domain            string          `json:"domain"`
+	ExecutionFilter   ExecutionFilter `json:"executionFilter"`
+	StartTimeFilter   TimeFilter      `json:"startTimeFilter"`
+	TagFilter         TagFilter       `json:"tagFilter"`
+	TypeFilter        TypeFilter      `json:"typeFilter"`
+}
+
+type CountOpenWorkflowExecutionsRequest struct {
+	Domain          string          `json:"domain"`
+	ExecutionFilter ExecutionFilter `json:"executionFilter"`
+	StartTimeFilter TimeFilter      `json:"startTimeFilter"`
+	TagFilter       TagFilter       `json:"tagFilter"`
+	TypeFilter      TypeFilter      `json:"typeFilter"`
+}
+
+type CountPendingActivityTasksRequest struct {
+	Domain   string   `json:"domain"`
+	TaskList TaskList `json:"taskList"`
+}
+
+type CountPendingDecisionTasksRequest struct {
+	Domain   string   `json:"domain"`
+	TaskList TaskList `json:"taskList"`
+}
+
+type StatusFilter struct {
+	Status string `json:"status"`
+}
+
+type CountResponse struct {
+	Count     string `json:"count"`
+	Truncated string `json:"truncated"`
+}
+type TimeFilter struct {
+	LatestDate string `json:"latestDate"`
+	OldestDate string `json:"oldestDate"`
+}
+
+type ExecutionFilter struct {
+	WorkflowId string `json:"workflowId"`
+}
+
+type TagFilter struct {
+	Tag string `json:"tag"`
+}
+
+type TypeFilter struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
 /*common types*/
 
 type TaskList struct {
@@ -613,9 +668,9 @@ type ActivityType struct {
 }
 
 type TypeInfo struct {
-	CreationDate    float32 `json:"creationDate"`
-	DeprecationDate float32 `json:"deprecationDate"`
-	Description     string  `json:"description"`
-	Status          string  `json:"status"`
+	CreationDate    float32      `json:"creationDate"`
+	DeprecationDate float32      `json:"deprecationDate"`
+	Description     string       `json:"description"`
+	Status          string       `json:"status"`
 	WorkflowType    WorkflowType `json:"workflowType"`
 }

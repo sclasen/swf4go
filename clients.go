@@ -43,6 +43,23 @@ type WorkflowAdminClient interface {
 	DeprecateDomain(request DeprecateDomain) error
 }
 
+type WorkflowInfoClient interface {
+	CountClosedWorkflowExecutions(request CountClosedWorkflowExecutionsRequest) (*CountResponse, error)
+	CountOpenWorkflowExecutions(request CountOpenWorkflowExecutionsRequest) (*CountResponse, error)
+	CountPendingActivityTasks(request CountPendingActivityTasksRequest) (*CountResponse, error)
+	CountPendingDecisionTasks(request CountPendingDecisionTasksRequest) (*CountResponse, error)
+	ListActivityTypes()
+	DescribeActivityType()
+	ListWorkflowTypes()
+	DescribeWorkflowType()
+	DescribeWorkflowExecution()
+	ListOpenWorkflowExecutions()
+	ListClosedWorkflowExecutions()
+	GetWorkflowExecutionHistory()
+	ListDomains()
+	DescribeDomain()
+}
+
 type Region struct {
 	Name     string
 	Endpoint string
@@ -165,6 +182,27 @@ func (c *Client) RegisterDomain(request RegisterDomain) error {
 func (c *Client) DeprecateDomain(request DeprecateDomain) error {
 	err := c.swfReqNoResponse("DeprecateDomain", request)
 	return err
+}
+
+func (c *Client) CountClosedWorkflowExecutions(request CountClosedWorkflowExecutionsRequest) (*CountResponse, error) {
+	resp := &CountResponse{}
+	err := c.swfReqWithResponse("CountClosedWorkflowExecutions", request, resp)
+	return resp, err
+}
+func (c *Client) CountOpenWorkflowExecutions(request CountOpenWorkflowExecutionsRequest) (*CountResponse, error) {
+	resp := &CountResponse{}
+	err := c.swfReqWithResponse("CountOpenWorkflowExecutions", request, resp)
+	return resp, err
+}
+func (c *Client) CountPendingActivityTasks(request CountPendingActivityTasksRequest) (*CountResponse, error) {
+	resp := &CountResponse{}
+	err := c.swfReqWithResponse("CountPendingActivityTasks", request, resp)
+	return resp, err
+}
+func (c *Client) CountPendingDecisionTasks(request CountPendingDecisionTasksRequest) (*CountResponse, error) {
+	resp := &CountResponse{}
+	err := c.swfReqWithResponse("CountPendingDecisionTasks", request, resp)
+	return resp, err
 }
 
 func (c *Client) swfReqWithResponse(operation string, request interface{}, response interface{}) error {

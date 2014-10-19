@@ -1,0 +1,6 @@
+{
+    "domain": "string",
+    "taskList": {
+        "name": "string"
+    }
+}
