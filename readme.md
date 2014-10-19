@@ -3,7 +3,7 @@ swf4go
 
 go client library for amazon simple workflow service
 
-* the `Client` struct implements the below interfaces
+* the `swf.Client` struct implements the below interfaces
 
 ```go
 package swf
