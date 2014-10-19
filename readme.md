@@ -3,9 +3,11 @@ swf4go
 
 go client library for amazon simple workflow service
 
-* the Client struct implements the below interfaces
+* the `Client` struct implements the below interfaces
 
 ```go
+package swf
+
 type WorkflowClient interface {
 	StartWorkflow(request StartWorkflowRequest) (*StartWorkflowResponse, error)
 	SignalWorkflow(request SignalWorkflowRequest) error
@@ -40,7 +42,7 @@ type WorkflowAdminClient interface {
 * create a client like so
 
 ```go
-client := NewClient(MustGetenv("AWS_ACCESS_KEY_ID"), MustGetenv("AWS_SECRET_ACCESS_KEY"), USEast1)
+client := swf.NewClient(swf.MustGetenv("AWS_ACCESS_KEY_ID"), swf.MustGetenv("AWS_SECRET_ACCESS_KEY"), swf.USEast1)
 ```
 
 need a request/response struct?
