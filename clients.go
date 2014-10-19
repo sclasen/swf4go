@@ -7,10 +7,10 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"os"
 	"strings"
 	"time"
 	"unicode"
-	"os"
 )
 
 type WorkflowClient interface {
@@ -59,7 +59,7 @@ type Client struct {
 
 func NewClient(key string, secret string, region *Region) *Client {
 	return &Client{
-		keys: &Keys{AccessKey:key, SecretKey:secret},
+		keys:   &Keys{AccessKey: key, SecretKey: secret},
 		Region: region,
 	}
 }
@@ -134,63 +134,37 @@ func (c *Client) RecordActivityTaskHeartbeat(request RecordActivityTaskHeartbeat
 }
 
 func (c *Client) swfReqWithResponse(operation string, request interface{}, response interface{}) error {
-	var b bytes.Buffer
-	if err := json.NewEncoder(&b).Encode(request); err != nil {
-		return err
-	}
-	req, err := http.NewRequest("POST", c.Region.URL(), &b)
+	resp, err := c.prepareAndExecuteRequest(operation, request)
 	if err != nil {
 		return err
 	}
-
-	req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
-	req.Header.Set("X-Amz-Target", "SimpleWorkflowService."+operation)
-	req.Header.Set("Content-Type", "application/x-amz-json-1.0")
-	req.Header.Set("Connection", "Keep-Alive")
-
-	err = c.Sign(req)
-	if err != nil {
-		return err
-	}
-
-	out, err := httputil.DumpRequestOut(req, true)
-	if err != nil {
-		return err
-	}
-	Multiln(string(out))
-
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-	out, err = httputil.DumpResponse(resp, true)
-	if err != nil {
-		return err
-	}
-	Multiln(string(out))
-
-
 	if resp.StatusCode != 200 {
 		return errors.New("non 200")
 	}
-
 	defer resp.Body.Close()
 	err = json.NewDecoder(resp.Body).Decode(response)
-	log.Printf("%+v", response)
 	return err
 }
 
 func (c *Client) swfReqNoResponse(operation string, request interface{}) error {
+	resp, err := c.prepareAndExecuteRequest(operation, request)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return errors.New("non 200")
+	}
+	return err
+}
+
+func (c *Client) prepareAndExecuteRequest(operation string, request interface{}) (*http.Response, error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(request); err != nil {
-		return err
+		return nil, err
 	}
 	req, err := http.NewRequest("POST", c.Region.URL(), &b)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
@@ -200,40 +174,33 @@ func (c *Client) swfReqNoResponse(operation string, request interface{}) error {
 
 	err = c.Sign(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	out, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	Multiln(string(out))
 
-
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer resp.Body.Close()
 	out, err = httputil.DumpResponse(resp, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	Multiln(string(out))
 
-
-	if resp.StatusCode != 200 {
-		return errors.New("non 200")
-	}
-
-	return nil
+	return resp, nil
 }
 
 func (c *Client) Sign(request *http.Request) error {
 	return c.Service().Sign(c.keys, request)
 }
-
 
 func Multiln(s string) {
 	lines := strings.Split(s, "\n")

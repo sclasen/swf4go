@@ -1,14 +1,14 @@
 package swf
 
 import (
-	"testing"
 	"log"
+	"testing"
 )
 
 func TestListWorkflowTypes(t *testing.T) {
 
 	request := ListWorkflowTypesRequest{
-		Domain: "swf4go",
+		Domain:             "swf4go",
 		RegistrationStatus: "REGISTERED",
 	}
 
