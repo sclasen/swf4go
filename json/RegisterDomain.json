@@ -1,0 +1,5 @@
+{
+    "description": "string",
+    "name": "string",
+    "workflowExecutionRetentionPeriodInDays": "string"
+}

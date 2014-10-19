@@ -1,0 +1,7 @@
+{
+    "domain": "string",
+    "workflowType": {
+        "name": "string",
+        "version": "string"
+    }
+}

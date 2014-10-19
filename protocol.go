@@ -65,6 +65,16 @@ type PollForDecisionTaskRequest struct {
 	TaskList        TaskList `json:"taskList"`
 }
 
+type PollForDecisionTaskResponse struct {
+	Events                 []HistoryEvent    `json:"events"`
+	NextPageToken          string            `json:"nextPageToken"`
+	PreviousStartedEventId string            `json:"previousStartedEventId"`
+	StartedEventId         string            `json:"startedEventId"`
+	TaskToken              string            `json:"taskToken"`
+	WorkflowExecution      WorkflowExecution `json:"workflowExecution"`
+	WorkflowType           WorkflowType      `json:"workflowType"`
+}
+
 type HistoryEvent struct {
 	ActivityTaskCancelRequestedEventAttributes                     *ActivityTaskCancelRequestedEventAttributes                     `json:"activityTaskCancelRequestedEventAttributes"`
 	ActivityTaskCanceledEventAttributes                            *ActivityTaskCanceledEventAttributes                            `json:"activityTaskCanceledEventAttributes"`
@@ -397,16 +407,6 @@ type WorkflowExecutionTimedOutEventAttributes struct {
 	TimeoutType string `json:"timeoutType"`
 }
 
-type PollForDecisionTaskResponse struct {
-	Events                 []HistoryEvent    `json:"events"`
-	NextPageToken          string            `json:"nextPageToken"`
-	PreviousStartedEventId string            `json:"previousStartedEventId"`
-	StartedEventId         string            `json:"startedEventId"`
-	TaskToken              string            `json:"taskToken"`
-	WorkflowExecution      WorkflowExecution `json:"workflowExecution"`
-	WorkflowType           WorkflowType      `json:"workflowType"`
-}
-
 type Decision struct {
 	CancelTimerDecisionAttributes                            *CancelTimerDecisionAttributes                            `json:"cancelTimerDecisionAttributes"`
 	CancelWorkflowExecutionDecisionAttributes                *CancelWorkflowExecutionDecisionAttributes                `json:"cancelWorkflowExecutionDecisionAttributes"`
@@ -538,6 +538,50 @@ type RecordActivityTaskHeartbeatRequest struct {
 
 type RecordActivityTaskHeartbeatResponse struct {
 	CancelRequested string `json:"cancelRequested"`
+}
+
+/*admin protocol*/
+type DeprecateActivityType struct {
+	ActivityType ActivityType `json:"activityType"`
+	Domain       string       `json:"domain"`
+}
+
+type DeprecateWorkflowType struct {
+	Domain       string       `json:"domain"`
+	WorkflowType WorkflowType `json:"workflowType"`
+}
+
+type DeprecateDomain struct {
+	Name string `json:"name"`
+}
+
+type RegisterActivityType struct {
+	DefaultTaskHeartbeatTimeout       string   `json:"defaultTaskHeartbeatTimeout"`
+	DefaultTaskList                   TaskList `json:"defaultTaskList"`
+	DefaultTaskScheduleToCloseTimeout string   `json:"defaultTaskScheduleToCloseTimeout"`
+	DefaultTaskScheduleToStartTimeout string   `json:"defaultTaskScheduleToStartTimeout"`
+	DefaultTaskStartToCloseTimeout    string   `json:"defaultTaskStartToCloseTimeout"`
+	Description                       string   `json:"description"`
+	Domain                            string   `json:"domain"`
+	Name                              string   `json:"name"`
+	Version                           string   `json:"version"`
+}
+
+type RegisterDomain struct {
+	Description                            string `json:"description"`
+	Name                                   string `json:"name"`
+	WorkflowExecutionRetentionPeriodInDays string `json:"workflowExecutionRetentionPeriodInDays"`
+}
+
+type RegisterWorkflowType struct {
+	DefaultChildPolicy                  string   `json:"defaultChildPolicy"`
+	DefaultExecutionStartToCloseTimeout string   `json:"defaultExecutionStartToCloseTimeout"`
+	DefaultTaskList                     TaskList `json:"defaultTaskList"`
+	DefaultTaskStartToCloseTimeout      string   `json:"defaultTaskStartToCloseTimeout"`
+	Description                         string   `json:"description"`
+	Domain                              string   `json:"domain"`
+	Name                                string   `json:"name"`
+	Version                             string   `json:"version"`
 }
 
 /*common types*/

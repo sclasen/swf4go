@@ -1,0 +1,7 @@
+{
+    "activityType": {
+        "name": "string",
+        "version": "string"
+    },
+    "domain": "string"
+}

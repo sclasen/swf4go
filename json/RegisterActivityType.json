@@ -1,0 +1,13 @@
+{
+    "defaultTaskHeartbeatTimeout": "string",
+    "defaultTaskList": {
+        "name": "string"
+    },
+    "defaultTaskScheduleToCloseTimeout": "string",
+    "defaultTaskScheduleToStartTimeout": "string",
+    "defaultTaskStartToCloseTimeout": "string",
+    "description": "string",
+    "domain": "string",
+    "name": "string",
+    "version": "string"
+}

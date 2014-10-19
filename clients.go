@@ -34,6 +34,15 @@ type ActivityWorkerClient interface {
 	RespondActivityTaskCanceled(request RespondActivityTaskFailedRequest) error
 }
 
+type WorkflowAdminClient interface {
+	RegisterActivityType(request RegisterActivityType) error
+	DeprecateActivityType(request DeprecateActivityType) error
+	RegisterWorkflowType(request RegisterWorkflowType) error
+	DeprecateWorkflowType(request DeprecateWorkflowType) error
+	RegisterDomain(request RegisterDomain) error
+	DeprecateDomain(request DeprecateDomain) error
+}
+
 type Region struct {
 	Name     string
 	Endpoint string
@@ -131,6 +140,31 @@ func (c *Client) RecordActivityTaskHeartbeat(request RecordActivityTaskHeartbeat
 	resp := &RecordActivityTaskHeartbeatResponse{}
 	err := c.swfReqWithResponse("RecordActivityTaskHeartbeat", request, resp)
 	return resp, err
+}
+
+func (c *Client) RegisterActivityType(request RegisterActivityType) error {
+	err := c.swfReqNoResponse("RegisterActivityType", request)
+	return err
+}
+func (c *Client) DeprecateActivityType(request DeprecateActivityType) error {
+	err := c.swfReqNoResponse("DeprecateActivityType", request)
+	return err
+}
+func (c *Client) RegisterWorkflowType(request RegisterWorkflowType) error {
+	err := c.swfReqNoResponse("RegisterWorkflowType", request)
+	return err
+}
+func (c *Client) DeprecateWorkflowType(request DeprecateWorkflowType) error {
+	err := c.swfReqNoResponse("DeprecateWorkflowType", request)
+	return err
+}
+func (c *Client) RegisterDomain(request RegisterDomain) error {
+	err := c.swfReqNoResponse("RegisterDomain", request)
+	return err
+}
+func (c *Client) DeprecateDomain(request DeprecateDomain) error {
+	err := c.swfReqNoResponse("DeprecateDomain", request)
+	return err
 }
 
 func (c *Client) swfReqWithResponse(operation string, request interface{}, response interface{}) error {

@@ -1,0 +1,12 @@
+{
+    "defaultChildPolicy": "string",
+    "defaultExecutionStartToCloseTimeout": "string",
+    "defaultTaskList": {
+        "name": "string"
+    },
+    "defaultTaskStartToCloseTimeout": "string",
+    "description": "string",
+    "domain": "string",
+    "name": "string",
+    "version": "string"
+}
