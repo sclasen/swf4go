@@ -1,0 +1,8 @@
+{
+    "childPolicy": "string",
+    "details": "string",
+    "domain": "string",
+    "reason": "string",
+    "runId": "string",
+    "workflowId": "string"
+}

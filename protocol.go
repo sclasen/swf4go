@@ -1,5 +1,7 @@
 package swf
 
+
+/*WorkflowProtocol*/
 type StartWorkflowRequest struct {
 	ChildPolicy                  string       `json:"childPolicy"`
 	Domain                       string       `json:"domain"`
@@ -16,12 +18,52 @@ type StartWorkflowResponse struct {
 	RunId string `json:"runId"`
 }
 
+type RequestCancelWorkflowExecution struct {
+	Domain     string `json:"domain"`
+	RunId      string `json:"runId"`
+	WorkflowId string `json:"workflowId"`
+}
+
+type SignalWorkflowRequest struct {
+	Domain     string `json:"domain"`
+	Input      string `json:"input"`
+	RunId      string `json:"runId"`
+	SignalName string `json:"signalName"`
+	WorkflowId string `json:"workflowId"`
+}
+
+type ListWorkflowTypesRequest struct {
+	Domain             string `json:"domain"`
+	MaximumPageSize    int `json:"maximumPageSize"`
+	Name               *string `json:"name"`
+	NextPageToken      *string `json:"nextPageToken"`
+	RegistrationStatus string `json:"registrationStatus"`
+	ReverseOrder       bool `json:"reverseOrder"`
+}
+
+type ListWorkflowTypesResponse struct {
+	NextPageToken string     `json:"nextPageToken"`
+	TypeInfos     []TypeInfo `json:"typeInfos"`
+}
+
+type TerminateWorkflowExecution struct {
+	ChildPolicy string `json:"childPolicy"`
+	Details     string `json:"details"`
+	Domain      string `json:"domain"`
+	Reason      string `json:"reason"`
+	RunId       string `json:"runId"`
+	WorkflowId  string `json:"workflowId"`
+}
+
+
+/*DecisionWorkerProtocol*/
+
 type PollForDecisionTaskRequest struct {
 	Domain          string   `json:"domain"`
 	Identity        string   `json:"identity"`
-	MaximumPageSize string   `json:"maximumPageSize"`
-	NextPageToken   string   `json:"nextPageToken"`
-	ReverseOrder    string   `json:"reverseOrder"`
+	MaximumPageSize int   `json:"maximumPageSize"`
+	NextPageToken   *string   `json:"nextPageToken"`
+	ReverseOrder    bool   `json:"reverseOrder"`
 	TaskList        TaskList `json:"taskList"`
 }
 
@@ -478,6 +520,8 @@ type RespondDecisionTaskCompletedRequest struct {
 	TaskToken        string     `json:"taskToken"`
 }
 
+/*ActivityWorkerProtocol*/
+
 type PollForActivityTaskRequest struct {
 	Domain   string   `json:"domain"`
 	Identity string   `json:"identity"`
@@ -518,14 +562,7 @@ type RecordActivityTaskHeartbeatResponse struct {
 	CancelRequested string `json:"cancelRequested"`
 }
 
-
-type SignalWorkflowRequest struct {
-	Domain     string `json:"domain"`
-	Input      string `json:"input"`
-	RunId      string `json:"runId"`
-	SignalName string `json:"signalName"`
-	WorkflowId string `json:"workflowId"`
-}
+/*common types*/
 
 type TaskList struct {
 	Name string `json:"name"`
@@ -545,24 +582,9 @@ type ActivityType struct {
 	Version string `json:"version"`
 }
 
-type ListWorkflowTypesRequest  struct {
-	Domain             string `json:"domain"`
-	MaximumPageSize    string `json:"maximumPageSize"`
-	Name               string `json:"name"`
-	NextPageToken      string `json:"nextPageToken"`
-	RegistrationStatus string `json:"registrationStatus"`
-	ReverseOrder       string `json:"reverseOrder"`
-}
-
-
-type ListWorkflowTypesResponse  struct {
-	NextPageToken string `json:"nextPageToken"`
-	TypeInfos     []TypeInfo `json:"typeInfos"`
-}
-
 type TypeInfo struct {
-	CreationDate    string `json:"creationDate"`
-	DeprecationDate string `json:"deprecationDate"`
+	CreationDate    float32 `json:"creationDate"`
+	DeprecationDate float32 `json:"deprecationDate"`
 	Description     string `json:"description"`
 	Status          string `json:"status"`
 	WorkflowType    WorkflowType
