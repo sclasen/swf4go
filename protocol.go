@@ -609,5 +609,5 @@ type TypeInfo struct {
 	DeprecationDate float32 `json:"deprecationDate"`
 	Description     string  `json:"description"`
 	Status          string  `json:"status"`
-	WorkflowType    WorkflowType
+	WorkflowType    WorkflowType `json:"workflowType"`
 }
