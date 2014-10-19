@@ -66,293 +66,335 @@ type PollForDecisionTaskRequest struct {
 }
 
 type HistoryEvent struct {
-	ActivityTaskCancelRequestedEventAttributes struct {
-		ActivityId                   string `json:"activityId"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-	} `json:"activityTaskCancelRequestedEventAttributes"`
-	ActivityTaskCanceledEventAttributes struct {
-		Details                      string `json:"details"`
-		LatestCancelRequestedEventId string `json:"latestCancelRequestedEventId"`
-		ScheduledEventId             string `json:"scheduledEventId"`
-		StartedEventId               string `json:"startedEventId"`
-	} `json:"activityTaskCanceledEventAttributes"`
-	ActivityTaskCompletedEventAttributes struct {
-		Result           string `json:"result"`
-		ScheduledEventId string `json:"scheduledEventId"`
-		StartedEventId   string `json:"startedEventId"`
-	} `json:"activityTaskCompletedEventAttributes"`
-	ActivityTaskFailedEventAttributes struct {
-		Details          string `json:"details"`
-		Reason           string `json:"reason"`
-		ScheduledEventId string `json:"scheduledEventId"`
-		StartedEventId   string `json:"startedEventId"`
-	} `json:"activityTaskFailedEventAttributes"`
-	ActivityTaskScheduledEventAttributes struct {
-		ActivityId                   string       `json:"activityId"`
-		ActivityType                 ActivityType `json:"activityType"`
-		Control                      string       `json:"control"`
-		DecisionTaskCompletedEventId string       `json:"decisionTaskCompletedEventId"`
-		HeartbeatTimeout             string       `json:"heartbeatTimeout"`
-		Input                        string       `json:"input"`
-		ScheduleToCloseTimeout       string       `json:"scheduleToCloseTimeout"`
-		ScheduleToStartTimeout       string       `json:"scheduleToStartTimeout"`
-		StartToCloseTimeout          string       `json:"startToCloseTimeout"`
-		TaskList                     TaskList     `json:"taskList"`
-	} `json:"activityTaskScheduledEventAttributes"`
-	ActivityTaskStartedEventAttributes struct {
-		Identity         string `json:"identity"`
-		ScheduledEventId string `json:"scheduledEventId"`
-	} `json:"activityTaskStartedEventAttributes"`
-	ActivityTaskTimedOutEventAttributes struct {
-		Details          string `json:"details"`
-		ScheduledEventId string `json:"scheduledEventId"`
-		StartedEventId   string `json:"startedEventId"`
-		TimeoutType      string `json:"timeoutType"`
-	} `json:"activityTaskTimedOutEventAttributes"`
-	CancelTimerFailedEventAttributes struct {
-		Cause                        string `json:"cause"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		TimerId                      string `json:"timerId"`
-	} `json:"cancelTimerFailedEventAttributes"`
-	CancelWorkflowExecutionFailedEventAttributes struct {
-		Cause                        string `json:"cause"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-	} `json:"cancelWorkflowExecutionFailedEventAttributes"`
-	ChildWorkflowExecutionCanceledEventAttributes struct {
-		Details           string            `json:"details"`
-		InitiatedEventId  string            `json:"initiatedEventId"`
-		StartedEventId    string            `json:"startedEventId"`
-		WorkflowExecution WorkflowExecution `json:"workflowExecution"`
-		WorkflowType      WorkflowType      `json:"workflowType"`
-	} `json:"childWorkflowExecutionCanceledEventAttributes"`
-	ChildWorkflowExecutionCompletedEventAttributes struct {
-		InitiatedEventId  string            `json:"initiatedEventId"`
-		Result            string            `json:"result"`
-		StartedEventId    string            `json:"startedEventId"`
-		WorkflowExecution WorkflowExecution `json:"workflowExecution"`
-		WorkflowType      WorkflowType      `json:"workflowType"`
-	} `json:"childWorkflowExecutionCompletedEventAttributes"`
-	ChildWorkflowExecutionFailedEventAttributes struct {
-		Details           string            `json:"details"`
-		InitiatedEventId  string            `json:"initiatedEventId"`
-		Reason            string            `json:"reason"`
-		StartedEventId    string            `json:"startedEventId"`
-		WorkflowExecution WorkflowExecution `json:"workflowExecution"`
-		WorkflowType      WorkflowType      `json:"workflowType"`
-	} `json:"childWorkflowExecutionFailedEventAttributes"`
-	ChildWorkflowExecutionStartedEventAttributes struct {
-		InitiatedEventId  string            `json:"initiatedEventId"`
-		WorkflowExecution WorkflowExecution `json:"workflowExecution"`
-		WorkflowType      WorkflowType      `json:"workflowType"`
-	} `json:"childWorkflowExecutionStartedEventAttributes"`
-	ChildWorkflowExecutionTerminatedEventAttributes struct {
-		InitiatedEventId  string            `json:"initiatedEventId"`
-		StartedEventId    string            `json:"startedEventId"`
-		WorkflowExecution WorkflowExecution `json:"workflowExecution"`
-		WorkflowType      WorkflowType      `json:"workflowType"`
-	} `json:"childWorkflowExecutionTerminatedEventAttributes"`
-	ChildWorkflowExecutionTimedOutEventAttributes struct {
-		InitiatedEventId  string            `json:"initiatedEventId"`
-		StartedEventId    string            `json:"startedEventId"`
-		TimeoutType       string            `json:"timeoutType"`
-		WorkflowExecution WorkflowExecution `json:"workflowExecution"`
-		WorkflowType      WorkflowType      `json:"workflowType"`
-	} `json:"childWorkflowExecutionTimedOutEventAttributes"`
-	CompleteWorkflowExecutionFailedEventAttributes struct {
-		Cause                        string `json:"cause"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-	} `json:"completeWorkflowExecutionFailedEventAttributes"`
-	ContinueAsNewWorkflowExecutionFailedEventAttributes struct {
-		Cause                        string `json:"cause"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-	} `json:"continueAsNewWorkflowExecutionFailedEventAttributes"`
-	DecisionTaskCompletedEventAttributes struct {
-		ExecutionContext string `json:"executionContext"`
-		ScheduledEventId string `json:"scheduledEventId"`
-		StartedEventId   string `json:"startedEventId"`
-	} `json:"decisionTaskCompletedEventAttributes"`
-	DecisionTaskScheduledEventAttributes struct {
-		StartToCloseTimeout string   `json:"startToCloseTimeout"`
-		TaskList            TaskList `json:"taskList"`
-	} `json:"decisionTaskScheduledEventAttributes"`
-	DecisionTaskStartedEventAttributes struct {
-		Identity         string `json:"identity"`
-		ScheduledEventId string `json:"scheduledEventId"`
-	} `json:"decisionTaskStartedEventAttributes"`
-	DecisionTaskTimedOutEventAttributes struct {
-		ScheduledEventId string `json:"scheduledEventId"`
-		StartedEventId   string `json:"startedEventId"`
-		TimeoutType      string `json:"timeoutType"`
-	} `json:"decisionTaskTimedOutEventAttributes"`
-	EventId                                                 string `json:"eventId"`
-	EventTimestamp                                          string `json:"eventTimestamp"`
-	EventType                                               string `json:"eventType"`
-	ExternalWorkflowExecutionCancelRequestedEventAttributes struct {
-		InitiatedEventId  string            `json:"initiatedEventId"`
-		WorkflowExecution WorkflowExecution `json:"workflowExecution"`
-	} `json:"externalWorkflowExecutionCancelRequestedEventAttributes"`
-	ExternalWorkflowExecutionSignaledEventAttributes struct {
-		InitiatedEventId  string            `json:"initiatedEventId"`
-		WorkflowExecution WorkflowExecution `json:"workflowExecution"`
-	} `json:"externalWorkflowExecutionSignaledEventAttributes"`
-	FailWorkflowExecutionFailedEventAttributes struct {
-		Cause                        string `json:"cause"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-	} `json:"failWorkflowExecutionFailedEventAttributes"`
-	MarkerRecordedEventAttributes struct {
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		Details                      string `json:"details"`
-		MarkerName                   string `json:"markerName"`
-	} `json:"markerRecordedEventAttributes"`
-	RecordMarkerFailedEventAttributes struct {
-		Cause                        string `json:"cause"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		MarkerName                   string `json:"markerName"`
-	} `json:"recordMarkerFailedEventAttributes"`
-	RequestCancelActivityTaskFailedEventAttributes struct {
-		ActivityId                   string `json:"activityId"`
-		Cause                        string `json:"cause"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-	} `json:"requestCancelActivityTaskFailedEventAttributes"`
-	RequestCancelExternalWorkflowExecutionFailedEventAttributes struct {
-		Cause                        string `json:"cause"`
-		Control                      string `json:"control"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		InitiatedEventId             string `json:"initiatedEventId"`
-		RunId                        string `json:"runId"`
-		WorkflowId                   string `json:"workflowId"`
-	} `json:"requestCancelExternalWorkflowExecutionFailedEventAttributes"`
-	RequestCancelExternalWorkflowExecutionInitiatedEventAttributes struct {
-		Control                      string `json:"control"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		RunId                        string `json:"runId"`
-		WorkflowId                   string `json:"workflowId"`
-	} `json:"requestCancelExternalWorkflowExecutionInitiatedEventAttributes"`
-	ScheduleActivityTaskFailedEventAttributes struct {
-		ActivityId   string `json:"activityId"`
-		ActivityType struct {
-			Name    string `json:"name"`
-			Version string `json:"version"`
-		} `json:"activityType"`
-		Cause                        string `json:"cause"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-	} `json:"scheduleActivityTaskFailedEventAttributes"`
-	SignalExternalWorkflowExecutionFailedEventAttributes struct {
-		Cause                        string `json:"cause"`
-		Control                      string `json:"control"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		InitiatedEventId             string `json:"initiatedEventId"`
-		RunId                        string `json:"runId"`
-		WorkflowId                   string `json:"workflowId"`
-	} `json:"signalExternalWorkflowExecutionFailedEventAttributes"`
-	SignalExternalWorkflowExecutionInitiatedEventAttributes struct {
-		Control                      string `json:"control"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		Input                        string `json:"input"`
-		RunId                        string `json:"runId"`
-		SignalName                   string `json:"signalName"`
-		WorkflowId                   string `json:"workflowId"`
-	} `json:"signalExternalWorkflowExecutionInitiatedEventAttributes"`
-	StartChildWorkflowExecutionFailedEventAttributes struct {
-		Cause                        string `json:"cause"`
-		Control                      string `json:"control"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		InitiatedEventId             string `json:"initiatedEventId"`
-		WorkflowId                   string `json:"workflowId"`
-		WorkflowType                 struct {
-			Name    string `json:"name"`
-			Version string `json:"version"`
-		} `json:"workflowType"`
-	} `json:"startChildWorkflowExecutionFailedEventAttributes"`
-	StartChildWorkflowExecutionInitiatedEventAttributes struct {
-		ChildPolicy                  string       `json:"childPolicy"`
-		Control                      string       `json:"control"`
-		DecisionTaskCompletedEventId string       `json:"decisionTaskCompletedEventId"`
-		ExecutionStartToCloseTimeout string       `json:"executionStartToCloseTimeout"`
-		Input                        string       `json:"input"`
-		TagList                      []string     `json:"tagList"`
-		TaskList                     TaskList     `json:"taskList"`
-		TaskStartToCloseTimeout      string       `json:"taskStartToCloseTimeout"`
-		WorkflowId                   string       `json:"workflowId"`
-		WorkflowType                 WorkflowType `json:"workflowType"`
-	} `json:"startChildWorkflowExecutionInitiatedEventAttributes"`
-	StartTimerFailedEventAttributes struct {
-		Cause                        string `json:"cause"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		TimerId                      string `json:"timerId"`
-	} `json:"startTimerFailedEventAttributes"`
-	TimerCanceledEventAttributes struct {
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		StartedEventId               string `json:"startedEventId"`
-		TimerId                      string `json:"timerId"`
-	} `json:"timerCanceledEventAttributes"`
-	TimerFiredEventAttributes struct {
-		StartedEventId string `json:"startedEventId"`
-		TimerId        string `json:"timerId"`
-	} `json:"timerFiredEventAttributes"`
-	TimerStartedEventAttributes struct {
-		Control                      string `json:"control"`
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		StartToFireTimeout           string `json:"startToFireTimeout"`
-		TimerId                      string `json:"timerId"`
-	} `json:"timerStartedEventAttributes"`
-	WorkflowExecutionCancelRequestedEventAttributes struct {
-		Cause                     string            `json:"cause"`
-		ExternalInitiatedEventId  string            `json:"externalInitiatedEventId"`
-		ExternalWorkflowExecution WorkflowExecution `json:"externalWorkflowExecution"`
-	} `json:"workflowExecutionCancelRequestedEventAttributes"`
-	WorkflowExecutionCanceledEventAttributes struct {
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		Details                      string `json:"details"`
-	} `json:"workflowExecutionCanceledEventAttributes"`
-	WorkflowExecutionCompletedEventAttributes struct {
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		Result                       string `json:"result"`
-	} `json:"workflowExecutionCompletedEventAttributes"`
-	WorkflowExecutionContinuedAsNewEventAttributes struct {
-		ChildPolicy                  string       `json:"childPolicy"`
-		DecisionTaskCompletedEventId string       `json:"decisionTaskCompletedEventId"`
-		ExecutionStartToCloseTimeout string       `json:"executionStartToCloseTimeout"`
-		Input                        string       `json:"input"`
-		NewExecutionRunId            string       `json:"newExecutionRunId"`
-		TagList                      []string     `json:"tagList"`
-		TaskList                     TaskList     `json:"taskList"`
-		TaskStartToCloseTimeout      string       `json:"taskStartToCloseTimeout"`
-		WorkflowType                 WorkflowType `json:"workflowType"`
-	} `json:"workflowExecutionContinuedAsNewEventAttributes"`
-	WorkflowExecutionFailedEventAttributes struct {
-		DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
-		Details                      string `json:"details"`
-		Reason                       string `json:"reason"`
-	} `json:"workflowExecutionFailedEventAttributes"`
-	WorkflowExecutionSignaledEventAttributes struct {
-		ExternalInitiatedEventId  string            `json:"externalInitiatedEventId"`
-		ExternalWorkflowExecution WorkflowExecution `json:"externalWorkflowExecution"`
-		Input                     string            `json:"input"`
-		SignalName                string            `json:"signalName"`
-	} `json:"workflowExecutionSignaledEventAttributes"`
-	WorkflowExecutionStartedEventAttributes struct {
-		ChildPolicy                  string            `json:"childPolicy"`
-		ContinuedExecutionRunId      string            `json:"continuedExecutionRunId"`
-		ExecutionStartToCloseTimeout string            `json:"executionStartToCloseTimeout"`
-		Input                        string            `json:"input"`
-		ParentInitiatedEventId       string            `json:"parentInitiatedEventId"`
-		ParentWorkflowExecution      WorkflowExecution `json:"parentWorkflowExecution"`
-		TagList                      []string          `json:"tagList"`
-		TaskList                     TaskList          `json:"taskList"`
-		TaskStartToCloseTimeout      string            `json:"taskStartToCloseTimeout"`
-		WorkflowType                 WorkflowType      `json:"workflowType"`
-	} `json:"workflowExecutionStartedEventAttributes"`
-	WorkflowExecutionTerminatedEventAttributes struct {
-		Cause       string `json:"cause"`
-		ChildPolicy string `json:"childPolicy"`
-		Details     string `json:"details"`
-		Reason      string `json:"reason"`
-	} `json:"workflowExecutionTerminatedEventAttributes"`
-	WorkflowExecutionTimedOutEventAttributes struct {
-		ChildPolicy string `json:"childPolicy"`
-		TimeoutType string `json:"timeoutType"`
-	} `json:"workflowExecutionTimedOutEventAttributes"`
+	ActivityTaskCancelRequestedEventAttributes                     *ActivityTaskCancelRequestedEventAttributes                     `json:"activityTaskCancelRequestedEventAttributes"`
+	ActivityTaskCanceledEventAttributes                            *ActivityTaskCanceledEventAttributes                            `json:"activityTaskCanceledEventAttributes"`
+	ActivityTaskCompletedEventAttributes                           *ActivityTaskCompletedEventAttributes                           `json:"activityTaskCompletedEventAttributes"`
+	ActivityTaskFailedEventAttributes                              *ActivityTaskFailedEventAttributes                              `json:"activityTaskFailedEventAttributes"`
+	ActivityTaskScheduledEventAttributes                           *ActivityTaskScheduledEventAttributes                           `json:"activityTaskScheduledEventAttributes"`
+	ActivityTaskStartedEventAttributes                             *ActivityTaskStartedEventAttributes                             `json:"activityTaskStartedEventAttributes"`
+	ActivityTaskTimedOutEventAttributes                            *ActivityTaskTimedOutEventAttributes                            `json:"activityTaskTimedOutEventAttributes"`
+	CancelTimerFailedEventAttributes                               *CancelTimerFailedEventAttributes                               `json:"cancelTimerFailedEventAttributes"`
+	CancelWorkflowExecutionFailedEventAttributes                   CancelWorkflowExecutionFailedEventAttributes                    `json:"cancelWorkflowExecutionFailedEventAttributes"`
+	ChildWorkflowExecutionCanceledEventAttributes                  *ChildWorkflowExecutionCanceledEventAttributes                  `json:"childWorkflowExecutionCanceledEventAttributes"`
+	ChildWorkflowExecutionCompletedEventAttributes                 *ChildWorkflowExecutionCompletedEventAttributes                 `json:"childWorkflowExecutionCompletedEventAttributes"`
+	ChildWorkflowExecutionFailedEventAttributes                    *CancelWorkflowExecutionFailedEventAttributes                   `json:"childWorkflowExecutionFailedEventAttributes"`
+	ChildWorkflowExecutionStartedEventAttributes                   *ChildWorkflowExecutionStartedEventAttributes                   `json:"childWorkflowExecutionStartedEventAttributes"`
+	ChildWorkflowExecutionTerminatedEventAttributes                *ChildWorkflowExecutionTerminatedEventAttributes                `json:"childWorkflowExecutionTerminatedEventAttributes"`
+	ChildWorkflowExecutionTimedOutEventAttributes                  *ChildWorkflowExecutionTimedOutEventAttributes                  `json:"childWorkflowExecutionTimedOutEventAttributes"`
+	CompleteWorkflowExecutionFailedEventAttributes                 *CompleteWorkflowExecutionFailedEventAttributes                 `json:"completeWorkflowExecutionFailedEventAttributes"`
+	ContinueAsNewWorkflowExecutionFailedEventAttributes            *ContinueAsNewWorkflowExecutionFailedEventAttributes            `json:"continueAsNewWorkflowExecutionFailedEventAttributes"`
+	DecisionTaskCompletedEventAttributes                           *DecisionTaskCompletedEventAttributes                           `json:"decisionTaskCompletedEventAttributes"`
+	DecisionTaskScheduledEventAttributes                           *DecisionTaskScheduledEventAttributes                           `json:"decisionTaskScheduledEventAttributes"`
+	DecisionTaskStartedEventAttributes                             *DecisionTaskStartedEventAttributes                             `json:"decisionTaskStartedEventAttributes"`
+	DecisionTaskTimedOutEventAttributes                            *DecisionTaskTimedOutEventAttributes                            `json:"decisionTaskTimedOutEventAttributes"`
+	EventId                                                        string                                                          `json:"eventId"`
+	EventTimestamp                                                 string                                                          `json:"eventTimestamp"`
+	EventType                                                      string                                                          `json:"eventType"`
+	ExternalWorkflowExecutionCancelRequestedEventAttributes        *ExternalWorkflowExecutionCancelRequestedEventAttributes        `json:"externalWorkflowExecutionCancelRequestedEventAttributes"`
+	ExternalWorkflowExecutionSignaledEventAttributes               *ExternalWorkflowExecutionSignaledEventAttributes               `json:"externalWorkflowExecutionSignaledEventAttributes"`
+	FailWorkflowExecutionFailedEventAttributes                     *FailWorkflowExecutionFailedEventAttributes                     `json:"failWorkflowExecutionFailedEventAttributes"`
+	MarkerRecordedEventAttributes                                  *MarkerRecordedEventAttributes                                  `json:"markerRecordedEventAttributes"`
+	RecordMarkerFailedEventAttributes                              *RecordMarkerFailedEventAttributes                              `json:"recordMarkerFailedEventAttributes"`
+	RequestCancelActivityTaskFailedEventAttributes                 *RequestCancelActivityTaskFailedEventAttributes                 `json:"requestCancelActivityTaskFailedEventAttributes"`
+	RequestCancelExternalWorkflowExecutionFailedEventAttributes    *RequestCancelExternalWorkflowExecutionFailedEventAttributes    `json:"requestCancelExternalWorkflowExecutionFailedEventAttributes"`
+	RequestCancelExternalWorkflowExecutionInitiatedEventAttributes *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes `json:"requestCancelExternalWorkflowExecutionInitiatedEventAttributes"`
+	ScheduleActivityTaskFailedEventAttributes                      *ScheduleActivityTaskFailedEventAttributes                      `json:"scheduleActivityTaskFailedEventAttributes"`
+	SignalExternalWorkflowExecutionFailedEventAttributes           *SignalExternalWorkflowExecutionFailedEventAttributes           `json:"signalExternalWorkflowExecutionFailedEventAttributes"`
+	SignalExternalWorkflowExecutionInitiatedEventAttributes        *SignalExternalWorkflowExecutionInitiatedEventAttributes        `json:"signalExternalWorkflowExecutionInitiatedEventAttributes"`
+	StartChildWorkflowExecutionFailedEventAttributes               *StartChildWorkflowExecutionFailedEventAttributes               `json:"startChildWorkflowExecutionFailedEventAttributes"`
+	StartChildWorkflowExecutionInitiatedEventAttributes            *StartChildWorkflowExecutionInitiatedEventAttributes            `json:"startChildWorkflowExecutionInitiatedEventAttributes"`
+	StartTimerFailedEventAttributes                                *StartTimerFailedEventAttributes                                `json:"startTimerFailedEventAttributes"`
+	TimerCanceledEventAttributes                                   *TimerCanceledEventAttributes                                   `json:"timerCanceledEventAttributes"`
+	TimerFiredEventAttributes                                      *TimerFiredEventAttributes                                      `json:"timerFiredEventAttributes"`
+	TimerStartedEventAttributes                                    *TimerStartedEventAttributes                                    `json:"timerStartedEventAttributes"`
+	WorkflowExecutionCancelRequestedEventAttributes                *WorkflowExecutionCancelRequestedEventAttributes                `json:"workflowExecutionCancelRequestedEventAttributes"`
+	WorkflowExecutionCanceledEventAttributes                       *WorkflowExecutionCanceledEventAttributes                       `json:"workflowExecutionCanceledEventAttributes"`
+	WorkflowExecutionCompletedEventAttributes                      *WorkflowExecutionCompletedEventAttributes                      `json:"workflowExecutionCompletedEventAttributes"`
+	WorkflowExecutionContinuedAsNewEventAttributes                 *WorkflowExecutionContinuedAsNewEventAttributes                 `json:"workflowExecutionContinuedAsNewEventAttributes"`
+	WorkflowExecutionFailedEventAttributes                         *WorkflowExecutionFailedEventAttributes                         `json:"workflowExecutionFailedEventAttributes"`
+	WorkflowExecutionSignaledEventAttributes                       *WorkflowExecutionSignaledEventAttributes                       `json:"workflowExecutionSignaledEventAttributes"`
+	WorkflowExecutionStartedEventAttributes                        *WorkflowExecutionStartedEventAttributes                        `json:"workflowExecutionStartedEventAttributes"`
+	WorkflowExecutionTerminatedEventAttributes                     *WorkflowExecutionTerminatedEventAttributes                     `json:"workflowExecutionTerminatedEventAttributes"`
+	WorkflowExecutionTimedOutEventAttributes                       *WorkflowExecutionTimedOutEventAttributes                       `json:"workflowExecutionTimedOutEventAttributes"`
+}
+
+type ActivityTaskCancelRequestedEventAttributes struct {
+	ActivityId                   string `json:"activityId"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+}
+type ActivityTaskCanceledEventAttributes struct {
+	Details                      string `json:"details"`
+	LatestCancelRequestedEventId string `json:"latestCancelRequestedEventId"`
+	ScheduledEventId             string `json:"scheduledEventId"`
+	StartedEventId               string `json:"startedEventId"`
+}
+type ActivityTaskCompletedEventAttributes struct {
+	Result           string `json:"result"`
+	ScheduledEventId string `json:"scheduledEventId"`
+	StartedEventId   string `json:"startedEventId"`
+}
+type ActivityTaskFailedEventAttributes struct {
+	Details          string `json:"details"`
+	Reason           string `json:"reason"`
+	ScheduledEventId string `json:"scheduledEventId"`
+	StartedEventId   string `json:"startedEventId"`
+}
+type ActivityTaskScheduledEventAttributes struct {
+	ActivityId                   string       `json:"activityId"`
+	ActivityType                 ActivityType `json:"activityType"`
+	Control                      string       `json:"control"`
+	DecisionTaskCompletedEventId string       `json:"decisionTaskCompletedEventId"`
+	HeartbeatTimeout             string       `json:"heartbeatTimeout"`
+	Input                        string       `json:"input"`
+	ScheduleToCloseTimeout       string       `json:"scheduleToCloseTimeout"`
+	ScheduleToStartTimeout       string       `json:"scheduleToStartTimeout"`
+	StartToCloseTimeout          string       `json:"startToCloseTimeout"`
+	TaskList                     TaskList     `json:"taskList"`
+}
+type ActivityTaskStartedEventAttributes struct {
+	Identity         string `json:"identity"`
+	ScheduledEventId string `json:"scheduledEventId"`
+}
+type ActivityTaskTimedOutEventAttributes struct {
+	Details          string `json:"details"`
+	ScheduledEventId string `json:"scheduledEventId"`
+	StartedEventId   string `json:"startedEventId"`
+	TimeoutType      string `json:"timeoutType"`
+}
+type CancelTimerFailedEventAttributes struct {
+	Cause                        string `json:"cause"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	TimerId                      string `json:"timerId"`
+}
+type CancelWorkflowExecutionFailedEventAttributes struct {
+	Cause                        string `json:"cause"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+}
+type ChildWorkflowExecutionCanceledEventAttributes struct {
+	Details           string            `json:"details"`
+	InitiatedEventId  string            `json:"initiatedEventId"`
+	StartedEventId    string            `json:"startedEventId"`
+	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
+	WorkflowType      WorkflowType      `json:"workflowType"`
+}
+type ChildWorkflowExecutionCompletedEventAttributes struct {
+	InitiatedEventId  string            `json:"initiatedEventId"`
+	Result            string            `json:"result"`
+	StartedEventId    string            `json:"startedEventId"`
+	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
+	WorkflowType      WorkflowType      `json:"workflowType"`
+}
+type ChildWorkflowExecutionFailedEventAttributes struct {
+	Details           string            `json:"details"`
+	InitiatedEventId  string            `json:"initiatedEventId"`
+	Reason            string            `json:"reason"`
+	StartedEventId    string            `json:"startedEventId"`
+	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
+	WorkflowType      WorkflowType      `json:"workflowType"`
+}
+type ChildWorkflowExecutionStartedEventAttributes struct {
+	InitiatedEventId  string            `json:"initiatedEventId"`
+	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
+	WorkflowType      WorkflowType      `json:"workflowType"`
+}
+type ChildWorkflowExecutionTerminatedEventAttributes struct {
+	InitiatedEventId  string            `json:"initiatedEventId"`
+	StartedEventId    string            `json:"startedEventId"`
+	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
+	WorkflowType      WorkflowType      `json:"workflowType"`
+}
+type ChildWorkflowExecutionTimedOutEventAttributes struct {
+	InitiatedEventId  string            `json:"initiatedEventId"`
+	StartedEventId    string            `json:"startedEventId"`
+	TimeoutType       string            `json:"timeoutType"`
+	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
+	WorkflowType      WorkflowType      `json:"workflowType"`
+}
+type CompleteWorkflowExecutionFailedEventAttributes struct {
+	Cause                        string `json:"cause"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+}
+type ContinueAsNewWorkflowExecutionFailedEventAttributes struct {
+	Cause                        string `json:"cause"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+}
+type DecisionTaskCompletedEventAttributes struct {
+	ExecutionContext string `json:"executionContext"`
+	ScheduledEventId string `json:"scheduledEventId"`
+	StartedEventId   string `json:"startedEventId"`
+}
+type DecisionTaskScheduledEventAttributes struct {
+	StartToCloseTimeout string   `json:"startToCloseTimeout"`
+	TaskList            TaskList `json:"taskList"`
+}
+type DecisionTaskStartedEventAttributes struct {
+	Identity         string `json:"identity"`
+	ScheduledEventId string `json:"scheduledEventId"`
+}
+type DecisionTaskTimedOutEventAttributes struct {
+	ScheduledEventId string `json:"scheduledEventId"`
+	StartedEventId   string `json:"startedEventId"`
+	TimeoutType      string `json:"timeoutType"`
+}
+type ExternalWorkflowExecutionCancelRequestedEventAttributes struct {
+	InitiatedEventId  string            `json:"initiatedEventId"`
+	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
+}
+type ExternalWorkflowExecutionSignaledEventAttributes struct {
+	InitiatedEventId  string            `json:"initiatedEventId"`
+	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
+}
+type FailWorkflowExecutionFailedEventAttributes struct {
+	Cause                        string `json:"cause"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+}
+type MarkerRecordedEventAttributes struct {
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	Details                      string `json:"details"`
+	MarkerName                   string `json:"markerName"`
+}
+type RecordMarkerFailedEventAttributes struct {
+	Cause                        string `json:"cause"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	MarkerName                   string `json:"markerName"`
+}
+type RequestCancelActivityTaskFailedEventAttributes struct {
+	ActivityId                   string `json:"activityId"`
+	Cause                        string `json:"cause"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+}
+type RequestCancelExternalWorkflowExecutionFailedEventAttributes struct {
+	Cause                        string `json:"cause"`
+	Control                      string `json:"control"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	InitiatedEventId             string `json:"initiatedEventId"`
+	RunId                        string `json:"runId"`
+	WorkflowId                   string `json:"workflowId"`
+}
+type RequestCancelExternalWorkflowExecutionInitiatedEventAttributes struct {
+	Control                      string `json:"control"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	RunId                        string `json:"runId"`
+	WorkflowId                   string `json:"workflowId"`
+}
+type ScheduleActivityTaskFailedEventAttributes struct {
+	ActivityId                   string `json:"activityId"`
+	ActivityType                 ActivityType
+	Cause                        string `json:"cause"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+}
+type SignalExternalWorkflowExecutionFailedEventAttributes struct {
+	Cause                        string `json:"cause"`
+	Control                      string `json:"control"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	InitiatedEventId             string `json:"initiatedEventId"`
+	RunId                        string `json:"runId"`
+	WorkflowId                   string `json:"workflowId"`
+}
+type SignalExternalWorkflowExecutionInitiatedEventAttributes struct {
+	Control                      string `json:"control"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	Input                        string `json:"input"`
+	RunId                        string `json:"runId"`
+	SignalName                   string `json:"signalName"`
+	WorkflowId                   string `json:"workflowId"`
+}
+type StartChildWorkflowExecutionFailedEventAttributes struct {
+	Cause                        string       `json:"cause"`
+	Control                      string       `json:"control"`
+	DecisionTaskCompletedEventId string       `json:"decisionTaskCompletedEventId"`
+	InitiatedEventId             string       `json:"initiatedEventId"`
+	WorkflowId                   string       `json:"workflowId"`
+	WorkflowType                 WorkflowType `json:"workflowType"`
+}
+type StartChildWorkflowExecutionInitiatedEventAttributes struct {
+	ChildPolicy                  string       `json:"childPolicy"`
+	Control                      string       `json:"control"`
+	DecisionTaskCompletedEventId string       `json:"decisionTaskCompletedEventId"`
+	ExecutionStartToCloseTimeout string       `json:"executionStartToCloseTimeout"`
+	Input                        string       `json:"input"`
+	TagList                      []string     `json:"tagList"`
+	TaskList                     TaskList     `json:"taskList"`
+	TaskStartToCloseTimeout      string       `json:"taskStartToCloseTimeout"`
+	WorkflowId                   string       `json:"workflowId"`
+	WorkflowType                 WorkflowType `json:"workflowType"`
+}
+type StartTimerFailedEventAttributes struct {
+	Cause                        string `json:"cause"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	TimerId                      string `json:"timerId"`
+}
+type TimerCanceledEventAttributes struct {
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	StartedEventId               string `json:"startedEventId"`
+	TimerId                      string `json:"timerId"`
+}
+type TimerFiredEventAttributes struct {
+	StartedEventId string `json:"startedEventId"`
+	TimerId        string `json:"timerId"`
+}
+type TimerStartedEventAttributes struct {
+	Control                      string `json:"control"`
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	StartToFireTimeout           string `json:"startToFireTimeout"`
+	TimerId                      string `json:"timerId"`
+}
+type WorkflowExecutionCancelRequestedEventAttributes struct {
+	Cause                     string            `json:"cause"`
+	ExternalInitiatedEventId  string            `json:"externalInitiatedEventId"`
+	ExternalWorkflowExecution WorkflowExecution `json:"externalWorkflowExecution"`
+}
+type WorkflowExecutionCanceledEventAttributes struct {
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	Details                      string `json:"details"`
+}
+type WorkflowExecutionCompletedEventAttributes struct {
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	Result                       string `json:"result"`
+}
+type WorkflowExecutionContinuedAsNewEventAttributes struct {
+	ChildPolicy                  string       `json:"childPolicy"`
+	DecisionTaskCompletedEventId string       `json:"decisionTaskCompletedEventId"`
+	ExecutionStartToCloseTimeout string       `json:"executionStartToCloseTimeout"`
+	Input                        string       `json:"input"`
+	NewExecutionRunId            string       `json:"newExecutionRunId"`
+	TagList                      []string     `json:"tagList"`
+	TaskList                     TaskList     `json:"taskList"`
+	TaskStartToCloseTimeout      string       `json:"taskStartToCloseTimeout"`
+	WorkflowType                 WorkflowType `json:"workflowType"`
+}
+type WorkflowExecutionFailedEventAttributes struct {
+	DecisionTaskCompletedEventId string `json:"decisionTaskCompletedEventId"`
+	Details                      string `json:"details"`
+	Reason                       string `json:"reason"`
+}
+type WorkflowExecutionSignaledEventAttributes struct {
+	ExternalInitiatedEventId  string            `json:"externalInitiatedEventId"`
+	ExternalWorkflowExecution WorkflowExecution `json:"externalWorkflowExecution"`
+	Input                     string            `json:"input"`
+	SignalName                string            `json:"signalName"`
+}
+type WorkflowExecutionStartedEventAttributes struct {
+	ChildPolicy                  string            `json:"childPolicy"`
+	ContinuedExecutionRunId      string            `json:"continuedExecutionRunId"`
+	ExecutionStartToCloseTimeout string            `json:"executionStartToCloseTimeout"`
+	Input                        string            `json:"input"`
+	ParentInitiatedEventId       string            `json:"parentInitiatedEventId"`
+	ParentWorkflowExecution      WorkflowExecution `json:"parentWorkflowExecution"`
+	TagList                      []string          `json:"tagList"`
+	TaskList                     TaskList          `json:"taskList"`
+	TaskStartToCloseTimeout      string            `json:"taskStartToCloseTimeout"`
+	WorkflowType                 WorkflowType      `json:"workflowType"`
+}
+type WorkflowExecutionTerminatedEventAttributes struct {
+	Cause       string `json:"cause"`
+	ChildPolicy string `json:"childPolicy"`
+	Details     string `json:"details"`
+	Reason      string `json:"reason"`
+}
+type WorkflowExecutionTimedOutEventAttributes struct {
+	ChildPolicy string `json:"childPolicy"`
+	TimeoutType string `json:"timeoutType"`
 }
 
 type PollForDecisionTaskResponse struct {
