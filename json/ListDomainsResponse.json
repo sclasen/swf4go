@@ -1,0 +1,10 @@
+{
+    "domainInfos": [
+        {
+            "description": "string",
+            "name": "string",
+            "status": "string"
+        }
+    ],
+    "nextPageToken": "string"
+}

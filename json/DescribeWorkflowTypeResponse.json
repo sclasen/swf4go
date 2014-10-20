@@ -1,0 +1,20 @@
+{
+    "configuration": {
+        "defaultChildPolicy": "string",
+        "defaultExecutionStartToCloseTimeout": "string",
+        "defaultTaskList": {
+            "name": "string"
+        },
+        "defaultTaskStartToCloseTimeout": "string"
+    },
+    "typeInfo": {
+        "creationDate": "number",
+        "deprecationDate": "number",
+        "description": "string",
+        "status": "string",
+        "workflowType": {
+            "name": "string",
+            "version": "string"
+        }
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "domain": "string",
+    "execution": {
+        "runId": "string",
+        "workflowId": "string"
+    },
+    "maximumPageSize": "number",
+    "nextPageToken": "string",
+    "reverseOrder": "boolean"
+}

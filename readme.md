@@ -11,7 +11,6 @@ package swf
 type WorkflowClient interface {
 	StartWorkflow(request StartWorkflowRequest) (*StartWorkflowResponse, error)
 	SignalWorkflow(request SignalWorkflowRequest) error
-	ListWorkflowTypes(request ListWorkflowTypesRequest) (*ListWorkflowTypesResponse, error)
 	RequestCancelWorkflowExecution(request RequestCancelWorkflowExecution) error
 	TerminateWorkflowExecution(request TerminateWorkflowExecution) error
 }
@@ -37,6 +36,23 @@ type WorkflowAdminClient interface {
 	RegisterDomain(request RegisterDomain) error
 	DeprecateDomain(request DeprecateDomain) error
 }
+
+type WorkflowInfoClient interface {
+	CountClosedWorkflowExecutions(request CountClosedWorkflowExecutionsRequest) (*CountResponse, error)
+	CountOpenWorkflowExecutions(request CountOpenWorkflowExecutionsRequest) (*CountResponse, error)
+	CountPendingActivityTasks(request CountPendingActivityTasksRequest) (*CountResponse, error)
+	CountPendingDecisionTasks(request CountPendingDecisionTasksRequest) (*CountResponse, error)
+	ListWorkflowTypes(request ListWorkflowTypesRequest) (*ListWorkflowTypesResponse, error)
+	ListActivityTypes(request ListActivityTypesRequest) (*ListActivityTypesResponse, error)
+	DescribeActivityType(request DescribeActivityTypeRequest) (*DescribeActivityTypeResponse, error)
+	DescribeDomain(request DescribeDomainRequest) (*DescribeDomainResponse, error)
+	DescribeWorkflowType(request DescribeWorkflowTypeRequest) (*DescribeWorkflowTypeResponse, error)
+	DescribeWorkflowExecution(request DescribeWorkflowExecutionRequest) (*DescribeWorkflowExecutionResponse, error)
+	ListOpenWorkflowExecutions(request ListOpenWorkflowExecutionsRequest) (*ListOpenWorkflowExecutionsResponse, error)
+	ListClosedWorkflowExecutions(request ListClosedWorkflowExecutionsRequest) (*ListClosedWorkflowExecutionsResponse, error)
+	GetWorkflowExecutionHistory(request GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error)
+	ListDomains(request ListDomainsRequest) (*ListDomainsResponse, error)
+}
 ```
 
 * create a client like so
@@ -44,12 +60,3 @@ type WorkflowAdminClient interface {
 ```go
 client := swf.NewClient(swf.MustGetenv("AWS_ACCESS_KEY_ID"), swf.MustGetenv("AWS_SECRET_ACCESS_KEY"), swf.USEast1)
 ```
-
-need a request/response struct?
--------------------------------
-
-* check out json/readme.md
-* put a file called json/NameOfActionRequest.json and json/NameOfActionResponse.json
-* run jsongen json/NameOfActionRequest.json
-* add the struct, after any cleanups/deduping to protocol.go
-* add a method to the right client interface and an implementation in the client

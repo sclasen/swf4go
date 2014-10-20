@@ -41,8 +41,8 @@ type ListWorkflowTypesRequest struct {
 }
 
 type ListWorkflowTypesResponse struct {
-	NextPageToken *string    `json:"nextPageToken"`
-	TypeInfos     []TypeInfo `json:"typeInfos"`
+	NextPageToken *string            `json:"nextPageToken"`
+	TypeInfos     []WorkflowTypeInfo `json:"typeInfos"`
 }
 
 type TerminateWorkflowExecution struct {
@@ -621,6 +621,186 @@ type CountPendingDecisionTasksRequest struct {
 	TaskList TaskList `json:"taskList"`
 }
 
+type DescribeActivityTypeRequest struct {
+	ActivityType ActivityType `json:"activityType"`
+	Domain       string       `json:"domain"`
+}
+
+type DescribeActivityTypeResponse struct {
+	Configuration ActivityTypeConfiguration `json:"configuration"`
+	TypeInfo      ActivityTypeInfo          `json:"typeInfo"`
+}
+
+type ActivityTypeConfiguration struct {
+	DefaultTaskHeartbeatTimeout string `json:"defaultTaskHeartbeatTimeout"`
+	DefaultTaskList             struct {
+		Name string `json:"name"`
+	} `json:"defaultTaskList"`
+	DefaultTaskScheduleToCloseTimeout string `json:"defaultTaskScheduleToCloseTimeout"`
+	DefaultTaskScheduleToStartTimeout string `json:"defaultTaskScheduleToStartTimeout"`
+	DefaultTaskStartToCloseTimeout    string `json:"defaultTaskStartToCloseTimeout"`
+}
+
+type DescribeDomainRequest struct {
+	Name string `json:"name"`
+}
+
+type DescribeDomainResponse struct {
+	Configuration DomainConfiguration `json:"configuration"`
+	DomainInfo    DomainInfo          `json:"domainInfo"`
+}
+
+type DomainConfiguration struct {
+	WorkflowExecutionRetentionPeriodInDays string `json:"workflowExecutionRetentionPeriodInDays"`
+}
+
+type DomainInfo struct {
+	Description string `json:"description"`
+	Name        string `json:"name"`
+	Status      string `json:"status"`
+}
+
+type DescribeWorkflowExecutionRequest struct {
+	Domain    string            `json:"domain"`
+	Execution WorkflowExecution `json:"execution"`
+}
+
+type DescribeWorkflowExecutionResponse struct {
+	ExecutionConfiguration      ExecutionConfiguration `json:"executionConfiguration"`
+	ExecutionInfo               ExecutionInfo          `json:"executionInfo"`
+	LatestActivityTaskTimestamp string                 `json:"latestActivityTaskTimestamp"`
+	LatestExecutionContext      string                 `json:"latestExecutionContext"`
+	OpenCounts                  OpenCounts             `json:"openCounts"`
+}
+
+type ExecutionConfiguration struct {
+	ChildPolicy                  string   `json:"childPolicy"`
+	ExecutionStartToCloseTimeout string   `json:"executionStartToCloseTimeout"`
+	TaskList                     TaskList `json:"taskList"`
+	TaskStartToCloseTimeout      string   `json:"taskStartToCloseTimeout"`
+}
+
+type ExecutionInfo struct {
+	CancelRequested string            `json:"cancelRequested"`
+	CloseStatus     string            `json:"closeStatus"`
+	CloseTimestamp  string            `json:"closeTimestamp"`
+	Execution       WorkflowExecution `json:"execution"`
+	ExecutionStatus string            `json:"executionStatus"`
+	Parent          WorkflowExecution `json:"parent"`
+	StartTimestamp  string            `json:"startTimestamp"`
+	TagList         []string          `json:"tagList"`
+	WorkflowType    WorkflowType      `json:"workflowType"`
+}
+
+type OpenCounts struct {
+	OpenActivityTasks           string `json:"openActivityTasks"`
+	OpenChildWorkflowExecutions string `json:"openChildWorkflowExecutions"`
+	OpenDecisionTasks           string `json:"openDecisionTasks"`
+	OpenTimers                  string `json:"openTimers"`
+}
+
+type DescribeWorkflowTypeRequest struct {
+	Domain       string       `json:"domain"`
+	WorkflowType WorkflowType `json:"workflowType"`
+}
+
+type DescribeWorkflowTypeResponse struct {
+	Configuration WorkflowConfiguration `json:"configuration"`
+	TypeInfo      WorkflowTypeInfo      `json:"typeInfo"`
+}
+
+type WorkflowConfiguration struct {
+	DefaultChildPolicy                  string   `json:"defaultChildPolicy"`
+	DefaultExecutionStartToCloseTimeout string   `json:"defaultExecutionStartToCloseTimeout"`
+	DefaultTaskList                     TaskList `json:"defaultTaskList"`
+	DefaultTaskStartToCloseTimeout      string   `json:"defaultTaskStartToCloseTimeout"`
+}
+
+type GetWorkflowExecutionHistoryRequest struct {
+	Domain          string            `json:"domain"`
+	Execution       WorkflowExecution `json:"execution"`
+	MaximumPageSize string            `json:"maximumPageSize"`
+	NextPageToken   string            `json:"nextPageToken"`
+	ReverseOrder    string            `json:"reverseOrder"`
+}
+
+type GetWorkflowExecutionHistoryResponse struct {
+	Events        []HistoryEvent `json:"events"`
+	NextPageToken string         `json:"nextPageToken"`
+}
+
+type ListActivityTypesRequest struct {
+	Domain             string `json:"domain"`
+	MaximumPageSize    string `json:"maximumPageSize"`
+	Name               string `json:"name"`
+	NextPageToken      string `json:"nextPageToken"`
+	RegistrationStatus string `json:"registrationStatus"`
+	ReverseOrder       string `json:"reverseOrder"`
+}
+
+type ListActivityTypesResponse struct {
+	NextPageToken string             `json:"nextPageToken"`
+	TypeInfos     []ActivityTypeInfo `json:"typeInfos"`
+}
+
+type ListClosedWorkflowExecutionsRequest struct {
+	CloseStatusFilter StatusFilter    `json:"closeStatusFilter"`
+	CloseTimeFilter   TimeFilter      `json:"closeTimeFilter"`
+	Domain            string          `json:"domain"`
+	ExecutionFilter   ExecutionFilter `json:"executionFilter"`
+	MaximumPageSize   string          `json:"maximumPageSize"`
+	NextPageToken     string          `json:"nextPageToken"`
+	ReverseOrder      string          `json:"reverseOrder"`
+	StartTimeFilter   TimeFilter      `json:"startTimeFilter"`
+	TagFilter         TagFilter       `json:"tagFilter"`
+	TypeFilter        TypeFilter      `json:"typeFilter"`
+}
+
+type ListClosedWorkflowExecutionsResponse struct {
+	ExecutionInfos []WorkflowExecutionInfo `json:"executionInfos"`
+	NextPageToken  string                  `json:"nextPageToken"`
+}
+
+type ListDomainsRequest struct {
+	MaximumPageSize    string `json:"maximumPageSize"`
+	NextPageToken      string `json:"nextPageToken"`
+	RegistrationStatus string `json:"registrationStatus"`
+	ReverseOrder       string `json:"reverseOrder"`
+}
+
+type ListDomainsResponse struct {
+	DomainInfos   []DomainInfo `json:"domainInfos"`
+	NextPageToken string       `json:"nextPageToken"`
+}
+
+type ListOpenWorkflowExecutionsRequest struct {
+	Domain          string          `json:"domain"`
+	ExecutionFilter ExecutionFilter `json:"executionFilter"`
+	MaximumPageSize string          `json:"maximumPageSize"`
+	NextPageToken   string          `json:"nextPageToken"`
+	ReverseOrder    string          `json:"reverseOrder"`
+	StartTimeFilter TimeFilter      `json:"startTimeFilter"`
+	TagFilter       TagFilter       `json:"tagFilter"`
+	TypeFilter      TypeFilter      `json:"typeFilter"`
+}
+
+type ListOpenWorkflowExecutionsResponse struct {
+	ExecutionInfos []WorkflowExecutionInfo `json:"executionInfos"`
+	NextPageToken  string                  `json:"nextPageToken"`
+}
+
+type WorkflowExecutionInfo struct {
+	CancelRequested string            `json:"cancelRequested"`
+	CloseStatus     string            `json:"closeStatus"`
+	CloseTimestamp  string            `json:"closeTimestamp"`
+	Execution       WorkflowExecution `json:"execution"`
+	ExecutionStatus string            `json:"executionStatus"`
+	Parent          WorkflowExecution `json:"parent"`
+	StartTimestamp  string            `json:"startTimestamp"`
+	TagList         []string          `json:"tagList"`
+	WorkflowType    WorkflowType      `json:"workflowType"`
+}
+
 type StatusFilter struct {
 	Status string `json:"status"`
 }
@@ -667,10 +847,18 @@ type ActivityType struct {
 	Version string `json:"version"`
 }
 
-type TypeInfo struct {
+type WorkflowTypeInfo struct {
 	CreationDate    float32      `json:"creationDate"`
 	DeprecationDate float32      `json:"deprecationDate"`
 	Description     string       `json:"description"`
 	Status          string       `json:"status"`
 	WorkflowType    WorkflowType `json:"workflowType"`
+}
+
+type ActivityTypeInfo struct {
+	CreationDate    float32      `json:"creationDate"`
+	DeprecationDate float32      `json:"deprecationDate"`
+	Description     string       `json:"description"`
+	Status          string       `json:"status"`
+	ActivityType    ActivityType `json:"activityType"`
 }

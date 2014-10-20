@@ -1,0 +1,20 @@
+{
+    "domain": "string",
+    "executionFilter": {
+        "workflowId": "string"
+    },
+    "maximumPageSize": "number",
+    "nextPageToken": "string",
+    "reverseOrder": "boolean",
+    "startTimeFilter": {
+        "latestDate": "number",
+        "oldestDate": "number"
+    },
+    "tagFilter": {
+        "tag": "string"
+    },
+    "typeFilter": {
+        "name": "string",
+        "version": "string"
+    }
+}

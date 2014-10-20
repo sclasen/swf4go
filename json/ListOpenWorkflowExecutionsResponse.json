@@ -1,0 +1,27 @@
+{
+    "executionInfos": [
+        {
+            "cancelRequested": "boolean",
+            "closeStatus": "string",
+            "closeTimestamp": "number",
+            "execution": {
+                "runId": "string",
+                "workflowId": "string"
+            },
+            "executionStatus": "string",
+            "parent": {
+                "runId": "string",
+                "workflowId": "string"
+            },
+            "startTimestamp": "number",
+            "tagList": [
+                "string"
+            ],
+            "workflowType": {
+                "name": "string",
+                "version": "string"
+            }
+        }
+    ],
+    "nextPageToken": "string"
+}

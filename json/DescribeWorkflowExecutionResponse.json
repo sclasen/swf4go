@@ -1,0 +1,40 @@
+{
+    "executionConfiguration": {
+        "childPolicy": "string",
+        "executionStartToCloseTimeout": "string",
+        "taskList": {
+            "name": "string"
+        },
+        "taskStartToCloseTimeout": "string"
+    },
+    "executionInfo": {
+        "cancelRequested": "boolean",
+        "closeStatus": "string",
+        "closeTimestamp": "number",
+        "execution": {
+            "runId": "string",
+            "workflowId": "string"
+        },
+        "executionStatus": "string",
+        "parent": {
+            "runId": "string",
+            "workflowId": "string"
+        },
+        "startTimestamp": "number",
+        "tagList": [
+            "string"
+        ],
+        "workflowType": {
+            "name": "string",
+            "version": "string"
+        }
+    },
+    "latestActivityTaskTimestamp": "number",
+    "latestExecutionContext": "string",
+    "openCounts": {
+        "openActivityTasks": "number",
+        "openChildWorkflowExecutions": "number",
+        "openDecisionTasks": "number",
+        "openTimers": "number"
+    }
+}

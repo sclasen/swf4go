@@ -1,0 +1,21 @@
+{
+    "configuration": {
+        "defaultTaskHeartbeatTimeout": "string",
+        "defaultTaskList": {
+            "name": "string"
+        },
+        "defaultTaskScheduleToCloseTimeout": "string",
+        "defaultTaskScheduleToStartTimeout": "string",
+        "defaultTaskStartToCloseTimeout": "string"
+    },
+    "typeInfo": {
+        "activityType": {
+            "name": "string",
+            "version": "string"
+        },
+        "creationDate": "number",
+        "deprecationDate": "number",
+        "description": "string",
+        "status": "string"
+    }
+}

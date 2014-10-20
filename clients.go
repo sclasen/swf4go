@@ -16,7 +16,6 @@ import (
 type WorkflowClient interface {
 	StartWorkflow(request StartWorkflowRequest) (*StartWorkflowResponse, error)
 	SignalWorkflow(request SignalWorkflowRequest) error
-	ListWorkflowTypes(request ListWorkflowTypesRequest) (*ListWorkflowTypesResponse, error)
 	RequestCancelWorkflowExecution(request RequestCancelWorkflowExecution) error
 	TerminateWorkflowExecution(request TerminateWorkflowExecution) error
 }
@@ -48,16 +47,16 @@ type WorkflowInfoClient interface {
 	CountOpenWorkflowExecutions(request CountOpenWorkflowExecutionsRequest) (*CountResponse, error)
 	CountPendingActivityTasks(request CountPendingActivityTasksRequest) (*CountResponse, error)
 	CountPendingDecisionTasks(request CountPendingDecisionTasksRequest) (*CountResponse, error)
-	ListActivityTypes()
-	DescribeActivityType()
-	ListWorkflowTypes()
-	DescribeWorkflowType()
-	DescribeWorkflowExecution()
-	ListOpenWorkflowExecutions()
-	ListClosedWorkflowExecutions()
-	GetWorkflowExecutionHistory()
-	ListDomains()
-	DescribeDomain()
+	ListWorkflowTypes(request ListWorkflowTypesRequest) (*ListWorkflowTypesResponse, error)
+	ListActivityTypes(request ListActivityTypesRequest) (*ListActivityTypesResponse, error)
+	DescribeActivityType(request DescribeActivityTypeRequest) (*DescribeActivityTypeResponse, error)
+	DescribeDomain(request DescribeDomainRequest) (*DescribeDomainResponse, error)
+	DescribeWorkflowType(request DescribeWorkflowTypeRequest) (*DescribeWorkflowTypeResponse, error)
+	DescribeWorkflowExecution(request DescribeWorkflowExecutionRequest) (*DescribeWorkflowExecutionResponse, error)
+	ListOpenWorkflowExecutions(request ListOpenWorkflowExecutionsRequest) (*ListOpenWorkflowExecutionsResponse, error)
+	ListClosedWorkflowExecutions(request ListClosedWorkflowExecutionsRequest) (*ListClosedWorkflowExecutionsResponse, error)
+	GetWorkflowExecutionHistory(request GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error)
+	ListDomains(request ListDomainsRequest) (*ListDomainsResponse, error)
 }
 
 type Region struct {
@@ -103,12 +102,6 @@ func (c *Client) StartWorkflow(request StartWorkflowRequest) (*StartWorkflowResp
 func (c *Client) SignalWorkflow(request SignalWorkflowRequest) error {
 	err := c.swfReqNoResponse("SignalWorkflowExecution", request)
 	return err
-}
-
-func (c *Client) ListWorkflowTypes(request ListWorkflowTypesRequest) (*ListWorkflowTypesResponse, error) {
-	resp := new(ListWorkflowTypesResponse)
-	err := c.swfReqWithResponse("ListWorkflowTypes", request, resp)
-	return resp, err
 }
 
 func (c *Client) RequestCancelWorkflowExecution(request RequestCancelWorkflowExecution) error {
@@ -202,6 +195,59 @@ func (c *Client) CountPendingActivityTasks(request CountPendingActivityTasksRequ
 func (c *Client) CountPendingDecisionTasks(request CountPendingDecisionTasksRequest) (*CountResponse, error) {
 	resp := &CountResponse{}
 	err := c.swfReqWithResponse("CountPendingDecisionTasks", request, resp)
+	return resp, err
+}
+
+func (c *Client) DescribeActivityType(request DescribeActivityTypeRequest) (*DescribeActivityTypeResponse, error) {
+	resp := &DescribeActivityTypeResponse{}
+	err := c.swfReqWithResponse("DescribeActivityType", request, resp)
+	return resp, err
+}
+func (c *Client) DescribeDomain(request DescribeDomainRequest) (*DescribeDomainResponse, error) {
+	resp := &DescribeDomainResponse{}
+	err := c.swfReqWithResponse("DescribeDomain", request, resp)
+	return resp, err
+}
+func (c *Client) DescribeWorkflowType(request DescribeWorkflowTypeRequest) (*DescribeWorkflowTypeResponse, error) {
+	resp := &DescribeWorkflowTypeResponse{}
+	err := c.swfReqWithResponse("DescribeWorkflowType", request, resp)
+	return resp, err
+}
+
+func (c *Client) DescribeWorkflowExecution(request DescribeWorkflowExecutionRequest) (*DescribeWorkflowExecutionResponse, error) {
+	resp := &DescribeWorkflowExecutionResponse{}
+	err := c.swfReqWithResponse("DescribeWorkflowExecution", request, resp)
+	return resp, err
+}
+
+
+func (c *Client) ListWorkflowTypes(request ListWorkflowTypesRequest) (*ListWorkflowTypesResponse, error){
+	resp := &ListWorkflowTypesResponse{}
+	err := c.swfReqWithResponse("ListWorkflowTypes", request, resp)
+	return resp, err
+}
+
+func (c *Client) ListOpenWorkflowExecutions(request ListOpenWorkflowExecutionsRequest) (*ListOpenWorkflowExecutionsResponse, error){
+	resp := &ListOpenWorkflowExecutionsResponse{}
+	err := c.swfReqWithResponse("ListOpenWorkflowExecutions", request, resp)
+	return resp, err
+}
+
+func (c *Client) ListClosedWorkflowExecutions(request ListClosedWorkflowExecutionsRequest) (*ListClosedWorkflowExecutionsResponse, error){
+	resp := &ListClosedWorkflowExecutionsResponse{}
+	err := c.swfReqWithResponse("ListClosedWorkflowExecutions", request, resp)
+	return resp, err
+}
+
+func (c *Client) GetWorkflowExecutionHistory(request GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error){
+	resp := &GetWorkflowExecutionHistoryResponse{}
+	err := c.swfReqWithResponse("GetWorkflowExecutionHistory", request, resp)
+	return resp, err
+}
+
+func (c *Client) ListDomains(request ListDomainsRequest) (*ListDomainsResponse, error){
+	resp := &ListDomainsResponse{}
+	err := c.swfReqWithResponse("ListDomains", request, resp)
 	return resp, err
 }
 

@@ -1,0 +1,10 @@
+{
+    "configuration": {
+        "workflowExecutionRetentionPeriodInDays": "string"
+    },
+    "domainInfo": {
+        "description": "string",
+        "name": "string",
+        "status": "string"
+    }
+}

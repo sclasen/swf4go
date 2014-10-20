@@ -1,0 +1,6 @@
+{
+    "maximumPageSize": "number",
+    "nextPageToken": "string",
+    "registrationStatus": "string",
+    "reverseOrder": "boolean"
+}

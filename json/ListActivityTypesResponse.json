@@ -1,0 +1,15 @@
+{
+    "nextPageToken": "string",
+    "typeInfos": [
+        {
+            "activityType": {
+                "name": "string",
+                "version": "string"
+            },
+            "creationDate": "number",
+            "deprecationDate": "number",
+            "description": "string",
+            "status": "string"
+        }
+    ]
+}
