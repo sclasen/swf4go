@@ -2,13 +2,13 @@ package swf
 
 /*WorkflowProtocol*/
 type StartWorkflowRequest struct {
-	ChildPolicy                  string       `json:"childPolicy"`
+	ChildPolicy                  string       `json:"childPolicy,omitempty"`
 	Domain                       string       `json:"domain"`
-	ExecutionStartToCloseTimeout string       `json:"executionStartToCloseTimeout"`
-	Input                        string       `json:"input"`
-	TagList                      []string     `json:"tagList"`
-	TaskList                     TaskList     `json:"taskList"`
-	TaskStartToCloseTimeout      string       `json:"taskStartToCloseTimeout"`
+	ExecutionStartToCloseTimeout string       `json:"executionStartToCloseTimeout,omitempty"`
+	Input                        string       `json:"input,omitempty"`
+	TagList                      []string     `json:"tagList,omitempty"`
+	TaskList                     *TaskList     `json:"taskList,omitempty"`
+	TaskStartToCloseTimeout      string       `json:"taskStartToCloseTimeout,omitempty"`
 	WorkflowId                   string       `json:"workflowId"`
 	WorkflowType                 WorkflowType `json:"workflowType"`
 }
@@ -19,49 +19,49 @@ type StartWorkflowResponse struct {
 
 type RequestCancelWorkflowExecution struct {
 	Domain     string `json:"domain"`
-	RunId      string `json:"runId"`
+	RunId      string `json:"runId,omitempty"`
 	WorkflowId string `json:"workflowId"`
 }
 
 type SignalWorkflowRequest struct {
 	Domain     string `json:"domain"`
-	Input      string `json:"input"`
-	RunId      string `json:"runId"`
+	Input      string `json:"input,omitempty"`
+	RunId      string `json:"runId,omitempty"`
 	SignalName string `json:"signalName"`
 	WorkflowId string `json:"workflowId"`
 }
 
 type ListWorkflowTypesRequest struct {
 	Domain             string  `json:"domain"`
-	MaximumPageSize    int     `json:"maximumPageSize"`
-	Name               *string `json:"name"`
-	NextPageToken      *string `json:"nextPageToken"`
+	MaximumPageSize    int     `json:"maximumPageSize,omitempty"`
+	Name               string `json:"name,omitempty"`
+	NextPageToken      string `json:"nextPageToken,omitempty"`
 	RegistrationStatus string  `json:"registrationStatus"`
-	ReverseOrder       bool    `json:"reverseOrder"`
+	ReverseOrder       bool    `json:"reverseOrder,omitempty"`
 }
 
 type ListWorkflowTypesResponse struct {
-	NextPageToken *string            `json:"nextPageToken"`
+	NextPageToken string            `json:"nextPageToken,omitempty"`
 	TypeInfos     []WorkflowTypeInfo `json:"typeInfos"`
 }
 
 type TerminateWorkflowExecution struct {
-	ChildPolicy string `json:"childPolicy"`
-	Details     string `json:"details"`
+	ChildPolicy string `json:"childPolicy,omitempty"`
+	Details     string `json:"details,omitempty"`
 	Domain      string `json:"domain"`
-	Reason      string `json:"reason"`
-	RunId       string `json:"runId"`
-	WorkflowId  string `json:"workflowId"`
+	Reason      string `json:"reason,omitempty"`
+	RunId       string `json:"runId,omitempty"`
+	WorkflowId  string `json:"workflowId,omitempty"`
 }
 
 /*DecisionWorkerProtocol*/
 
 type PollForDecisionTaskRequest struct {
 	Domain          string   `json:"domain"`
-	Identity        string   `json:"identity"`
-	MaximumPageSize int      `json:"maximumPageSize"`
-	NextPageToken   *string  `json:"nextPageToken"`
-	ReverseOrder    bool     `json:"reverseOrder"`
+	Identity        string   `json:"identity,omitempty"`
+	MaximumPageSize int      `json:"maximumPageSize,omitempty"`
+	NextPageToken   string  `json:"nextPageToken,omitempty"`
+	ReverseOrder    bool     `json:"reverseOrder,omitempty"`
 	TaskList        TaskList `json:"taskList"`
 }
 
@@ -510,7 +510,7 @@ type RespondDecisionTaskCompletedRequest struct {
 
 type PollForActivityTaskRequest struct {
 	Domain   string   `json:"domain"`
-	Identity string   `json:"identity"`
+	Identity string   `json:"identity,omitempty"`
 	TaskList TaskList `json:"taskList"`
 }
 
@@ -524,23 +524,23 @@ type PollForActivityTaskResponse struct {
 }
 
 type RespondActivityTaskCompletedRequest struct {
-	Result    string `json:"result"`
+	Result    string `json:"result,omitempty"`
 	TaskToken string `json:"taskToken"`
 }
 
 type RespondActivityTaskFailedRequest struct {
-	Details   string `json:"details"`
-	Reason    string `json:"reason"`
+	Details   string `json:"details,omitempty"`
+	Reason    string `json:"reason,omitempty"`
 	TaskToken string `json:"taskToken"`
 }
 
 type RespondActivityTaskCanceledRequest struct {
-	Details   string `json:"details"`
+	Details   string `json:"details,omitempty"`
 	TaskToken string `json:"taskToken"`
 }
 
 type RecordActivityTaskHeartbeatRequest struct {
-	Details   string `json:"details"`
+	Details   string `json:"details,omitempty"`
 	TaskToken string `json:"taskToken"`
 }
 
@@ -564,29 +564,29 @@ type DeprecateDomain struct {
 }
 
 type RegisterActivityType struct {
-	DefaultTaskHeartbeatTimeout       string   `json:"defaultTaskHeartbeatTimeout"`
-	DefaultTaskList                   TaskList `json:"defaultTaskList"`
-	DefaultTaskScheduleToCloseTimeout string   `json:"defaultTaskScheduleToCloseTimeout"`
-	DefaultTaskScheduleToStartTimeout string   `json:"defaultTaskScheduleToStartTimeout"`
-	DefaultTaskStartToCloseTimeout    string   `json:"defaultTaskStartToCloseTimeout"`
-	Description                       string   `json:"description"`
+	DefaultTaskHeartbeatTimeout       string   `json:"defaultTaskHeartbeatTimeout,omitempty"`
+	DefaultTaskList                   *TaskList `json:"defaultTaskList",omitempty`
+	DefaultTaskScheduleToCloseTimeout string   `json:"defaultTaskScheduleToCloseTimeout,omitempty"`
+	DefaultTaskScheduleToStartTimeout string   `json:"defaultTaskScheduleToStartTimeout,omitempty"`
+	DefaultTaskStartToCloseTimeout    string   `json:"defaultTaskStartToCloseTimeout,omitempty"`
+	Description                       string   `json:"description,omitempty"`
 	Domain                            string   `json:"domain"`
 	Name                              string   `json:"name"`
 	Version                           string   `json:"version"`
 }
 
 type RegisterDomain struct {
-	Description                            string `json:"description"`
+	Description                            string `json:"description,omitempty"`
 	Name                                   string `json:"name"`
 	WorkflowExecutionRetentionPeriodInDays string `json:"workflowExecutionRetentionPeriodInDays"`
 }
 
 type RegisterWorkflowType struct {
-	DefaultChildPolicy                  string   `json:"defaultChildPolicy"`
-	DefaultExecutionStartToCloseTimeout string   `json:"defaultExecutionStartToCloseTimeout"`
-	DefaultTaskList                     TaskList `json:"defaultTaskList"`
-	DefaultTaskStartToCloseTimeout      string   `json:"defaultTaskStartToCloseTimeout"`
-	Description                         string   `json:"description"`
+	DefaultChildPolicy                  string   `json:"defaultChildPolicy,omitempty"`
+	DefaultExecutionStartToCloseTimeout string   `json:"defaultExecutionStartToCloseTimeout,omitempty"`
+	DefaultTaskList                     *TaskList `json:"defaultTaskList,omitempty"`
+	DefaultTaskStartToCloseTimeout      string   `json:"defaultTaskStartToCloseTimeout,omitempty"`
+	Description                         string   `json:"description,omitempty"`
 	Domain                              string   `json:"domain"`
 	Name                                string   `json:"name"`
 	Version                             string   `json:"version"`
@@ -594,21 +594,21 @@ type RegisterWorkflowType struct {
 
 /*WorkflowInfoProtocol*/
 type CountClosedWorkflowExecutionsRequest struct {
-	CloseStatusFilter StatusFilter    `json:"closeStatusFilter"`
-	CloseTimeFilter   TimeFilter      `json:"closeTimeFilter"`
-	Domain            string          `json:"domain"`
-	ExecutionFilter   ExecutionFilter `json:"executionFilter"`
-	StartTimeFilter   TimeFilter      `json:"startTimeFilter"`
-	TagFilter         TagFilter       `json:"tagFilter"`
-	TypeFilter        TypeFilter      `json:"typeFilter"`
+	CloseStatusFilter *StatusFilter    `json:"closeStatusFilter,omitempty"`
+	CloseTimeFilter  *TimeFilter      `json:"closeTimeFilter,omitempty"`
+	Domain           string          `json:"domain"`
+	ExecutionFilter   *ExecutionFilter `json:"executionFilter,omitempty"`
+	StartTimeFilter   *TimeFilter      `json:"startTimeFilter,omitempty"`
+	TagFilter         *TagFilter       `json:"tagFilter,omitempty"`
+	TypeFilter       *TypeFilter      `json:"typeFilter,omitempty"`
 }
 
 type CountOpenWorkflowExecutionsRequest struct {
 	Domain          string          `json:"domain"`
-	ExecutionFilter ExecutionFilter `json:"executionFilter"`
-	StartTimeFilter TimeFilter      `json:"startTimeFilter"`
-	TagFilter       TagFilter       `json:"tagFilter"`
-	TypeFilter      TypeFilter      `json:"typeFilter"`
+	ExecutionFilter *ExecutionFilter `json:"executionFilter,omitempty"`
+	StartTimeFilter *TimeFilter      `json:"startTimeFilter,omitempty"`
+	TagFilter       *TagFilter       `json:"tagFilter,omitempty"`
+	TypeFilter      *TypeFilter      `json:"typeFilter,omitempty"`
 }
 
 type CountPendingActivityTasksRequest struct {
@@ -717,23 +717,23 @@ type WorkflowConfiguration struct {
 type GetWorkflowExecutionHistoryRequest struct {
 	Domain          string            `json:"domain"`
 	Execution       WorkflowExecution `json:"execution"`
-	MaximumPageSize int               `json:"maximumPageSize"`
-	NextPageToken   *string           `json:"nextPageToken"`
-	ReverseOrder    bool              `json:"reverseOrder"`
+	MaximumPageSize int               `json:"maximumPageSize,omitempty"`
+	NextPageToken   string           `json:"nextPageToken,omitempty"`
+	ReverseOrder    bool              `json:"reverseOrder,omitempty"`
 }
 
 type GetWorkflowExecutionHistoryResponse struct {
 	Events        []HistoryEvent `json:"events"`
-	NextPageToken string         `json:"nextPageToken"`
+	NextPageToken string         `json:"nextPageToken,omitempty"`
 }
 
 type ListActivityTypesRequest struct {
 	Domain             string  `json:"domain"`
-	MaximumPageSize    int     `json:"maximumPageSize"`
-	Name               string  `json:"name"`
-	NextPageToken      *string `json:"nextPageToken"`
+	MaximumPageSize    int     `json:"maximumPageSize,omitempty"`
+	Name               string  `json:"name,omitempty"`
+	NextPageToken      string `json:"nextPageToken,omitempty"`
 	RegistrationStatus string  `json:"registrationStatus"`
-	ReverseOrder       bool    `json:"reverseOrder"`
+	ReverseOrder       bool    `json:"reverseOrder,omitempty"`
 }
 
 type ListActivityTypesResponse struct {
@@ -742,49 +742,49 @@ type ListActivityTypesResponse struct {
 }
 
 type ListClosedWorkflowExecutionsRequest struct {
-	CloseStatusFilter StatusFilter    `json:"closeStatusFilter"`
-	CloseTimeFilter   TimeFilter      `json:"closeTimeFilter"`
+	CloseStatusFilter *StatusFilter    `json:"closeStatusFilter,omitempty"`
+	CloseTimeFilter   *TimeFilter      `json:"closeTimeFilter,omitempty"`
 	Domain            string          `json:"domain"`
-	ExecutionFilter   ExecutionFilter `json:"executionFilter"`
-	MaximumPageSize   int             `json:"maximumPageSize"`
-	NextPageToken     *string         `json:"nextPageToken"`
-	ReverseOrder      bool            `json:"reverseOrder"`
-	StartTimeFilter   TimeFilter      `json:"startTimeFilter"`
-	TagFilter         TagFilter       `json:"tagFilter"`
-	TypeFilter        TypeFilter      `json:"typeFilter"`
+	ExecutionFilter   *ExecutionFilter `json:"executionFilter,omitempty"`
+	MaximumPageSize   int             `json:"maximumPageSize,omitempty"`
+	NextPageToken     string         `json:"nextPageToken,omitempty"`
+	ReverseOrder      bool            `json:"reverseOrde,omitemptyr"`
+	StartTimeFilter   *TimeFilter      `json:"startTimeFilter,omitempty"`
+	TagFilter         *TagFilter       `json:"tagFilter,omitempty"`
+	TypeFilter        *TypeFilter      `json:"typeFilter,omitempty"`
 }
 
 type ListClosedWorkflowExecutionsResponse struct {
 	ExecutionInfos []WorkflowExecutionInfo `json:"executionInfos"`
-	NextPageToken  *string                 `json:"nextPageToken"`
+	NextPageToken   string                 `json:"nextPageToken,omitempty"`
 }
 
 type ListDomainsRequest struct {
-	MaximumPageSize    int     `json:"maximumPageSize"`
-	NextPageToken      *string `json:"nextPageToken"`
+	MaximumPageSize    int     `json:"maximumPageSize,omitempty"`
+	NextPageToken      string `json:"nextPageToken,omitempty"`
 	RegistrationStatus string  `json:"registrationStatus"`
-	ReverseOrder       bool    `json:"reverseOrder"`
+	ReverseOrder       bool    `json:"reverseOrder,omitempty"`
 }
 
 type ListDomainsResponse struct {
 	DomainInfos   []DomainInfo `json:"domainInfos"`
-	NextPageToken *string      `json:"nextPageToken"`
+	NextPageToken string      `json:"nextPageToken,omitempty"`
 }
 
 type ListOpenWorkflowExecutionsRequest struct {
 	Domain          string          `json:"domain"`
-	ExecutionFilter ExecutionFilter `json:"executionFilter"`
-	MaximumPageSize int             `json:"maximumPageSize"`
-	NextPageToken   *string         `json:"nextPageToken"`
-	ReverseOrder    bool            `json:"reverseOrder"`
-	StartTimeFilter TimeFilter      `json:"startTimeFilter"`
-	TagFilter       TagFilter       `json:"tagFilter"`
-	TypeFilter      TypeFilter      `json:"typeFilter"`
+	ExecutionFilter *ExecutionFilter `json:"executionFilter,omitempty"`
+	MaximumPageSize int             `json:"maximumPageSize,omitempty"`
+	NextPageToken   string         `json:"nextPageToken,omitempty"`
+	ReverseOrder    bool            `json:"reverseOrder,omitempty"`
+	StartTimeFilter *TimeFilter      `json:"startTimeFilter,omitempty"`
+	TagFilter       *TagFilter       `json:"tagFilter,omitempty"`
+	TypeFilter      *TypeFilter      `json:"typeFilter,omitempty"`
 }
 
 type ListOpenWorkflowExecutionsResponse struct {
 	ExecutionInfos []WorkflowExecutionInfo `json:"executionInfos"`
-	NextPageToken  *string                 `json:"nextPageToken"`
+	NextPageToken  string                 `json:"nextPageToken,omitempty"`
 }
 
 type WorkflowExecutionInfo struct {
@@ -808,8 +808,8 @@ type CountResponse struct {
 	Truncated string `json:"truncated"`
 }
 type TimeFilter struct {
-	LatestDate string `json:"latestDate"`
-	OldestDate string `json:"oldestDate"`
+	LatestDate float32 `json:"latestDate"`
+	OldestDate float32 `json:"oldestDate"`
 }
 
 type ExecutionFilter struct {

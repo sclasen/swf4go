@@ -19,4 +19,14 @@ func TestListWorkflowTypes(t *testing.T) {
 	}
 
 	log.Printf("%+v", resp)
+
+	count, err := client.CountOpenWorkflowExecutions(CountOpenWorkflowExecutionsRequest{
+		Domain:"swf4go",
+    })
+
+	if err != nil {
+		t.Fail()
+	}
+
+	log.Printf("%+v", count)
 }
