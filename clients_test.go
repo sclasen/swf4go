@@ -21,10 +21,14 @@ func TestListWorkflowTypes(t *testing.T) {
 	log.Printf("%+v", resp)
 
 	count, err := client.CountOpenWorkflowExecutions(CountOpenWorkflowExecutionsRequest{
-		Domain:"swf4go",
-    })
+		Domain: "swf4go",
+		StartTimeFilter: &TimeFilter{
+			OldestDate: 0,
+		},
+	})
 
 	if err != nil {
+		log.Printf("%+v", err)
 		t.Fail()
 	}
 
