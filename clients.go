@@ -220,32 +220,31 @@ func (c *Client) DescribeWorkflowExecution(request DescribeWorkflowExecutionRequ
 	return resp, err
 }
 
-
-func (c *Client) ListWorkflowTypes(request ListWorkflowTypesRequest) (*ListWorkflowTypesResponse, error){
+func (c *Client) ListWorkflowTypes(request ListWorkflowTypesRequest) (*ListWorkflowTypesResponse, error) {
 	resp := &ListWorkflowTypesResponse{}
 	err := c.swfReqWithResponse("ListWorkflowTypes", request, resp)
 	return resp, err
 }
 
-func (c *Client) ListOpenWorkflowExecutions(request ListOpenWorkflowExecutionsRequest) (*ListOpenWorkflowExecutionsResponse, error){
+func (c *Client) ListOpenWorkflowExecutions(request ListOpenWorkflowExecutionsRequest) (*ListOpenWorkflowExecutionsResponse, error) {
 	resp := &ListOpenWorkflowExecutionsResponse{}
 	err := c.swfReqWithResponse("ListOpenWorkflowExecutions", request, resp)
 	return resp, err
 }
 
-func (c *Client) ListClosedWorkflowExecutions(request ListClosedWorkflowExecutionsRequest) (*ListClosedWorkflowExecutionsResponse, error){
+func (c *Client) ListClosedWorkflowExecutions(request ListClosedWorkflowExecutionsRequest) (*ListClosedWorkflowExecutionsResponse, error) {
 	resp := &ListClosedWorkflowExecutionsResponse{}
 	err := c.swfReqWithResponse("ListClosedWorkflowExecutions", request, resp)
 	return resp, err
 }
 
-func (c *Client) GetWorkflowExecutionHistory(request GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error){
+func (c *Client) GetWorkflowExecutionHistory(request GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error) {
 	resp := &GetWorkflowExecutionHistoryResponse{}
 	err := c.swfReqWithResponse("GetWorkflowExecutionHistory", request, resp)
 	return resp, err
 }
 
-func (c *Client) ListDomains(request ListDomainsRequest) (*ListDomainsResponse, error){
+func (c *Client) ListDomains(request ListDomainsRequest) (*ListDomainsResponse, error) {
 	resp := &ListDomainsResponse{}
 	err := c.swfReqWithResponse("ListDomains", request, resp)
 	return resp, err
