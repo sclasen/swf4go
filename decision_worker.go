@@ -12,33 +12,61 @@ func NewDecisionWorker(client *Client, stateSerializer StateSerializer, idGenera
 	return &DecisionWorker{client: client, StateSerializer: stateSerializer, idGenerator: idGenerator}
 }
 
-func (d *DecisionWorker) DecideToScheduleActivity(taskToken string, activityName string, activityVersion string, activityTaskList string, input interface{}) error {
+func (d *DecisionWorker) ScheduleActivityTaskDecision(activityName string, activityVersion string, activityTaskList string, input interface{}) (*Decision, error) {
 	serialized, err := d.StateSerializer.Serialize(input)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = d.client.RespondDecisionTaskCompleted(
-		RespondDecisionTaskCompletedRequest{
-			Decisions: []Decision{
-				Decision{DecisionType: "ScheduleActivityTask",
-					ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
-						ActivityId: d.idGenerator.ActivityID(),
-						ActivityType: ActivityType{
-							Name: activityName, Version: activityVersion,
-						},
-						Input: serialized,
-						ScheduleToStartTimeout: "NONE",
-						ScheduleToCloseTimeout: "NONE",
-						StartToCloseTimeout:    "NONE",
-						HeartbeatTimeout:       "NONE",
-						TaskList: TaskList{
-							Name: activityTaskList,
-						},
-					}},
+	return &Decision{
+		DecisionType: "ScheduleActivityTask",
+		ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
+			ActivityId: d.idGenerator.ActivityID(),
+			ActivityType: ActivityType{
+				Name: activityName, Version: activityVersion,
 			},
+			Input: serialized,
+			ScheduleToStartTimeout: "NONE",
+			ScheduleToCloseTimeout: "NONE",
+			StartToCloseTimeout:    "NONE",
+			HeartbeatTimeout:       "NONE",
+			TaskList: TaskList{
+				Name: activityTaskList,
+			},
+		},
+	}, nil
+}
+
+func (d *DecisionWorker) StartChildWorkflowExecutionDecision(workflowType string, workflowVersion string, childPolicy string, taskList string, tags []string, input string) (*Decision, error) {
+	serialized, err := d.StateSerializer.Serialize(input)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Decision{
+		DecisionType: "StartChildWorkflowExecution",
+		StartChildWorkflowExecutionDecisionAttributes: &StartChildWorkflowExecutionDecisionAttributes{
+			ChildPolicy: childPolicy,
+			Input:       serialized,
+			TagList:     tags,
+			TaskList: TaskList{
+				Name: taskList,
+			},
+			WorkflowType: WorkflowType{
+				Name:    workflowType,
+				Version: workflowVersion,
+			},
+		},
+	}, nil
+}
+
+func (d *DecisionWorker) Decide(taskToken string, decisions []*Decision) error {
+	err := d.client.RespondDecisionTaskCompleted(
+		RespondDecisionTaskCompletedRequest{
+			Decisions: decisions,
 			TaskToken: taskToken,
 		})
+
 	return err
 }
 

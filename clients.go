@@ -80,6 +80,7 @@ var (
 type Client struct {
 	keys   *Keys
 	Region *Region
+	Debug bool
 }
 
 func NewClient(key string, secret string, region *Region) *Client {
@@ -296,23 +297,27 @@ func (c *Client) prepareAndExecuteRequest(operation string, request interface{})
 		return nil, err
 	}
 
-	out, err := httputil.DumpRequestOut(req, true)
-	if err != nil {
-		return nil, err
+	if c.Debug {
+		out, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			return nil, err
+		}
+		Multiln(string(out))
 	}
-	Multiln(string(out))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
-	out, err = httputil.DumpResponse(resp, true)
-	if err != nil {
-		return nil, err
+	if c.Debug {
+		defer resp.Body.Close()
+		out, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			return nil, err
+		}
+		Multiln(string(out))
 	}
-	Multiln(string(out))
 
 	return resp, nil
 }
