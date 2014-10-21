@@ -260,6 +260,8 @@ func (c *Client) swfReqWithResponse(operation string, request interface{}, respo
 	}
 	defer resp.Body.Close()
 	err = json.NewDecoder(resp.Body).Decode(response)
+	pretty, _ := json.MarshalIndent(response, "", "    ")
+	log.Println(string(pretty))
 	return err
 }
 
