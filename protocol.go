@@ -469,12 +469,12 @@ type ScheduleActivityTaskDecisionAttributes struct {
 	ActivityId             string       `json:"activityId"`
 	ActivityType           ActivityType `json:"activityType"`
 	Control                string       `json:"control"`
-	HeartbeatTimeout       string       `json:"heartbeatTimeout"`
-	Input                  string       `json:"input"`
-	ScheduleToCloseTimeout string       `json:"scheduleToCloseTimeout"`
-	ScheduleToStartTimeout string       `json:"scheduleToStartTimeout"`
-	StartToCloseTimeout    string       `json:"startToCloseTimeout"`
-	TaskList               TaskList     `json:"taskList"`
+	HeartbeatTimeout       string       `json:"heartbeatTimeout,omitempty"`
+	Input                  string       `json:"input,omitempty"`
+	ScheduleToCloseTimeout string       `json:"scheduleToCloseTimeout,omitempty"`
+	ScheduleToStartTimeout string       `json:"scheduleToStartTimeout,omitempty"`
+	StartToCloseTimeout    string       `json:"startToCloseTimeout,omitempty"`
+	TaskList               TaskList     `json:"taskList,omitempty"`
 }
 type SignalExternalWorkflowExecutionDecisionAttributes struct {
 	Control    string `json:"control"`
