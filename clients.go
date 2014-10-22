@@ -3,7 +3,6 @@ package swf
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -262,10 +261,14 @@ func (c *Client) swfReqWithResponse(operation string, request interface{}, respo
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode != 200 {
-		return errors.New("non 200")
-	}
 	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		errResp := new(ErrorResponse)
+		if err := json.NewDecoder(resp.Body).Decode(errResp); err != nil {
+			return err
+		}
+		return errResp
+	}
 	err = json.NewDecoder(resp.Body).Decode(response)
 	pretty, _ := json.MarshalIndent(response, "", "    ")
 	log.Println(string(pretty))
@@ -277,8 +280,13 @@ func (c *Client) swfReqNoResponse(operation string, request interface{}) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return errors.New("non 200")
+		response := new(ErrorResponse)
+		if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
+			return err
+		}
+		return response
 	}
 	return err
 }
