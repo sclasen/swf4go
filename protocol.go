@@ -1,5 +1,15 @@
 package swf
 
+type ErrorResponse struct {
+	StatusCode int
+	Type       string `json:"__type"`
+	Message    string `json:"message"`
+}
+
+func (err *ErrorResponse) Error() string {
+	return err.Type + ": " + err.Message
+}
+
 /*WorkflowProtocol*/
 type StartWorkflowRequest struct {
 	ChildPolicy                  string       `json:"childPolicy,omitempty"`
