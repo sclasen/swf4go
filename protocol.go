@@ -621,7 +621,7 @@ type RecordActivityTaskHeartbeatRequest struct {
 }
 
 type RecordActivityTaskHeartbeatResponse struct {
-	CancelRequested string `json:"cancelRequested"`
+	CancelRequested bool `json:"cancelRequested"`
 }
 
 /*admin protocol*/
