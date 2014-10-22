@@ -7,7 +7,7 @@ import (
 func TestFSM(t *testing.T) {
 
 	fsm := FSM{
-		DecisionWorker: DecisionWorker{StateSerializer: JsonStateSerializer{}, idGenerator: UUIDGenerator{}},
+		DecisionWorker: &DecisionWorker{StateSerializer: JsonStateSerializer{}, idGenerator: UUIDGenerator{}},
 		EmptyData:      func() interface{} { return &TestData{} },
 		states:         make(map[string]*FSMState),
 	}
