@@ -46,6 +46,9 @@ func (f *FSM) AddInitialState(state *FSMState) {
 	f.initialState = state
 }
 func (f *FSM) AddState(state *FSMState) {
+	if f.states == nil {
+		f.states = make(map[string]*FSMState)
+	}
 	f.states[state.Name] = state
 }
 
