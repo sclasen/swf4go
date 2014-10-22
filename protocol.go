@@ -82,56 +82,57 @@ type PollForDecisionTaskResponse struct {
 // TimerStarted | StartTimerFailed | TimerFired | TimerCanceled | CancelTimerFailed | StartChildWorkflowExecutionInitiated | StartChildWorkflowExecutionFailed | ChildWorkflowExecutionStarted |
 // ChildWorkflowExecutionCompleted | ChildWorkflowExecutionFailed | ChildWorkflowExecutionTimedOut | ChildWorkflowExecutionCanceled | ChildWorkflowExecutionTerminated | SignalExternalWorkflowExecutionInitiated |
 // SignalExternalWorkflowExecutionFailed | ExternalWorkflowExecutionSignaled | RequestCancelExternalWorkflowExecutionInitiated | RequestCancelExternalWorkflowExecutionFailed | ExternalWorkflowExecutionCancelRequested
- 
+
 const (
-	EventTypeWorkflowExecutionStarted = "WorkflowExecutionStarted" 
-	EventTypeWorkflowExecutionCancelRequested = "WorkflowExecutionCancelRequested" 
-	EventTypeWorkflowExecutionCompleted = "WorkflowExecutionCompleted" 
-	EventTypeCompleteWorkflowExecutionFailed = "CompleteWorkflowExecutionFailed" 
-	EventTypeWorkflowExecutionFailed = "WorkflowExecutionFailed" 
-	EventTypeFailWorkflowExecutionFailed ="FailWorkflowExecutionFailed"
-	EventTypeWorkflowExecutionTimedOut ="WorkflowExecutionTimedOut" 
-	EventTypeWorkflowExecutionCanceled ="WorkflowExecutionCanceled" 
-	EventTypeCancelWorkflowExecutionFailed ="CancelWorkflowExecutionFailed" 
-	EventTypeWorkflowExecutionContinuedAsNew ="WorkflowExecutionContinuedAsNew" 
-	EventTypeContinueAsNewWorkflowExecutionFailed ="ContinueAsNewWorkflowExecutionFailed" 
-	EventTypeWorkflowExecutionTerminated ="WorkflowExecutionTerminated"
-	EventTypeDecisionTaskScheduled ="DecisionTaskScheduled" 
-	EventTypeDecisionTaskStarted ="DecisionTaskStarted" 
-	EventTypeDecisionTaskCompleted ="DecisionTaskCompleted" 
-	EventTypeDecisionTaskTimedOut ="DecisionTaskTimedOut" 
-	EventTypeActivityTaskScheduled ="ActivityTaskScheduled" 
-	EventTypeScheduleActivityTaskFailed ="ScheduleActivityTaskFailed" 
-	EventTypeActivityTaskStarted ="ActivityTaskStarted" 
-	EventTypeActivityTaskCompleted ="ActivityTaskCompleted"
-	EventTypeActivityTaskFailed ="ActivityTaskFailed" 
-	EventTypeActivityTaskTimedOut ="ActivityTaskTimedOut" 
-	EventTypeActivityTaskCanceled ="ActivityTaskCanceled" 
-	EventTypeActivityTaskCancelRequested ="ActivityTaskCancelRequested" 
-	EventTypeRequestCancelActivityTaskFailed ="RequestCancelActivityTaskFailed" 
-	EventTypeWorkflowExecutionSignaled ="WorkflowExecutionSignaled" 
-	EventTypeMarkerRecorded ="MarkerRecorded" 
-	EventTypeRecordMarkerFailed ="RecordMarkerFailed"
-	EventTypeTimerStarted ="TimerStarted" 
-	EventTypeStartTimerFailed ="StartTimerFailed" 
-	EventTypeTimerFired ="TimerFired" 
-	EventTypeTimerCanceled ="TimerCanceled" 
-	EventTypeCancelTimerFailed ="CancelTimerFailed" 
-	EventTypeStartChildWorkflowExecutionInitiated ="StartChildWorkflowExecutionInitiated" 
-	EventTypeStartChildWorkflowExecutionFailed ="StartChildWorkflowExecutionFailed" 
-	EventTypeChildWorkflowExecutionStarted ="ChildWorkflowExecutionStarted"
-	EventTypeChildWorkflowExecutionCompleted ="ChildWorkflowExecutionCompleted" 
-	EventTypeChildWorkflowExecutionFailed ="ChildWorkflowExecutionFailed" 
-	EventTypeChildWorkflowExecutionTimedOut ="ChildWorkflowExecutionTimedOut" 
-	EventTypeChildWorkflowExecutionCanceled ="ChildWorkflowExecutionCanceled" 
-	EventTypeChildWorkflowExecutionTerminated ="ChildWorkflowExecutionTerminated" 
-	EventTypeSignalExternalWorkflowExecutionInitiated ="SignalExternalWorkflowExecutionInitiated"
-	EventTypeSignalExternalWorkflowExecutionFailed ="SignalExternalWorkflowExecutionFailed" 
-	EventTypeExternalWorkflowExecutionSignaled ="ExternalWorkflowExecutionSignaled" 
-	EventTypeRequestCancelExternalWorkflowExecutionInitiated ="RequestCancelExternalWorkflowExecutionInitiated" 
-	EventTypeRequestCancelExternalWorkflowExecutionFailed ="RequestCancelExternalWorkflowExecutionFailed" 
-	EventTypeExternalWorkflowExecutionCancelRequested ="ExternalWorkflowExecutionCancelRequested"
+	EventTypeWorkflowExecutionStarted                        = "WorkflowExecutionStarted"
+	EventTypeWorkflowExecutionCancelRequested                = "WorkflowExecutionCancelRequested"
+	EventTypeWorkflowExecutionCompleted                      = "WorkflowExecutionCompleted"
+	EventTypeCompleteWorkflowExecutionFailed                 = "CompleteWorkflowExecutionFailed"
+	EventTypeWorkflowExecutionFailed                         = "WorkflowExecutionFailed"
+	EventTypeFailWorkflowExecutionFailed                     = "FailWorkflowExecutionFailed"
+	EventTypeWorkflowExecutionTimedOut                       = "WorkflowExecutionTimedOut"
+	EventTypeWorkflowExecutionCanceled                       = "WorkflowExecutionCanceled"
+	EventTypeCancelWorkflowExecutionFailed                   = "CancelWorkflowExecutionFailed"
+	EventTypeWorkflowExecutionContinuedAsNew                 = "WorkflowExecutionContinuedAsNew"
+	EventTypeContinueAsNewWorkflowExecutionFailed            = "ContinueAsNewWorkflowExecutionFailed"
+	EventTypeWorkflowExecutionTerminated                     = "WorkflowExecutionTerminated"
+	EventTypeDecisionTaskScheduled                           = "DecisionTaskScheduled"
+	EventTypeDecisionTaskStarted                             = "DecisionTaskStarted"
+	EventTypeDecisionTaskCompleted                           = "DecisionTaskCompleted"
+	EventTypeDecisionTaskTimedOut                            = "DecisionTaskTimedOut"
+	EventTypeActivityTaskScheduled                           = "ActivityTaskScheduled"
+	EventTypeScheduleActivityTaskFailed                      = "ScheduleActivityTaskFailed"
+	EventTypeActivityTaskStarted                             = "ActivityTaskStarted"
+	EventTypeActivityTaskCompleted                           = "ActivityTaskCompleted"
+	EventTypeActivityTaskFailed                              = "ActivityTaskFailed"
+	EventTypeActivityTaskTimedOut                            = "ActivityTaskTimedOut"
+	EventTypeActivityTaskCanceled                            = "ActivityTaskCanceled"
+	EventTypeActivityTaskCancelRequested                     = "ActivityTaskCancelRequested"
+	EventTypeRequestCancelActivityTaskFailed                 = "RequestCancelActivityTaskFailed"
+	EventTypeWorkflowExecutionSignaled                       = "WorkflowExecutionSignaled"
+	EventTypeMarkerRecorded                                  = "MarkerRecorded"
+	EventTypeRecordMarkerFailed                              = "RecordMarkerFailed"
+	EventTypeTimerStarted                                    = "TimerStarted"
+	EventTypeStartTimerFailed                                = "StartTimerFailed"
+	EventTypeTimerFired                                      = "TimerFired"
+	EventTypeTimerCanceled                                   = "TimerCanceled"
+	EventTypeCancelTimerFailed                               = "CancelTimerFailed"
+	EventTypeStartChildWorkflowExecutionInitiated            = "StartChildWorkflowExecutionInitiated"
+	EventTypeStartChildWorkflowExecutionFailed               = "StartChildWorkflowExecutionFailed"
+	EventTypeChildWorkflowExecutionStarted                   = "ChildWorkflowExecutionStarted"
+	EventTypeChildWorkflowExecutionCompleted                 = "ChildWorkflowExecutionCompleted"
+	EventTypeChildWorkflowExecutionFailed                    = "ChildWorkflowExecutionFailed"
+	EventTypeChildWorkflowExecutionTimedOut                  = "ChildWorkflowExecutionTimedOut"
+	EventTypeChildWorkflowExecutionCanceled                  = "ChildWorkflowExecutionCanceled"
+	EventTypeChildWorkflowExecutionTerminated                = "ChildWorkflowExecutionTerminated"
+	EventTypeSignalExternalWorkflowExecutionInitiated        = "SignalExternalWorkflowExecutionInitiated"
+	EventTypeSignalExternalWorkflowExecutionFailed           = "SignalExternalWorkflowExecutionFailed"
+	EventTypeExternalWorkflowExecutionSignaled               = "ExternalWorkflowExecutionSignaled"
+	EventTypeRequestCancelExternalWorkflowExecutionInitiated = "RequestCancelExternalWorkflowExecutionInitiated"
+	EventTypeRequestCancelExternalWorkflowExecutionFailed    = "RequestCancelExternalWorkflowExecutionFailed"
+	EventTypeExternalWorkflowExecutionCancelRequested        = "ExternalWorkflowExecutionCancelRequested"
 )
+
 type HistoryEvent struct {
 	ActivityTaskCancelRequestedEventAttributes                     *ActivityTaskCancelRequestedEventAttributes                     `json:"activityTaskCancelRequestedEventAttributes,omitempty"`
 	ActivityTaskCanceledEventAttributes                            *ActivityTaskCanceledEventAttributes                            `json:"activityTaskCanceledEventAttributes,omitempty"`
@@ -485,7 +486,7 @@ type Decision struct {
 	CancelWorkflowExecutionDecisionAttributes                *CancelWorkflowExecutionDecisionAttributes                `json:"cancelWorkflowExecutionDecisionAttributes,omitempty"`
 	CompleteWorkflowExecutionDecisionAttributes              *CompleteWorkflowExecutionDecisionAttributes              `json:"completeWorkflowExecutionDecisionAttributes,omitempty"`
 	ContinueAsNewWorkflowExecutionDecisionAttributes         *ContinueAsNewWorkflowExecutionDecisionAttributes         `json:"continueAsNewWorkflowExecutionDecisionAttributes,omitempty"`
-	DecisionType                                             string                                              `json:"decisionType"`
+	DecisionType                                             string                                                    `json:"decisionType"`
 	FailWorkflowExecutionDecisionAttributes                  *FailWorkflowExecutionDecisionAttributes                  `json:"failWorkflowExecutionDecisionAttributes,omitempty"`
 	RecordMarkerDecisionAttributes                           *RecordMarkerDecisionAttributes                           `json:"recordMarkerDecisionAttributes,omitempty"`
 	RequestCancelActivityTaskDecisionAttributes              *RequestCancelActivityTaskDecisionAttributes              `json:"requestCancelActivityTaskDecisionAttributes,omitempty"`
@@ -731,7 +732,7 @@ type DescribeWorkflowExecutionRequest struct {
 type DescribeWorkflowExecutionResponse struct {
 	ExecutionConfiguration      ExecutionConfiguration `json:"executionConfiguration"`
 	ExecutionInfo               ExecutionInfo          `json:"executionInfo"`
-	LatestActivityTaskTimestamp float32                 `json:"latestActivityTaskTimestamp"`
+	LatestActivityTaskTimestamp float32                `json:"latestActivityTaskTimestamp"`
 	LatestExecutionContext      string                 `json:"latestExecutionContext"`
 	OpenCounts                  OpenCounts             `json:"openCounts"`
 }
@@ -746,11 +747,11 @@ type ExecutionConfiguration struct {
 type ExecutionInfo struct {
 	CancelRequested string            `json:"cancelRequested"`
 	CloseStatus     string            `json:"closeStatus"`
-	CloseTimestamp  float32            `json:"closeTimestamp"`
+	CloseTimestamp  float32           `json:"closeTimestamp"`
 	Execution       WorkflowExecution `json:"execution"`
 	ExecutionStatus string            `json:"executionStatus"`
 	Parent          WorkflowExecution `json:"parent"`
-	StartTimestamp  float32            `json:"startTimestamp"`
+	StartTimestamp  float32           `json:"startTimestamp"`
 	TagList         []string          `json:"tagList"`
 	WorkflowType    WorkflowType      `json:"workflowType"`
 }
@@ -853,13 +854,13 @@ type ListOpenWorkflowExecutionsResponse struct {
 }
 
 type WorkflowExecutionInfo struct {
-	CancelRequested bool            `json:"cancelRequested"`
+	CancelRequested bool              `json:"cancelRequested"`
 	CloseStatus     string            `json:"closeStatus"`
-	CloseTimestamp  float32            `json:"closeTimestamp"`
+	CloseTimestamp  float32           `json:"closeTimestamp"`
 	Execution       WorkflowExecution `json:"execution"`
 	ExecutionStatus string            `json:"executionStatus"`
 	Parent          WorkflowExecution `json:"parent"`
-	StartTimestamp  float32            `json:"startTimestamp"`
+	StartTimestamp  float32           `json:"startTimestamp"`
 	TagList         []string          `json:"tagList"`
 	WorkflowType    WorkflowType      `json:"workflowType"`
 }

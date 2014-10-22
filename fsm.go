@@ -111,7 +111,7 @@ func (f *FSM) findLastEvent(events []HistoryEvent) HistoryEvent {
 			t != EventTypeDecisionTaskScheduled &&
 			t != EventTypeDecisionTaskCompleted &&
 			t != EventTypeDecisionTaskStarted &&
-		    t != EventTypeDecisionTaskTimedOut {
+			t != EventTypeDecisionTaskTimedOut {
 			return event
 		}
 	}
