@@ -24,6 +24,7 @@ func (w *WorkflowWorker) StartWorkflow(domain string, workflowName string, workf
 			WorkflowType: WorkflowType{
 				Name:    workflowName,
 				Version: workflowVersion},
+			TaskStartToCloseTimeout: "20",
 		})
 	if err != nil {
 		return "", err

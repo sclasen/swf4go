@@ -85,7 +85,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 
 func (f *FSM) findCurrentState(events []HistoryEvent) *FSMState {
 	for _, event := range events {
-		if event.EventType == "MarkerRecorded" && event.MarkerRecordedEventAttributes.MarkerName == "FSM.State" {
+		if event.EventType == EventTypeMarkerRecorded && event.MarkerRecordedEventAttributes.MarkerName == STATE_MARKER {
 			return f.states[event.MarkerRecordedEventAttributes.Details]
 		}
 	}
@@ -95,9 +95,9 @@ func (f *FSM) findCurrentState(events []HistoryEvent) *FSMState {
 //assumes events ordered newest to oldest
 func (f *FSM) findCurrentData(events []HistoryEvent) string {
 	for _, event := range events {
-		if event.EventType == "MarkerRecorded" && event.MarkerRecordedEventAttributes.MarkerName == "FSM.Data" {
+		if event.EventType == EventTypeMarkerRecorded && event.MarkerRecordedEventAttributes.MarkerName == DATA_MARKER {
 			return event.MarkerRecordedEventAttributes.Details
-		} else if event.EventType == "WorkflowExecutionStarted" {
+		} else if event.EventType == EventTypeWorkflowExecutionStarted {
 			return event.WorkflowExecutionStartedEventAttributes.Input
 		}
 	}
@@ -107,7 +107,11 @@ func (f *FSM) findCurrentData(events []HistoryEvent) string {
 func (f *FSM) findLastEvent(events []HistoryEvent) HistoryEvent {
 	for _, event := range events {
 		t := event.EventType
-		if t != "MarkerRecorded" && t != "DecisionTaskScheduled" && t != "DecisionTaskStarted" {
+		if t != EventTypeMarkerRecorded &&
+			t != EventTypeDecisionTaskScheduled &&
+			t != EventTypeDecisionTaskCompleted &&
+			t != EventTypeDecisionTaskStarted &&
+		    t != EventTypeDecisionTaskTimedOut {
 			return event
 		}
 	}

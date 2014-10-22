@@ -32,7 +32,7 @@ func (d *DecisionWorker) ScheduleActivityTaskDecision(activityName string, activ
 	}
 
 	return &Decision{
-		DecisionType: "ScheduleActivityTask",
+		DecisionType: DecisionTypeScheduleActivityTask,
 		ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
 			ActivityId: d.idGenerator.ActivityID(),
 			ActivityType: ActivityType{
@@ -50,14 +50,14 @@ func (d *DecisionWorker) ScheduleActivityTaskDecision(activityName string, activ
 	}, nil
 }
 
-func (d *DecisionWorker) StartChildWorkflowExecutionDecision(workflowType string, workflowVersion string, childPolicy string, taskList string, tags []string, input string) (*Decision, error) {
+func (d *DecisionWorker) StartChildWorkflowExecutionDecision(workflowType string, workflowVersion string, childPolicy string, taskList string, tags []string, input interface{}) (*Decision, error) {
 	serialized, err := d.StateSerializer.Serialize(input)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Decision{
-		DecisionType: "StartChildWorkflowExecution",
+		DecisionType: DecisionTypeStartChildWorkflowExecution,
 		StartChildWorkflowExecutionDecisionAttributes: &StartChildWorkflowExecutionDecisionAttributes{
 			ChildPolicy: childPolicy,
 			Input:       serialized,
@@ -87,7 +87,7 @@ func (d *DecisionWorker) RecordMarker(markerName string, details interface{}) (*
 
 func (d *DecisionWorker) RecordStringMarker(markerName string, details string) *Decision {
 	return &Decision{
-		DecisionType: "RecordMarker",
+		DecisionType: DecisionTypeRecordMarker,
 		RecordMarkerDecisionAttributes: &RecordMarkerDecisionAttributes{
 			MarkerName: markerName,
 			Details:    details,
@@ -102,7 +102,7 @@ func (d *DecisionWorker) CompleteWorkflowExecution(result interface{}) (*Decisio
 	}
 
 	return &Decision{
-		DecisionType: "CompleteWorkflowExecution",
+		DecisionType: DecisionTypeCompleteWorkflowExecution,
 		CompleteWorkflowExecutionDecisionAttributes: &CompleteWorkflowExecutionDecisionAttributes{
 			Result: serialized,
 		},
