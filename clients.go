@@ -141,7 +141,7 @@ func (c *Client) RespondActivityTaskFailed(request RespondActivityTaskFailedRequ
 	return err
 }
 
-func (c *Client) RespondActivityTaskCanceled(request RespondActivityTaskFailedRequest) error {
+func (c *Client) RespondActivityTaskCanceled(request RespondActivityTaskCanceledRequest) error {
 	err := c.swfReqNoResponse("RespondActivityTaskCanceled", request)
 	return err
 }
