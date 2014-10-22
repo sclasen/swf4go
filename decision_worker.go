@@ -3,13 +3,26 @@ package swf
 import "log"
 
 type DecisionWorker struct {
-	client          *Client
+	client          DecisionWorkerClient
+	infoClient      WorkflowInfoClient
 	StateSerializer StateSerializer
 	idGenerator     IdGenerator
 }
 
 func NewDecisionWorker(client *Client, stateSerializer StateSerializer, idGenerator IdGenerator) *DecisionWorker {
-	return &DecisionWorker{client: client, StateSerializer: stateSerializer, idGenerator: idGenerator}
+	return &DecisionWorker{client: client, infoClient: client, StateSerializer: stateSerializer, idGenerator: idGenerator}
+}
+
+func (d *DecisionWorker) ListOpenWorkflowExecutionsByTag(domain string, tag string) ([]WorkflowExecutionInfo, error) {
+	resp, err := d.infoClient.ListOpenWorkflowExecutions(ListOpenWorkflowExecutionsRequest{
+		Domain:          domain,
+		StartTimeFilter: TimeFilter{OldestDate: 0},
+		TagFilter:       &TagFilter{Tag: tag},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp.ExecutionInfos, nil
 }
 
 func (d *DecisionWorker) ScheduleActivityTaskDecision(activityName string, activityVersion string, activityTaskList string, input interface{}) (*Decision, error) {
@@ -52,10 +65,46 @@ func (d *DecisionWorker) StartChildWorkflowExecutionDecision(workflowType string
 			TaskList: TaskList{
 				Name: taskList,
 			},
+			ExecutionStartToCloseTimeout: "1000",
+			TaskStartToCloseTimeout:      "1000",
 			WorkflowType: WorkflowType{
 				Name:    workflowType,
 				Version: workflowVersion,
 			},
+			WorkflowId: d.idGenerator.WorkflowID(),
+		},
+	}, nil
+}
+
+func (d *DecisionWorker) RecordMarker(markerName string, details interface{}) (*Decision, error) {
+	serialized, err := d.StateSerializer.Serialize(details)
+	if err != nil {
+		return nil, err
+	}
+
+	return d.RecordStringMarker(markerName, serialized), nil
+}
+
+func (d *DecisionWorker) RecordStringMarker(markerName string, details string) *Decision {
+	return &Decision{
+		DecisionType: "RecordMarker",
+		RecordMarkerDecisionAttributes: &RecordMarkerDecisionAttributes{
+			MarkerName: markerName,
+			Details:    details,
+		},
+	}
+}
+
+func (d *DecisionWorker) CompleteWorkflowExecution(result interface{}) (*Decision, error) {
+	serialized, err := d.StateSerializer.Serialize(result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Decision{
+		DecisionType: "CompleteWorkflowExecution",
+		CompleteWorkflowExecutionDecisionAttributes: &CompleteWorkflowExecutionDecisionAttributes{
+			Result: serialized,
 		},
 	}, nil
 }
@@ -85,7 +134,7 @@ func (d *DecisionWorker) PollTaskList(domain string, identity string, taskList s
 }
 
 type DecisionTaskPoller struct {
-	client   *Client
+	client   DecisionWorkerClient
 	Identity string
 	Domain   string
 	TaskList string

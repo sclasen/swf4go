@@ -80,7 +80,7 @@ var (
 type Client struct {
 	keys   *Keys
 	Region *Region
-	Debug bool
+	Debug  bool
 }
 
 func NewClient(key string, secret string, region *Region) *Client {
@@ -218,6 +218,12 @@ func (c *Client) DescribeWorkflowType(request DescribeWorkflowTypeRequest) (*Des
 func (c *Client) DescribeWorkflowExecution(request DescribeWorkflowExecutionRequest) (*DescribeWorkflowExecutionResponse, error) {
 	resp := &DescribeWorkflowExecutionResponse{}
 	err := c.swfReqWithResponse("DescribeWorkflowExecution", request, resp)
+	return resp, err
+}
+
+func (c *Client) ListActivityTypes(request ListActivityTypesRequest) (*ListActivityTypesResponse, error) {
+	resp := &ListActivityTypesResponse{}
+	err := c.swfReqWithResponse("ListActivityTypes", request, resp)
 	return resp, err
 }
 

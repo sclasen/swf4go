@@ -502,8 +502,8 @@ type StartTimerDecisionAttributes struct {
 
 type RespondDecisionTaskCompletedRequest struct {
 	Decisions        []*Decision `json:"decisions"`
-	ExecutionContext string     `json:"executionContext"`
-	TaskToken        string     `json:"taskToken"`
+	ExecutionContext string      `json:"executionContext"`
+	TaskToken        string      `json:"taskToken"`
 }
 
 /*ActivityWorkerProtocol*/
