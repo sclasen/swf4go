@@ -119,13 +119,13 @@ func (d *DecisionWorker) Decide(taskToken string, decisions []*Decision) error {
 	return err
 }
 
-func (d *DecisionWorker) PollTaskList(domain string, identity string, taskList string) *DecisionTaskPoller {
+func (d *DecisionWorker) PollTaskList(domain string, identity string, taskList string, taskChannel chan *PollForDecisionTaskResponse) *DecisionTaskPoller {
 	poller := &DecisionTaskPoller{
 		client:   d.client,
 		Domain:   domain,
 		Identity: identity,
 		TaskList: taskList,
-		Tasks:    make(chan *PollForDecisionTaskResponse),
+		Tasks:    taskChannel,
 		stop:     make(chan bool, 1),
 	}
 	poller.start()

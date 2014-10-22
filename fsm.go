@@ -30,9 +30,10 @@ type FSMState struct {
 }
 
 type FSM struct {
-	WorkflowType   WorkflowType
-	TaskList       TaskList
-	DecisionWorker DecisionWorker
+	Domain         string
+	TaskList       string
+	Identity       string
+	DecisionWorker *DecisionWorker
 	states         map[string]*FSMState
 	initialState   *FSMState
 	Input          chan *PollForDecisionTaskResponse
@@ -49,13 +50,16 @@ func (f *FSM) AddState(state *FSMState) {
 }
 
 func (f *FSM) Start() {
+
 	go func() {
+		poller := f.DecisionWorker.PollTaskList(f.Domain, f.Identity, f.TaskList, f.Input)
 		for {
 			select {
 			case decisionTask := <-f.Input:
 				decisions := f.Tick(decisionTask)
 				f.DecisionWorker.Decide(decisionTask.TaskToken, decisions)
 			case <-f.stop:
+				poller.Stop()
 				break
 			}
 		}
