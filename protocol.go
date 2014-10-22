@@ -741,7 +741,7 @@ type DescribeWorkflowExecutionRequest struct {
 
 type DescribeWorkflowExecutionResponse struct {
 	ExecutionConfiguration      ExecutionConfiguration `json:"executionConfiguration"`
-	ExecutionInfo               ExecutionInfo          `json:"executionInfo"`
+	ExecutionInfo               WorkflowExecutionInfo  `json:"executionInfo"`
 	LatestActivityTaskTimestamp float32                `json:"latestActivityTaskTimestamp"`
 	LatestExecutionContext      string                 `json:"latestExecutionContext"`
 	OpenCounts                  OpenCounts             `json:"openCounts"`
@@ -752,18 +752,6 @@ type ExecutionConfiguration struct {
 	ExecutionStartToCloseTimeout string   `json:"executionStartToCloseTimeout"`
 	TaskList                     TaskList `json:"taskList"`
 	TaskStartToCloseTimeout      string   `json:"taskStartToCloseTimeout"`
-}
-
-type ExecutionInfo struct {
-	CancelRequested string            `json:"cancelRequested"`
-	CloseStatus     string            `json:"closeStatus"`
-	CloseTimestamp  float32           `json:"closeTimestamp"`
-	Execution       WorkflowExecution `json:"execution"`
-	ExecutionStatus string            `json:"executionStatus"`
-	Parent          WorkflowExecution `json:"parent"`
-	StartTimestamp  float32           `json:"startTimestamp"`
-	TagList         []string          `json:"tagList"`
-	WorkflowType    WorkflowType      `json:"workflowType"`
 }
 
 type OpenCounts struct {
