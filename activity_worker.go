@@ -3,13 +3,13 @@ package swf
 import "log"
 
 type ActivityWorker struct {
-	client          *Client
+	Client          *Client
 	StateSerializer StateSerializer
-	idGenerator     IdGenerator
+	IdGenerator     IdGenerator
 }
 
 func NewActivityWorker(client *Client, stateSerializer StateSerializer, idGenerator IdGenerator) *ActivityWorker {
-	return &ActivityWorker{client: client, StateSerializer: stateSerializer, idGenerator: idGenerator}
+	return &ActivityWorker{Client: client, StateSerializer: stateSerializer, IdGenerator: idGenerator}
 }
 
 func (a *ActivityWorker) CompleteActivity(taskToken string, result interface{}) error {
@@ -18,7 +18,7 @@ func (a *ActivityWorker) CompleteActivity(taskToken string, result interface{}) 
 		return err
 	}
 
-	return a.client.RespondActivityTaskCompleted(RespondActivityTaskCompletedRequest{
+	return a.Client.RespondActivityTaskCompleted(RespondActivityTaskCompletedRequest{
 		TaskToken: taskToken,
 		Result:    serialized,
 	})
@@ -26,7 +26,7 @@ func (a *ActivityWorker) CompleteActivity(taskToken string, result interface{}) 
 
 func (d *ActivityWorker) PollTaskList(domain string, identity string, taskList string) *ActivityTaskPoller {
 	poller := &ActivityTaskPoller{
-		client:   d.client,
+		client:   d.Client,
 		Domain:   domain,
 		Identity: identity,
 		TaskList: taskList,
