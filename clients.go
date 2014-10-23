@@ -269,9 +269,12 @@ func (c *Client) swfReqWithResponse(operation string, request interface{}, respo
 		}
 		return errResp
 	}
+
 	err = json.NewDecoder(resp.Body).Decode(response)
-	pretty, _ := json.MarshalIndent(response, "", "    ")
-	log.Println(string(pretty))
+	if c.Debug {
+		pretty, _ := json.MarshalIndent(response, "", "    ")
+		log.Println(string(pretty))
+	}
 	return err
 }
 
