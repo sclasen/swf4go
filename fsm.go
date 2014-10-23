@@ -78,7 +78,10 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	lastEvent := f.findLastEvent(decisionTask.Events)
 	log.Printf("component=FSM action=tick at=find-last-event event-type=%s", lastEvent.EventType)
 	outcome := state.Decider(lastEvent, data)
-	log.Printf("component=FSM action=tick at=decide next-state=%s num-decisions=%d", outcome.NextState, len(outcome.Decisions))
+	for _, d := range outcome.Decisions {
+		log.Printf("component=FSM action=tick at=decide next-state=%s decision=%s", outcome.NextState, d.DecisionType)
+	}
+
 	decisions := f.decisions(outcome)
 	return decisions
 }
