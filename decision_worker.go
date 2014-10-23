@@ -160,7 +160,10 @@ func (p *DecisionTaskPoller) start() {
 					log.Printf("%s in %+v", err, p)
 				} else {
 					if resp.TaskToken != "" {
+						log.Println("component=DecisionTaskPoller at=decision-task-recieved")
 						p.Tasks <- resp
+					} else {
+						log.Println("component=DecisionTaskPoller at=decision-task-empty-response")
 					}
 				}
 			}

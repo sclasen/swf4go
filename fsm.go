@@ -1,8 +1,8 @@
 package swf
 
 import (
-	"log"
 	"errors"
+	"log"
 )
 
 /*
@@ -129,7 +129,7 @@ func (f *FSM) findCurrentState(events []HistoryEvent) (*FSMState, error) {
 				return state, nil
 			} else {
 				log.Printf("component=FSM action=tick error=marked-state-not-in-fsm marker-state=%s", markerState)
-				return nil, errors.New(markerState+" does not exist")
+				return nil, errors.New(markerState + " does not exist")
 			}
 		}
 	}
