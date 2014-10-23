@@ -11,11 +11,16 @@ func NewWorkflowWorker(client *Client, stateSerializer StateSerializer, idGenera
 }
 
 func (w *WorkflowWorker) StartWorkflow(domain string, workflowName string, workflowVersion string, input interface{}) (string, error) {
+	workflowId := w.idGenerator.WorkflowID()
+	return w.StartWorkflowWithId(domain, workflowName, workflowVersion, workflowId, input)
+}
+
+func (w *WorkflowWorker) StartWorkflowWithId(domain string, workflowName string, workflowVersion string, workflowId string, input interface{}) (string, error) {
 	serialized, err := w.stateSerializer.Serialize(input)
 	if err != nil {
 		return "", err
 	}
-	workflowId := w.idGenerator.WorkflowID()
+
 	_, err = w.client.StartWorkflow(
 		StartWorkflowRequest{
 			Domain:     domain,
