@@ -63,7 +63,10 @@ func (p *ActivityTaskPoller) start() {
 					log.Printf("%s in %+v", err, p)
 				} else {
 					if resp.TaskToken != "" {
+						log.Printf("component=ActivityTaskPoller at=activity-task-recieved activity=%s", resp.ActivityType.Name)
 						p.Tasks <- resp
+					} else {
+						log.Println("component=ActivityTaskPoller at=activity-task-empty-response")
 					}
 				}
 			}

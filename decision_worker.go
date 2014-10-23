@@ -160,7 +160,7 @@ func (p *DecisionTaskPoller) start() {
 					log.Printf("%s in %+v", err, p)
 				} else {
 					if resp.TaskToken != "" {
-						log.Println("component=DecisionTaskPoller at=decision-task-recieved")
+						log.Printf("component=DecisionTaskPoller at=decision-task-recieved workflow=%s", resp.WorkflowType.Name)
 						p.Tasks <- resp
 					} else {
 						log.Println("component=DecisionTaskPoller at=decision-task-empty-response")
