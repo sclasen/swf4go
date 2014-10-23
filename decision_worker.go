@@ -140,6 +140,7 @@ type DecisionTaskPoller struct {
 	TaskList string
 	Tasks    chan *PollForDecisionTaskResponse
 	stop     chan bool
+	Interest chan *bool //tell the poller to go?
 }
 
 func (p *DecisionTaskPoller) start() {
