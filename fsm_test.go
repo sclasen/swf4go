@@ -14,7 +14,8 @@ func TestFSM(t *testing.T) {
 
 	fsm.AddInitialState(&FSMState{
 		Name: "start",
-		Decider: func(lastEvent HistoryEvent, data interface{}) *Outcome {
+		Decider: func(lastEvents []HistoryEvent, data interface{}) *Outcome {
+			lastEvent := lastEvents[0]
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "start")
 			decision, _ := fsm.DecisionWorker.ScheduleActivityTaskDecision("activity", "activityVersion", "taskList", testData)
@@ -28,7 +29,8 @@ func TestFSM(t *testing.T) {
 
 	fsm.AddState(&FSMState{
 		Name: "working",
-		Decider: func(lastEvent HistoryEvent, data interface{}) *Outcome {
+		Decider: func(lastEvents []HistoryEvent, data interface{}) *Outcome {
+			lastEvent := lastEvents[0]
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "working")
 			var decision *Decision
