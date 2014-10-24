@@ -51,6 +51,11 @@ func (d *DecisionWorker) ScheduleActivityTaskDecision(activityName string, activ
 }
 
 func (d *DecisionWorker) StartChildWorkflowExecutionDecision(workflowType string, workflowVersion string, childPolicy string, taskList string, tags []string, input interface{}) (*Decision, error) {
+return d.StartChildWorkflowExecutionWithIdDecision(workflowType, workflowVersion, childPolicy, taskList, tags, d.idGenerator.ActivityID(), input)
+
+}
+
+func (d *DecisionWorker) StartChildWorkflowExecutionWithIdDecision(workflowType string, workflowVersion string, childPolicy string, taskList string, tags []string, childId string, input interface{}) (*Decision, error) {
 	serialized, err := d.StateSerializer.Serialize(input)
 	if err != nil {
 		return nil, err
@@ -71,7 +76,7 @@ func (d *DecisionWorker) StartChildWorkflowExecutionDecision(workflowType string
 				Name:    workflowType,
 				Version: workflowVersion,
 			},
-			WorkflowId: d.idGenerator.WorkflowID(),
+			WorkflowId: childId,
 		},
 	}, nil
 }
@@ -157,7 +162,7 @@ func (p *DecisionTaskPoller) start() {
 					TaskList:     TaskList{Name: p.TaskList},
 				})
 				if err != nil {
-					log.Printf("%s in %+v", err, p)
+					panic(p)
 				} else {
 					if resp.TaskToken != "" {
 						log.Printf("component=DecisionTaskPoller at=decision-task-recieved workflow=%s", resp.WorkflowType.Name)
