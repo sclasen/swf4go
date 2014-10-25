@@ -7,6 +7,7 @@ import (
 func TestFSM(t *testing.T) {
 
 	fsm := FSM{
+		Name: "test-fsm",
 		DecisionWorker: &DecisionWorker{StateSerializer: JsonStateSerializer{}, idGenerator: UUIDGenerator{}},
 		EmptyData:      func() interface{} { return &TestData{} },
 		states:         make(map[string]*FSMState),
@@ -14,7 +15,7 @@ func TestFSM(t *testing.T) {
 
 	fsm.AddInitialState(&FSMState{
 		Name: "start",
-		Decider: func(lastEvent HistoryEvent, data interface{}) *Outcome {
+		Decider: func(f *FSM, lastEvent HistoryEvent, data interface{}) *Outcome {
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "start")
 			decision, _ := fsm.DecisionWorker.ScheduleActivityTaskDecision("activity", "activityVersion", "taskList", testData)
@@ -28,7 +29,7 @@ func TestFSM(t *testing.T) {
 
 	fsm.AddState(&FSMState{
 		Name: "working",
-		Decider: func(lastEvent HistoryEvent, data interface{}) *Outcome {
+		Decider: func(f *FSM, lastEvent HistoryEvent, data interface{}) *Outcome {
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "working")
 			var decisions = make([]*Decision, 0)

@@ -3,6 +3,7 @@ package swf
 import (
 	"errors"
 	"log"
+	"fmt"
 )
 
 /*
@@ -18,8 +19,9 @@ const (
 	DATA_MARKER  = "FSM.Data"
 )
 
-type Decider func(HistoryEvent, interface{}) *Outcome
+type Decider func(*FSM, HistoryEvent, interface{}) *Outcome
 type EmptyData func() interface{}
+type EmptyInputOrResult func(HistoryEvent) interface{}
 
 type Outcome struct {
 	Data      interface{}
@@ -33,16 +35,17 @@ type FSMState struct {
 }
 
 type FSM struct {
-	Name           string
-	Domain         string
-	TaskList       string
-	Identity       string
-	DecisionWorker *DecisionWorker
-	states         map[string]*FSMState
-	initialState   *FSMState
-	Input          chan *PollForDecisionTaskResponse
-	EmptyData      EmptyData
-	stop           chan bool
+	Name               string
+	Domain             string
+	TaskList           string
+	Identity           string
+	DecisionWorker     *DecisionWorker
+	states             map[string]*FSMState
+	initialState       *FSMState
+	Input              chan *PollForDecisionTaskResponse
+	EmptyData          EmptyData
+	EmptyInputOrResult EmptyInputOrResult
+	stop               chan bool
 }
 
 func (f *FSM) AddInitialState(state *FSMState) {
@@ -68,11 +71,11 @@ func (f *FSM) Start() {
 				if ok {
 					decisions, err := f.Tick(decisionTask)
 					if err != nil {
-						log.Printf("component=FSM name=%s action=tick error=tick-failed state=%s", f.Name, decisionTask)
+						f.log("action=tick error=tick-failed state=%s", decisionTask)
 					} else {
 						err = f.DecisionWorker.Decide(decisionTask.TaskToken, decisions)
 						if err != nil {
-							log.Printf("component=FSM name=%s action=tick at=decide-request-failed error=%s", f.Name, err.Error())
+							f.log("action=tick at=decide-request-failed error=%s", err.Error())
 							poller.Stop()
 							return
 						}
@@ -95,19 +98,19 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, erro
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("component=FSM name=%s action=tick at=find-current-state state=%s", f.Name, state)
+	f.log("action=tick at=find-current-state state=%s", state)
 	data := f.EmptyData()
 	serialized, err := f.findCurrentData(decisionTask.Events)
 	if err != nil {
-		log.Printf("component=FSM name=%s action=tick at=error=find-data-failed", f.Name)
+		f.log("action=tick at=error=find-data-failed")
 		return nil, err
 	}
 	err = f.DecisionWorker.StateSerializer.Deserialize(serialized, data)
 	if err != nil {
-		log.Println("component=FSM name=%s action=tick at=error=deserialize-state-failed", f.Name)
+		f.log("action=tick at=error=deserialize-state-failed")
 		return nil, err
 	}
-	log.Printf("component=FSM name=%s action=tick at=find-current-data data=%v", f.Name, data)
+	f.log("action=tick at=find-current-data data=%v", data)
 	lastEvents, err := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
 
 	if err != nil {
@@ -122,28 +125,64 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, erro
 	//if the outcome changes the state use the right FSMState
 	for i := len(lastEvents) - 1; i >= 0; i-- {
 		e := lastEvents[i]
-		log.Printf("component=FSM name=%s action=tick at=history id=%d type=%s", f.Name, e.EventId, e.EventType)
+		f.log("action=tick at=history id=%d type=%s", e.EventId, e.EventType)
 		fsmState, ok := f.states[outcome.NextState]
 		if ok {
-			anOutcome := fsmState.Decider(e, outcome.Data)
-			log.Printf("component=FSM name=%s action=tick at=decided-event state=%s next-state=%s decisions=%d", f.Name, outcome.NextState, anOutcome.NextState, len(anOutcome.Decisions))
+			anOutcome := fsmState.Decider(f, e, outcome.Data)
+			f.log("action=tick at=decided-event state=%s next-state=%s decisions=%d", outcome.NextState, anOutcome.NextState, len(anOutcome.Decisions))
 			outcome.Data = anOutcome.Data
 			outcome.NextState = anOutcome.NextState
 			outcome.Decisions = append(outcome.Decisions, anOutcome.Decisions...)
 		} else {
-			log.Printf("component=FSM name=%s action=tick error=marked-state-not-in-fsm state=%s", f.Name, outcome.NextState)
-			return nil, errors.New(outcome.NextState + " does not exist")
+			f.log("action=tick error=marked-state-not-in-fsm state=%s", outcome.NextState)
+			return nil, errors.New(outcome.NextState+" does not exist")
 		}
 
 	}
 
-	log.Printf("component=FSM name=%s action=tick at=events-processed next-state=%s decisions=%d", f.Name, outcome.NextState, len(outcome.Decisions))
+	f.log("action=tick at=events-processed next-state=%s decisions=%d", outcome.NextState, len(outcome.Decisions))
 
 	for _, d := range outcome.Decisions {
-		log.Printf("component=FSM name=%s action=tick at=decide next-state=%s decision=%s", f.Name, outcome.NextState, d.DecisionType)
+		f.log("action=tick at=decide next-state=%s decision=%s", outcome.NextState, d.DecisionType)
 	}
 
 	return f.decisions(outcome)
+}
+
+func (f *FSM) EventData(event HistoryEvent) interface{} {
+	eventData := f.EmptyInputOrResult(event)
+
+	if eventData != nil {
+		var serialized string
+		switch event.EventType {
+		case EventTypeActivityTaskCompleted:
+			serialized = event.ActivityTaskCompletedEventAttributes.Result
+		case EventTypeWorkflowExecutionCompleted:
+			serialized = event.WorkflowExecutionCompletedEventAttributes.Result
+		case EventTypeChildWorkflowExecutionCompleted:
+			serialized = event.ChildWorkflowExecutionCompletedEventAttributes.Result
+		case EventTypeWorkflowExecutionSignaled:
+			serialized = event.WorkflowExecutionSignaledEventAttributes.Input
+		case EventTypeWorkflowExecutionStarted:
+			serialized = event.WorkflowExecutionStartedEventAttributes.Input
+		case EventTypeWorkflowExecutionContinuedAsNew:
+			serialized = event.WorkflowExecutionContinuedAsNewEventAttributes.Input
+		}
+		if serialized != "" {
+			err := f.DecisionWorker.StateSerializer.Deserialize(serialized, eventData)
+			if err != nil {
+				log.Printf("")
+			}
+		}
+	}
+
+	return eventData
+
+}
+
+func (f *FSM)log(format string, data... interface{}){
+	actualFormat := fmt.Sprintf("component=FSM name=%s %s", f.Name, format)
+	log.Printf(actualFormat, data...)
 }
 
 func (f *FSM) findCurrentState(events []HistoryEvent) (string, error) {

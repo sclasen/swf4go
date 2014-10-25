@@ -39,10 +39,6 @@ func (d *DecisionWorker) ScheduleActivityTaskDecision(activityName string, activ
 				Name: activityName, Version: activityVersion,
 			},
 			Input: serialized,
-			ScheduleToStartTimeout: "NONE",
-			ScheduleToCloseTimeout: "NONE",
-			StartToCloseTimeout:    "NONE",
-			HeartbeatTimeout:       "NONE",
 			TaskList: TaskList{
 				Name: activityTaskList,
 			},
