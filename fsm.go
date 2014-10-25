@@ -18,7 +18,7 @@ const (
 	DATA_MARKER  = "FSM.Data"
 )
 
-type Decider func([]HistoryEvent, interface{}) *Outcome
+type Decider func(HistoryEvent, interface{}) *Outcome
 type EmptyData func() interface{}
 
 type Outcome struct {
@@ -30,18 +30,6 @@ type Outcome struct {
 type FSMState struct {
 	Name    string
 	Decider Decider
-}
-
-func EventsByType(events []HistoryEvent) map[string][]HistoryEvent {
-	byType := make(map[string][]HistoryEvent)
-	for _, e := range events {
-		es, ok := byType[e.EventType]
-		if !ok {
-			es = make([]HistoryEvent, 0)
-		}
-		byType[e.EventType] = append(es, e)
-	}
-	return byType
 }
 
 type FSM struct {
@@ -107,7 +95,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, erro
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("component=FSM name=%s action=tick at=find-current-state state=%s", f.Name, state.Name)
+	log.Printf("component=FSM name=%s action=tick at=find-current-state state=%s", f.Name, state)
 	data := f.EmptyData()
 	serialized, err := f.findCurrentData(decisionTask.Events)
 	if err != nil {
@@ -121,14 +109,36 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, erro
 	}
 	log.Printf("component=FSM name=%s action=tick at=find-current-data data=%v", f.Name, data)
 	lastEvents, err := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
+
 	if err != nil {
 		return nil, err
 	}
-	for _, e := range lastEvents {
+
+	outcome := new(Outcome)
+	outcome.Data = data
+	outcome.NextState = state
+
+	//iterate through events oldest to newest, calling the decider for the current state.
+	//if the outcome changes the state use the right FSMState
+	for i := len(lastEvents) - 1; i >= 0; i-- {
+		e := lastEvents[i]
 		log.Printf("component=FSM name=%s action=tick at=history id=%d type=%s", f.Name, e.EventId, e.EventType)
+		fsmState, ok := f.states[outcome.NextState]
+		if ok {
+			anOutcome := fsmState.Decider(e, outcome.Data)
+			log.Printf("component=FSM name=%s action=tick at=decided-event state=%s next-state=%s decisions=%d", f.Name, outcome.NextState, anOutcome.NextState, len(anOutcome.Decisions))
+			outcome.Data = anOutcome.Data
+			outcome.NextState = anOutcome.NextState
+			outcome.Decisions = append(outcome.Decisions, anOutcome.Decisions...)
+		} else {
+			log.Printf("component=FSM name=%s action=tick error=marked-state-not-in-fsm state=%s", f.Name, outcome.NextState)
+			return nil, errors.New(outcome.NextState + " does not exist")
+		}
+
 	}
-	outcome := state.Decider(lastEvents, data)
-	log.Printf("component=FSM name=%s action=tick at=decide next-state=%s decisions=%d", f.Name, outcome.NextState, len(outcome.Decisions))
+
+	log.Printf("component=FSM name=%s action=tick at=events-processed next-state=%s decisions=%d", f.Name, outcome.NextState, len(outcome.Decisions))
+
 	for _, d := range outcome.Decisions {
 		log.Printf("component=FSM name=%s action=tick at=decide next-state=%s decision=%s", f.Name, outcome.NextState, d.DecisionType)
 	}
@@ -136,20 +146,13 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, erro
 	return f.decisions(outcome)
 }
 
-func (f *FSM) findCurrentState(events []HistoryEvent) (*FSMState, error) {
+func (f *FSM) findCurrentState(events []HistoryEvent) (string, error) {
 	for _, event := range events {
 		if f.isStateMarker(event) {
-			markerState := event.MarkerRecordedEventAttributes.Details
-			state, ok := f.states[markerState]
-			if ok {
-				return state, nil
-			} else {
-				log.Printf("component=FSM name=%s action=tick error=marked-state-not-in-fsm marker-state=%s", f.Name, markerState)
-				return nil, errors.New(markerState+" does not exist")
-			}
+			return event.MarkerRecordedEventAttributes.Details, nil
 		}
 	}
-	return f.initialState, nil
+	return f.initialState.Name, nil
 }
 
 //assumes events ordered newest to oldest
@@ -178,7 +181,6 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryE
 				t != EventTypeDecisionTaskTimedOut {
 				lastEvents = append(lastEvents, event)
 			}
-
 		}
 	}
 

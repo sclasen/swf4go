@@ -51,8 +51,7 @@ func (d *DecisionWorker) ScheduleActivityTaskDecision(activityName string, activ
 }
 
 func (d *DecisionWorker) StartChildWorkflowExecutionDecision(workflowType string, workflowVersion string, childPolicy string, taskList string, tags []string, input interface{}) (*Decision, error) {
-return d.StartChildWorkflowExecutionWithIdDecision(workflowType, workflowVersion, childPolicy, taskList, tags, d.idGenerator.ActivityID(), input)
-
+	return d.StartChildWorkflowExecutionWithIdDecision(workflowType, workflowVersion, childPolicy, taskList, tags, d.idGenerator.ActivityID(), input)
 }
 
 func (d *DecisionWorker) StartChildWorkflowExecutionWithIdDecision(workflowType string, workflowVersion string, childPolicy string, taskList string, tags []string, childId string, input interface{}) (*Decision, error) {

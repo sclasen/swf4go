@@ -14,8 +14,7 @@ func TestFSM(t *testing.T) {
 
 	fsm.AddInitialState(&FSMState{
 		Name: "start",
-		Decider: func(lastEvents []HistoryEvent, data interface{}) *Outcome {
-			lastEvent := lastEvents[0]
+		Decider: func(lastEvent HistoryEvent, data interface{}) *Outcome {
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "start")
 			decision, _ := fsm.DecisionWorker.ScheduleActivityTaskDecision("activity", "activityVersion", "taskList", testData)
@@ -29,28 +28,30 @@ func TestFSM(t *testing.T) {
 
 	fsm.AddState(&FSMState{
 		Name: "working",
-		Decider: func(lastEvents []HistoryEvent, data interface{}) *Outcome {
-			lastEvent := lastEvents[0]
+		Decider: func(lastEvent HistoryEvent, data interface{}) *Outcome {
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "working")
-			var decision *Decision
+			var decisions = make([]*Decision, 0)
 			if lastEvent.EventType == "ActivityTaskCompleted" {
-				decision, _ = fsm.DecisionWorker.CompleteWorkflowExecution(testData)
+				decision, _ := fsm.DecisionWorker.CompleteWorkflowExecution(testData)
+				decisions = append(decisions, decision)
 			} else if lastEvent.EventType == "ActivityTaskFailed" {
-				decision, _ = fsm.DecisionWorker.ScheduleActivityTaskDecision("activity", "activityVersion", "taskList", testData)
+				decision, _ := fsm.DecisionWorker.ScheduleActivityTaskDecision("activity", "activityVersion", "taskList", testData)
+				decisions = append(decisions, decision)
 			}
 			return &Outcome{
 				NextState: "working",
 				Data:      testData,
-				Decisions: []*Decision{decision},
+				Decisions: decisions,
 			}
 		},
 	})
 
 	events := []HistoryEvent{
-		HistoryEvent{EventType: "DecisionTaskStarted"},
-		HistoryEvent{EventType: "DecisionTaskScheduled"},
+		HistoryEvent{EventType: "DecisionTaskStarted", EventId: 3},
+		HistoryEvent{EventType: "DecisionTaskScheduled", EventId: 2},
 		HistoryEvent{
+			EventId:   1,
 			EventType: "WorkflowExecutionStarted",
 			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
 				Input: "{\"States\":[]}",
@@ -59,10 +60,11 @@ func TestFSM(t *testing.T) {
 	}
 
 	first := &PollForDecisionTaskResponse{
-		Events: events,
+		Events:                 events,
+		PreviousStartedEventId: 0,
 	}
 
-	decisions := fsm.Tick(first)
+	decisions, _ := fsm.Tick(first)
 
 	if !Find(decisions, stateMarkerPredicate) {
 		t.Fatal("No Record State Marker")
@@ -80,21 +82,15 @@ func TestFSM(t *testing.T) {
 	secondEvents = append(secondEvents, events...)
 
 	second := &PollForDecisionTaskResponse{
-		Events: secondEvents,
+		Events:                 secondEvents,
+		PreviousStartedEventId: 3,
 	}
 
-	if fsm.findCurrentState(secondEvents).Name != "working" {
+	if name, _ := fsm.findCurrentState(secondEvents); name != "working" {
 		t.Fatal("current state is not 'working'", secondEvents)
 	}
 
-	var curr = &TestData{}
-	fsm.DecisionWorker.StateSerializer.Deserialize(fsm.findCurrentData(secondEvents), curr)
-
-	if len(curr.States) != 1 && curr.States[0] != "start" {
-		t.Fatal("current data is not right", curr.States)
-	}
-
-	secondDecisions := fsm.Tick(second)
+	secondDecisions, _ := fsm.Tick(second)
 
 	if !Find(secondDecisions, stateMarkerPredicate) {
 		t.Fatal("No Record State Marker")
@@ -141,16 +137,19 @@ func DecisionsToEvents(decisions []*Decision) []HistoryEvent {
 		if scheduleActivityPredicate(d) {
 			event := HistoryEvent{
 				EventType: "ActivityTaskCompleted",
+				EventId:   7,
 			}
 			events = append(events, event)
 			event = HistoryEvent{
 				EventType: "ActivityTaskScheduled",
+				EventId:   6,
 			}
 			events = append(events, event)
 		}
 		if stateMarkerPredicate(d) {
 			event := HistoryEvent{
 				EventType: "MarkerRecorded",
+				EventId:   5,
 				MarkerRecordedEventAttributes: &MarkerRecordedEventAttributes{
 					MarkerName: STATE_MARKER,
 					Details:    d.RecordMarkerDecisionAttributes.Details,
@@ -162,6 +161,7 @@ func DecisionsToEvents(decisions []*Decision) []HistoryEvent {
 		if dataMarkerPredicate(d) {
 			event := HistoryEvent{
 				EventType: "MarkerRecorded",
+				EventId:   4,
 				MarkerRecordedEventAttributes: &MarkerRecordedEventAttributes{
 					MarkerName: DATA_MARKER,
 					Details:    d.RecordMarkerDecisionAttributes.Details,
