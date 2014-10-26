@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 )
 
 // The marker name used then recording the current state and data of a workflow
@@ -168,7 +169,7 @@ func (f *FSM) EventData(event HistoryEvent) interface{} {
 		if serialized != "" {
 			err := f.Serializer().Deserialize(serialized, eventData)
 			if err != nil {
-				log.Printf("")  //TODO propagate here. too much error handling in deciders, maybe make them panic safe.
+				log.Printf("") //TODO propagate here. too much error handling in deciders, maybe make them panic safe.
 			}
 		}
 	}
@@ -256,4 +257,47 @@ func (f *FSM) EmptyDecisions() []*Decision {
 type SerializedState struct {
 	State string `json:"state"`
 	Data  string `json:"data"`
+}
+
+/*tigertonic-like marhslling of data*/
+type MarshalledDecider struct {
+	v reflect.Value
+}
+
+func TypedDecider(decider interface{}) Decider {
+	t := reflect.TypeOf(decider)
+	if reflect.Func != t.Kind() {
+		panic(fmt.Sprintf("kind was %v, not Func", t.Kind()))
+	}
+	if 3 != t.NumIn() {
+		panic(fmt.Sprintf(
+			"input arity was %v, not 3",
+			t.NumIn(),
+		))
+	}
+	if "*swf.FSM" != t.In(0).String() {
+		panic(fmt.Sprintf(
+			"type of first argument was %v, not *swf.FSM",
+			t.In(0),
+		))
+	}
+	if "swf.HistoryEvent" != t.In(1).String() {
+		panic(fmt.Sprintf(
+			"type of second argument was %v, not swf.HistoryEvent",
+			t.In(1),
+		))
+	}
+
+	if "*swf.Outcome" != t.Out(0).String() {
+		panic(fmt.Sprintf(
+			"type of return value was %v, not *swf.Outcome",
+			t.Out(0),
+		))
+	}
+
+	return MarshalledDecider{reflect.ValueOf(decider)}.Decide
+}
+
+func (m MarshalledDecider) Decide(f *FSM, h HistoryEvent, data interface{}) *Outcome {
+	return m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0].Interface().(*Outcome)
 }
