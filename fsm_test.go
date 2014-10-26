@@ -29,8 +29,7 @@ func TestFSM(t *testing.T) {
 
 	fsm.AddState(&FSMState{
 		Name: "working",
-		Decider: func(f *FSM, lastEvent HistoryEvent, data interface{}) *Outcome {
-			testData := data.(*TestData)
+		Decider: TypedDecider(func(f *FSM, lastEvent HistoryEvent, testData *TestData) *Outcome {
 			testData.States = append(testData.States, "working")
 			var decisions = f.EmptyDecisions()
 			if lastEvent.EventType == "ActivityTaskCompleted" {
@@ -45,7 +44,7 @@ func TestFSM(t *testing.T) {
 				Data:      testData,
 				Decisions: decisions,
 			}
-		},
+		}),
 	})
 
 	events := []HistoryEvent{
@@ -153,4 +152,21 @@ func DecisionsToEvents(decisions []*Decision) []HistoryEvent {
 
 type TestData struct {
 	States []string
+}
+
+func TestMarshalledDecider(t *testing.T) {
+	typedDecider := func(f *FSM, h HistoryEvent, d TestData) *Outcome {
+		if d.States[0] != "marshalled" {
+			t.Fail()
+		}
+		return &Outcome{NextState:"ok"}
+	}
+
+	wrapped := TypedDecider(typedDecider)
+
+	outcome := wrapped(&FSM{}, HistoryEvent{}, TestData{States: []string{"marshalled"}})
+
+	if outcome.NextState != "ok" {
+		t.Fatal("NextState was not 'ok'")
+	}
 }
