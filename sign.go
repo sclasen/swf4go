@@ -1,5 +1,3 @@
-// Package aws4 signs HTTP requests as prescribed in
-// http://docs.amazonwebservices.com/general/latest/gr/signature-version-4.html
 package swf
 
 import (
