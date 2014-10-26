@@ -93,6 +93,7 @@ type PollForDecisionTaskResponse struct {
 // ChildWorkflowExecutionCompleted | ChildWorkflowExecutionFailed | ChildWorkflowExecutionTimedOut | ChildWorkflowExecutionCanceled | ChildWorkflowExecutionTerminated | SignalExternalWorkflowExecutionInitiated |
 // SignalExternalWorkflowExecutionFailed | ExternalWorkflowExecutionSignaled | RequestCancelExternalWorkflowExecutionInitiated | RequestCancelExternalWorkflowExecutionFailed | ExternalWorkflowExecutionCancelRequested
 
+// Valid values for the field EventType in the HistoryEvent struct.
 const (
 	EventTypeWorkflowExecutionStarted                        = "WorkflowExecutionStarted"
 	EventTypeWorkflowExecutionCancelRequested                = "WorkflowExecutionCancelRequested"
@@ -476,6 +477,8 @@ type WorkflowExecutionTimedOutEventAttributes struct {
 }
 
 //DecisionType := ScheduleActivityTask | RequestCancelActivityTask | CompleteWorkflowExecution | FailWorkflowExecution | CancelWorkflowExecution | ContinueAsNewWorkflowExecution | RecordMarker | StartTimer | CancelTimer | SignalExternalWorkflowExecution | RequestCancelExternalWorkflowExecution | StartChildWorkflowExecution
+
+// Valid values for the field DecisionType in the Decision struct.
 const (
 	DecisionTypeScheduleActivityTask                   = "ScheduleActivityTask"
 	DecisionTypeRequestCancelActivityTask              = "RequestCancelActivityTask"
