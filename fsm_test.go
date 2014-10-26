@@ -108,7 +108,6 @@ func Find(decisions []*Decision, predicate func(*Decision) bool) bool {
 	return false
 }
 
-
 func stateMarkerPredicate(d *Decision) bool {
 	return d.DecisionType == "RecordMarker" && d.RecordMarkerDecisionAttributes.MarkerName == STATE_MARKER
 }

@@ -6,39 +6,29 @@ import (
 	"log"
 )
 
-/*
-FSM start -> decider worker poll tasklist
-on event ->
-get all events in Reverse until finding latest marker event with MarkerName FSM.State.
-and lastest marker event with MarkerName FSM.Data?
-If not found, use initial state/start workflow input?
-*/
-
 const (
 	STATE_MARKER = "FSM.State"
 )
 
+// Decider decides an Outcome based on an event and the current data for an FSM
 type Decider func(*FSM, HistoryEvent, interface{}) *Outcome
-type DecisionContext struct{
-	FSM FSM
-	Event HistoryEvent
-	Data interface{}
-	Outcome *Outcome
-}
+// EmptyData specifies the type of data used by the FSM, return
 type EmptyData func() interface{}
+// EmptyInputOrResult
 type EmptyInputOrResult func(HistoryEvent) interface{}
-
+// Outcome is created by Deciders
 type Outcome struct {
 	Data      interface{}
 	NextState string
 	Decisions []*Decision
 }
-
+// FSMState defines the behavior of one state of an FSM
 type FSMState struct {
 	Name    string
 	Decider Decider
 }
 
+// FSM models the decision handling logic a workflow in SWF
 type FSM struct {
 	Name               string
 	Domain             string
@@ -106,7 +96,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, erro
 
 	f.log("action=tick at=find-current-state state=%s", serializedState.State)
 	data := f.EmptyData()
-    err = f.Serializer().Deserialize(serializedState.Data, data)
+	err = f.Serializer().Deserialize(serializedState.Data, data)
 	if err != nil {
 		f.log("action=tick at=error=deserialize-state-failed")
 		return nil, err
@@ -186,7 +176,6 @@ func (f *FSM) log(format string, data ...interface{}) {
 	actualFormat := fmt.Sprintf("component=FSM name=%s %s", f.Name, format)
 	log.Printf(actualFormat, data...)
 }
-
 
 func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, error) {
 	for _, event := range events {
