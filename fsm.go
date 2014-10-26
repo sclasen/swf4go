@@ -2,8 +2,8 @@ package swf
 
 import (
 	"errors"
-	"log"
 	"fmt"
+	"log"
 )
 
 /*
@@ -16,10 +16,15 @@ If not found, use initial state/start workflow input?
 
 const (
 	STATE_MARKER = "FSM.State"
-	DATA_MARKER  = "FSM.Data"
 )
 
 type Decider func(*FSM, HistoryEvent, interface{}) *Outcome
+type DecisionContext struct{
+	FSM FSM
+	Event HistoryEvent
+	Data interface{}
+	Outcome *Outcome
+}
 type EmptyData func() interface{}
 type EmptyInputOrResult func(HistoryEvent) interface{}
 
@@ -94,22 +99,19 @@ func (f *FSM) Start() {
 }
 
 func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, error) {
-	state, err := f.findCurrentState(decisionTask.Events)
+	serializedState, err := f.findSerializedState(decisionTask.Events)
 	if err != nil {
 		return nil, err
 	}
-	f.log("action=tick at=find-current-state state=%s", state)
+
+	f.log("action=tick at=find-current-state state=%s", serializedState.State)
 	data := f.EmptyData()
-	serialized, err := f.findCurrentData(decisionTask.Events)
-	if err != nil {
-		f.log("action=tick at=error=find-data-failed")
-		return nil, err
-	}
-	err = f.DecisionWorker.StateSerializer.Deserialize(serialized, data)
+    err = f.Serializer().Deserialize(serializedState.Data, data)
 	if err != nil {
 		f.log("action=tick at=error=deserialize-state-failed")
 		return nil, err
 	}
+
 	f.log("action=tick at=find-current-data data=%v", data)
 	lastEvents, err := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
 
@@ -119,7 +121,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, erro
 
 	outcome := new(Outcome)
 	outcome.Data = data
-	outcome.NextState = state
+	outcome.NextState = serializedState.State
 
 	//iterate through events oldest to newest, calling the decider for the current state.
 	//if the outcome changes the state use the right FSMState
@@ -135,7 +137,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, erro
 			outcome.Decisions = append(outcome.Decisions, anOutcome.Decisions...)
 		} else {
 			f.log("action=tick error=marked-state-not-in-fsm state=%s", outcome.NextState)
-			return nil, errors.New(outcome.NextState+" does not exist")
+			return nil, errors.New(outcome.NextState + " does not exist")
 		}
 
 	}
@@ -169,7 +171,7 @@ func (f *FSM) EventData(event HistoryEvent) interface{} {
 			serialized = event.WorkflowExecutionContinuedAsNewEventAttributes.Input
 		}
 		if serialized != "" {
-			err := f.DecisionWorker.StateSerializer.Deserialize(serialized, eventData)
+			err := f.Serializer().Deserialize(serialized, eventData)
 			if err != nil {
 				log.Printf("")
 			}
@@ -180,30 +182,23 @@ func (f *FSM) EventData(event HistoryEvent) interface{} {
 
 }
 
-func (f *FSM)log(format string, data... interface{}){
+func (f *FSM) log(format string, data ...interface{}) {
 	actualFormat := fmt.Sprintf("component=FSM name=%s %s", f.Name, format)
 	log.Printf(actualFormat, data...)
 }
 
-func (f *FSM) findCurrentState(events []HistoryEvent) (string, error) {
+
+func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, error) {
 	for _, event := range events {
 		if f.isStateMarker(event) {
-			return event.MarkerRecordedEventAttributes.Details, nil
-		}
-	}
-	return f.initialState.Name, nil
-}
-
-//assumes events ordered newest to oldest
-func (f *FSM) findCurrentData(events []HistoryEvent) (string, error) {
-	for _, event := range events {
-		if f.isDataMarker(event) {
-			return event.MarkerRecordedEventAttributes.Details, nil
+			state := &SerializedState{}
+			err := f.Serializer().Deserialize(event.MarkerRecordedEventAttributes.Details, state)
+			return state, err
 		} else if event.EventType == EventTypeWorkflowExecutionStarted {
-			return event.WorkflowExecutionStartedEventAttributes.Input, nil
+			return &SerializedState{State: f.initialState.Name, Data: event.WorkflowExecutionStartedEventAttributes.Input}, nil
 		}
 	}
-	return "", errors.New("Cant Find Current Data")
+	return &SerializedState{}, errors.New("Cant Find Current Data")
 }
 
 func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryEvent, error) {
@@ -227,13 +222,21 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryE
 }
 
 func (f *FSM) decisions(outcome *Outcome) ([]*Decision, error) {
-	decisions := make([]*Decision, 0)
-	decisions = append(decisions, f.DecisionWorker.RecordStringMarker(STATE_MARKER, outcome.NextState))
-	dataMarker, err := f.DecisionWorker.RecordMarker(DATA_MARKER, outcome.Data)
+
+	serializedData, err := f.Serializer().Serialize(outcome.Data)
+
+	state := SerializedState{
+		State: outcome.NextState,
+		Data:  serializedData,
+	}
+
+	d, err := f.DecisionWorker.RecordMarker(STATE_MARKER, state)
 	if err != nil {
 		return nil, err
 	}
-	decisions = append(decisions, dataMarker)
+	decisions := make([]*Decision, 0)
+	decisions = append(decisions, d)
+
 	for _, decision := range outcome.Decisions {
 		decisions = append(decisions, decision)
 	}
@@ -248,10 +251,11 @@ func (f *FSM) isStateMarker(e HistoryEvent) bool {
 	return e.EventType == EventTypeMarkerRecorded && e.MarkerRecordedEventAttributes.MarkerName == STATE_MARKER
 }
 
-func (f *FSM) isDataMarker(e HistoryEvent) bool {
-	return e.EventType == EventTypeMarkerRecorded && e.MarkerRecordedEventAttributes.MarkerName == DATA_MARKER
+func (f *FSM) Serializer() StateSerializer {
+	return f.DecisionWorker.StateSerializer
 }
 
-func (f *FSM) isStateOrDataMarker(e HistoryEvent) bool {
-	return f.isStateMarker(e) || f.isDataMarker(e)
+type SerializedState struct {
+	State string `json:"state"`
+	Data  string `json:"data"`
 }
