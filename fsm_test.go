@@ -7,7 +7,7 @@ import (
 func TestFSM(t *testing.T) {
 
 	fsm := FSM{
-		Name: "test-fsm",
+		Name:           "test-fsm",
 		DecisionWorker: &DecisionWorker{StateSerializer: JsonStateSerializer{}, idGenerator: UUIDGenerator{}},
 		EmptyData:      func() interface{} { return &TestData{} },
 		states:         make(map[string]*FSMState),
@@ -71,10 +71,6 @@ func TestFSM(t *testing.T) {
 		t.Fatal("No Record State Marker")
 	}
 
-	if !Find(decisions, dataMarkerPredicate) {
-		t.Fatal("No Record Data Marker")
-	}
-
 	if !Find(decisions, scheduleActivityPredicate) {
 		t.Fatal("No ScheduleActivityTask")
 	}
@@ -87,7 +83,7 @@ func TestFSM(t *testing.T) {
 		PreviousStartedEventId: 3,
 	}
 
-	if name, _ := fsm.findCurrentState(secondEvents); name != "working" {
+	if state, _ := fsm.findSerializedState(secondEvents); state.State != "working" {
 		t.Fatal("current state is not 'working'", secondEvents)
 	}
 
@@ -95,10 +91,6 @@ func TestFSM(t *testing.T) {
 
 	if !Find(secondDecisions, stateMarkerPredicate) {
 		t.Fatal("No Record State Marker")
-	}
-
-	if !Find(secondDecisions, dataMarkerPredicate) {
-		t.Fatal("No Record Data Marker")
 	}
 
 	if !Find(secondDecisions, completeWorkflowPredicate) {
@@ -114,10 +106,6 @@ func Find(decisions []*Decision, predicate func(*Decision) bool) bool {
 		}
 	}
 	return false
-}
-
-func dataMarkerPredicate(d *Decision) bool {
-	return d.DecisionType == "RecordMarker" && d.RecordMarkerDecisionAttributes.MarkerName == DATA_MARKER
 }
 
 func stateMarkerPredicate(d *Decision) bool {
@@ -153,18 +141,6 @@ func DecisionsToEvents(decisions []*Decision) []HistoryEvent {
 				EventId:   5,
 				MarkerRecordedEventAttributes: &MarkerRecordedEventAttributes{
 					MarkerName: STATE_MARKER,
-					Details:    d.RecordMarkerDecisionAttributes.Details,
-				},
-			}
-			events = append(events, event)
-
-		}
-		if dataMarkerPredicate(d) {
-			event := HistoryEvent{
-				EventType: "MarkerRecorded",
-				EventId:   4,
-				MarkerRecordedEventAttributes: &MarkerRecordedEventAttributes{
-					MarkerName: DATA_MARKER,
 					Details:    d.RecordMarkerDecisionAttributes.Details,
 				},
 			}
