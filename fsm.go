@@ -107,11 +107,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, erro
 	}
 
 	f.log("action=tick at=find-current-data data=%v", data)
-	lastEvents, err := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
-
-	if err != nil {
-		return nil, err
-	}
+	lastEvents := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
 
 	outcome := new(Outcome)
 	outcome.Data = data
@@ -194,11 +190,11 @@ func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, erro
 	return &SerializedState{}, errors.New("Cant Find Current Data")
 }
 
-func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryEvent, error) {
+func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) []HistoryEvent {
 	lastEvents := make([]HistoryEvent, 0)
 	for _, event := range events {
 		if event.EventId == prevStarted {
-			return lastEvents, nil
+			return lastEvents
 		} else {
 			switch event.EventType {
 			case EventTypeDecisionTaskCompleted, EventTypeDecisionTaskScheduled,
@@ -214,7 +210,7 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryE
 		}
 	}
 
-	return lastEvents, nil
+	return lastEvents
 }
 
 func (f *FSM) decisions(outcome *Outcome) ([]*Decision, error) {
