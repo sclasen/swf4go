@@ -34,17 +34,17 @@ type FSMState struct {
 
 // FSM models the decision handling logic a workflow in SWF
 type FSM struct {
-	Name                      string
-	Domain                    string
-	TaskList                  string
-	Identity                  string
-	DecisionWorker            *DecisionWorker
-	states                    map[string]*FSMState
-	initialState              *FSMState
-	Input                     chan *PollForDecisionTaskResponse
-	DataType                  interface{}
-	EventDataType             EventDataType
-	stop                      chan bool
+	Name           string
+	Domain         string
+	TaskList       string
+	Identity       string
+	DecisionWorker *DecisionWorker
+	states         map[string]*FSMState
+	initialState   *FSMState
+	Input          chan *PollForDecisionTaskResponse
+	DataType       interface{}
+	EventDataType  EventDataType
+	stop           chan bool
 }
 
 func (f *FSM) AddInitialState(state *FSMState) {
@@ -200,12 +200,15 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryE
 		if event.EventId == prevStarted {
 			return lastEvents, nil
 		} else {
-			t := event.EventType
-			if t != EventTypeMarkerRecorded &&
-				t != EventTypeDecisionTaskScheduled &&
-				t != EventTypeDecisionTaskCompleted &&
-				t != EventTypeDecisionTaskStarted &&
-				t != EventTypeDecisionTaskTimedOut {
+			switch event.EventType {
+			case EventTypeDecisionTaskCompleted, EventTypeDecisionTaskScheduled,
+				EventTypeDecisionTaskStarted, EventTypeDecisionTaskTimedOut:
+				//no-op
+			case EventTypeMarkerRecorded:
+				if ! f.isStateMarker(event) {
+					lastEvents = append(lastEvents, event)
+				}
+			default:
 				lastEvents = append(lastEvents, event)
 			}
 		}
