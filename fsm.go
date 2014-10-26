@@ -187,7 +187,7 @@ func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, erro
 			return &SerializedState{State: f.initialState.Name, Data: event.WorkflowExecutionStartedEventAttributes.Input}, nil
 		}
 	}
-	return &SerializedState{}, errors.New("Cant Find Current Data")
+	return nil, errors.New("Cant Find Current Data")
 }
 
 func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) []HistoryEvent {
@@ -201,7 +201,7 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) []HistoryEv
 				EventTypeDecisionTaskStarted, EventTypeDecisionTaskTimedOut:
 				//no-op
 			case EventTypeMarkerRecorded:
-				if ! f.isStateMarker(event) {
+				if !f.isStateMarker(event) {
 					lastEvents = append(lastEvents, event)
 				}
 			default:
@@ -228,10 +228,7 @@ func (f *FSM) decisions(outcome *Outcome) ([]*Decision, error) {
 	}
 	decisions := f.EmptyDecisions()
 	decisions = append(decisions, d)
-
-	for _, decision := range outcome.Decisions {
-		decisions = append(decisions, decision)
-	}
+	decisions = append(decisions, outcome.Decisions...)
 	return decisions, nil
 }
 
