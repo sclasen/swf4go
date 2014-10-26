@@ -15,11 +15,9 @@ const (
 // Decider decides an Outcome based on an event and the current data for an FSM
 type Decider func(*FSM, HistoryEvent, interface{}) *Outcome
 
-// EmptyData specifies the type of data used by the FSM, return
-type EmptyData func() interface{}
-
-// EmptyInputOrResult
-type EmptyInputOrResult func(HistoryEvent) interface{}
+// EventDataType should return an empty struct of the correct type based on the event
+// the FSM will unmarshal data from the event into this struct
+type EventDataType func(HistoryEvent) interface{}
 
 // Outcome is created by Deciders
 type Outcome struct {
@@ -36,17 +34,17 @@ type FSMState struct {
 
 // FSM models the decision handling logic a workflow in SWF
 type FSM struct {
-	Name               string
-	Domain             string
-	TaskList           string
-	Identity           string
-	DecisionWorker     *DecisionWorker
-	states             map[string]*FSMState
-	initialState       *FSMState
-	Input              chan *PollForDecisionTaskResponse
-	EmptyData          EmptyData
-	EmptyInputOrResult EmptyInputOrResult
-	stop               chan bool
+	Name                      string
+	Domain                    string
+	TaskList                  string
+	Identity                  string
+	DecisionWorker            *DecisionWorker
+	states                    map[string]*FSMState
+	initialState              *FSMState
+	Input                     chan *PollForDecisionTaskResponse
+	DataType                  interface{}
+	EventDataType             EventDataType
+	stop                      chan bool
 }
 
 func (f *FSM) AddInitialState(state *FSMState) {
@@ -101,7 +99,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, erro
 	}
 
 	f.log("action=tick at=find-current-state state=%s", serializedState.State)
-	data := f.EmptyData()
+	data := reflect.New(reflect.TypeOf(f.DataType)).Interface()
 	err = f.Serializer().Deserialize(serializedState.Data, data)
 	if err != nil {
 		f.log("action=tick at=error=deserialize-state-failed")
@@ -148,7 +146,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]*Decision, erro
 }
 
 func (f *FSM) EventData(event HistoryEvent) interface{} {
-	eventData := f.EmptyInputOrResult(event)
+	eventData := f.EventDataType(event)
 
 	if eventData != nil {
 		var serialized string

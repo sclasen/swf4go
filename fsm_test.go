@@ -9,7 +9,7 @@ func TestFSM(t *testing.T) {
 	fsm := FSM{
 		Name:           "test-fsm",
 		DecisionWorker: &DecisionWorker{StateSerializer: JsonStateSerializer{}, idGenerator: UUIDGenerator{}},
-		EmptyData:      func() interface{} { return &TestData{} },
+		DataType:       TestData{},
 		states:         make(map[string]*FSMState),
 	}
 
@@ -159,7 +159,7 @@ func TestMarshalledDecider(t *testing.T) {
 		if d.States[0] != "marshalled" {
 			t.Fail()
 		}
-		return &Outcome{NextState:"ok"}
+		return &Outcome{NextState: "ok"}
 	}
 
 	wrapped := TypedDecider(typedDecider)
