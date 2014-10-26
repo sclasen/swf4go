@@ -18,7 +18,7 @@ func TestFSM(t *testing.T) {
 		Decider: func(f *FSM, lastEvent HistoryEvent, data interface{}) *Outcome {
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "start")
-			decision, _ := fsm.DecisionWorker.ScheduleActivityTaskDecision("activity", "activityVersion", "taskList", testData)
+			decision, _ := f.DecisionWorker.ScheduleActivityTaskDecision("activity", "activityVersion", "taskList", testData)
 			return &Outcome{
 				NextState: "working",
 				Data:      testData,
@@ -32,12 +32,12 @@ func TestFSM(t *testing.T) {
 		Decider: func(f *FSM, lastEvent HistoryEvent, data interface{}) *Outcome {
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "working")
-			var decisions = make([]*Decision, 0)
+			var decisions = f.EmptyDecisions()
 			if lastEvent.EventType == "ActivityTaskCompleted" {
-				decision, _ := fsm.DecisionWorker.CompleteWorkflowExecution(testData)
+				decision, _ := f.DecisionWorker.CompleteWorkflowExecution(testData)
 				decisions = append(decisions, decision)
 			} else if lastEvent.EventType == "ActivityTaskFailed" {
-				decision, _ := fsm.DecisionWorker.ScheduleActivityTaskDecision("activity", "activityVersion", "taskList", testData)
+				decision, _ := f.DecisionWorker.ScheduleActivityTaskDecision("activity", "activityVersion", "taskList", testData)
 				decisions = append(decisions, decision)
 			}
 			return &Outcome{

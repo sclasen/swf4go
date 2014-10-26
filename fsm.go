@@ -12,16 +12,20 @@ const (
 
 // Decider decides an Outcome based on an event and the current data for an FSM
 type Decider func(*FSM, HistoryEvent, interface{}) *Outcome
+
 // EmptyData specifies the type of data used by the FSM, return
 type EmptyData func() interface{}
+
 // EmptyInputOrResult
 type EmptyInputOrResult func(HistoryEvent) interface{}
+
 // Outcome is created by Deciders
 type Outcome struct {
 	Data      interface{}
 	NextState string
 	Decisions []*Decision
 }
+
 // FSMState defines the behavior of one state of an FSM
 type FSMState struct {
 	Name    string
@@ -223,7 +227,7 @@ func (f *FSM) decisions(outcome *Outcome) ([]*Decision, error) {
 	if err != nil {
 		return nil, err
 	}
-	decisions := make([]*Decision, 0)
+	decisions := f.EmptyDecisions()
 	decisions = append(decisions, d)
 
 	for _, decision := range outcome.Decisions {
@@ -242,6 +246,10 @@ func (f *FSM) isStateMarker(e HistoryEvent) bool {
 
 func (f *FSM) Serializer() StateSerializer {
 	return f.DecisionWorker.StateSerializer
+}
+
+func (f *FSM) EmptyDecisions() []*Decision {
+	return make([]*Decision, 0)
 }
 
 type SerializedState struct {
