@@ -6,6 +6,7 @@ import (
 	"log"
 )
 
+// The marker name used then recording the current state and data of a workflow
 const (
 	STATE_MARKER = "FSM.State"
 )
@@ -167,7 +168,7 @@ func (f *FSM) EventData(event HistoryEvent) interface{} {
 		if serialized != "" {
 			err := f.Serializer().Deserialize(serialized, eventData)
 			if err != nil {
-				log.Printf("")
+				log.Printf("")  //TODO propagate here. too much error handling in deciders, maybe make them panic safe.
 			}
 		}
 	}
