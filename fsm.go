@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-// The marker name used then recording the current state and data of a workflow
+// The marker name used when recording the current state and data of a workflow
 const (
 	STATE_MARKER = "FSM.State"
 )
@@ -39,11 +39,11 @@ type FSM struct {
 	TaskList       string
 	Identity       string
 	DecisionWorker *DecisionWorker
-	states         map[string]*FSMState
-	initialState   *FSMState
 	Input          chan *PollForDecisionTaskResponse
 	DataType       interface{}
 	EventDataType  EventDataType
+	states         map[string]*FSMState
+	initialState   *FSMState
 	stop           chan bool
 }
 
@@ -62,6 +62,10 @@ func (f *FSM) Start() {
 	if f.initialState == nil {
 		panic("No Initial State Defined For FSM")
 	}
+	if f.stop == nil {
+		f.stop = make(chan bool)
+	}
+
 	go func() {
 		poller := f.DecisionWorker.PollTaskList(f.Domain, f.Identity, f.TaskList, f.Input)
 		for {
