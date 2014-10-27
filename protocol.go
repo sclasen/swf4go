@@ -1,6 +1,9 @@
 package swf
 
-import "bytes"
+import (
+	"bytes"
+	"fmt"
+)
 
 type ErrorResponse struct {
 	StatusCode int
@@ -146,54 +149,56 @@ const (
 	EventTypeExternalWorkflowExecutionCancelRequested        = "ExternalWorkflowExecutionCancelRequested"
 )
 
-var EventTypes = []string{
-	EventTypeWorkflowExecutionStarted,
-	EventTypeWorkflowExecutionCancelRequested,
-	EventTypeWorkflowExecutionCompleted,
-	EventTypeCompleteWorkflowExecutionFailed,
-	EventTypeWorkflowExecutionFailed,
-	EventTypeFailWorkflowExecutionFailed,
-	EventTypeWorkflowExecutionTimedOut,
-	EventTypeWorkflowExecutionCanceled,
-	EventTypeCancelWorkflowExecutionFailed,
-	EventTypeWorkflowExecutionContinuedAsNew,
-	EventTypeContinueAsNewWorkflowExecutionFailed,
-	EventTypeWorkflowExecutionTerminated,
-	EventTypeDecisionTaskScheduled,
-	EventTypeDecisionTaskStarted,
-	EventTypeDecisionTaskCompleted,
-	EventTypeDecisionTaskTimedOut,
-	EventTypeActivityTaskScheduled,
-	EventTypeScheduleActivityTaskFailed,
-	EventTypeActivityTaskStarted,
-	EventTypeActivityTaskCompleted,
-	EventTypeActivityTaskFailed,
-	EventTypeActivityTaskTimedOut,
-	EventTypeActivityTaskCanceled,
-	EventTypeActivityTaskCancelRequested,
-	EventTypeRequestCancelActivityTaskFailed,
-	EventTypeWorkflowExecutionSignaled,
-	EventTypeMarkerRecorded,
-	EventTypeRecordMarkerFailed,
-	EventTypeTimerStarted,
-	EventTypeStartTimerFailed,
-	EventTypeTimerFired,
-	EventTypeTimerCanceled,
-	EventTypeCancelTimerFailed,
-	EventTypeStartChildWorkflowExecutionInitiated,
-	EventTypeStartChildWorkflowExecutionFailed,
-	EventTypeChildWorkflowExecutionStarted,
-	EventTypeChildWorkflowExecutionCompleted,
-	EventTypeChildWorkflowExecutionFailed,
-	EventTypeChildWorkflowExecutionTimedOut,
-	EventTypeChildWorkflowExecutionCanceled,
-	EventTypeChildWorkflowExecutionTerminated,
-	EventTypeSignalExternalWorkflowExecutionInitiated,
-	EventTypeSignalExternalWorkflowExecutionFailed,
-	EventTypeExternalWorkflowExecutionSignaled,
-	EventTypeRequestCancelExternalWorkflowExecutionInitiated,
-	EventTypeRequestCancelExternalWorkflowExecutionFailed,
-	EventTypeExternalWorkflowExecutionCancelRequested,
+var EventTypes = map[string]func(HistoryEvent) interface{}{
+	EventTypeWorkflowExecutionStarted:                 func(h HistoryEvent) interface{} { return h.WorkflowExecutionStartedEventAttributes },
+	EventTypeWorkflowExecutionCancelRequested:         func(h HistoryEvent) interface{} { return h.WorkflowExecutionCancelRequestedEventAttributes },
+	EventTypeWorkflowExecutionCompleted:               func(h HistoryEvent) interface{} { return h.WorkflowExecutionCompletedEventAttributes },
+	EventTypeCompleteWorkflowExecutionFailed:          func(h HistoryEvent) interface{} { return h.CompleteWorkflowExecutionFailedEventAttributes },
+	EventTypeWorkflowExecutionFailed:                  func(h HistoryEvent) interface{} { return h.WorkflowExecutionFailedEventAttributes },
+	EventTypeFailWorkflowExecutionFailed:              func(h HistoryEvent) interface{} { return h.FailWorkflowExecutionFailedEventAttributes },
+	EventTypeWorkflowExecutionTimedOut:                func(h HistoryEvent) interface{} { return h.WorkflowExecutionTimedOutEventAttributes },
+	EventTypeWorkflowExecutionCanceled:                func(h HistoryEvent) interface{} { return h.WorkflowExecutionCanceledEventAttributes },
+	EventTypeCancelWorkflowExecutionFailed:            func(h HistoryEvent) interface{} { return h.CancelWorkflowExecutionFailedEventAttributes },
+	EventTypeWorkflowExecutionContinuedAsNew:          func(h HistoryEvent) interface{} { return h.WorkflowExecutionContinuedAsNewEventAttributes },
+	EventTypeContinueAsNewWorkflowExecutionFailed:     func(h HistoryEvent) interface{} { return h.ContinueAsNewWorkflowExecutionFailedEventAttributes },
+	EventTypeWorkflowExecutionTerminated:              func(h HistoryEvent) interface{} { return h.WorkflowExecutionTerminatedEventAttributes },
+	EventTypeDecisionTaskScheduled:                    func(h HistoryEvent) interface{} { return h.DecisionTaskScheduledEventAttributes },
+	EventTypeDecisionTaskStarted:                      func(h HistoryEvent) interface{} { return h.DecisionTaskStartedEventAttributes },
+	EventTypeDecisionTaskCompleted:                    func(h HistoryEvent) interface{} { return h.DecisionTaskCompletedEventAttributes },
+	EventTypeDecisionTaskTimedOut:                     func(h HistoryEvent) interface{} { return h.DecisionTaskTimedOutEventAttributes },
+	EventTypeActivityTaskScheduled:                    func(h HistoryEvent) interface{} { return h.ActivityTaskScheduledEventAttributes },
+	EventTypeScheduleActivityTaskFailed:               func(h HistoryEvent) interface{} { return h.ScheduleActivityTaskFailedEventAttributes },
+	EventTypeActivityTaskStarted:                      func(h HistoryEvent) interface{} { return h.ActivityTaskStartedEventAttributes },
+	EventTypeActivityTaskCompleted:                    func(h HistoryEvent) interface{} { return h.ActivityTaskCompletedEventAttributes },
+	EventTypeActivityTaskFailed:                       func(h HistoryEvent) interface{} { return h.ActivityTaskFailedEventAttributes },
+	EventTypeActivityTaskTimedOut:                     func(h HistoryEvent) interface{} { return h.ActivityTaskTimedOutEventAttributes },
+	EventTypeActivityTaskCanceled:                     func(h HistoryEvent) interface{} { return h.ActivityTaskCanceledEventAttributes },
+	EventTypeActivityTaskCancelRequested:              func(h HistoryEvent) interface{} { return h.ActivityTaskCancelRequestedEventAttributes },
+	EventTypeRequestCancelActivityTaskFailed:          func(h HistoryEvent) interface{} { return h.RequestCancelActivityTaskFailedEventAttributes },
+	EventTypeWorkflowExecutionSignaled:                func(h HistoryEvent) interface{} { return h.WorkflowExecutionSignaledEventAttributes },
+	EventTypeMarkerRecorded:                           func(h HistoryEvent) interface{} { return h.MarkerRecordedEventAttributes },
+	EventTypeRecordMarkerFailed:                       func(h HistoryEvent) interface{} { return h.RecordMarkerFailedEventAttributes },
+	EventTypeTimerStarted:                             func(h HistoryEvent) interface{} { return h.TimerStartedEventAttributes },
+	EventTypeStartTimerFailed:                         func(h HistoryEvent) interface{} { return h.StartTimerFailedEventAttributes },
+	EventTypeTimerFired:                               func(h HistoryEvent) interface{} { return h.TimerFiredEventAttributes },
+	EventTypeTimerCanceled:                            func(h HistoryEvent) interface{} { return h.TimerCanceledEventAttributes },
+	EventTypeCancelTimerFailed:                        func(h HistoryEvent) interface{} { return h.CancelTimerFailedEventAttributes },
+	EventTypeStartChildWorkflowExecutionInitiated:     func(h HistoryEvent) interface{} { return h.StartChildWorkflowExecutionInitiatedEventAttributes },
+	EventTypeStartChildWorkflowExecutionFailed:        func(h HistoryEvent) interface{} { return h.StartChildWorkflowExecutionFailedEventAttributes },
+	EventTypeChildWorkflowExecutionStarted:            func(h HistoryEvent) interface{} { return h.ChildWorkflowExecutionStartedEventAttributes },
+	EventTypeChildWorkflowExecutionCompleted:          func(h HistoryEvent) interface{} { return h.ChildWorkflowExecutionCompletedEventAttributes },
+	EventTypeChildWorkflowExecutionFailed:             func(h HistoryEvent) interface{} { return h.ChildWorkflowExecutionFailedEventAttributes },
+	EventTypeChildWorkflowExecutionTimedOut:           func(h HistoryEvent) interface{} { return h.ChildWorkflowExecutionTimedOutEventAttributes },
+	EventTypeChildWorkflowExecutionCanceled:           func(h HistoryEvent) interface{} { return h.ChildWorkflowExecutionCanceledEventAttributes },
+	EventTypeChildWorkflowExecutionTerminated:         func(h HistoryEvent) interface{} { return h.ChildWorkflowExecutionTerminatedEventAttributes },
+	EventTypeSignalExternalWorkflowExecutionInitiated: func(h HistoryEvent) interface{} { return h.SignalExternalWorkflowExecutionInitiatedEventAttributes },
+	EventTypeSignalExternalWorkflowExecutionFailed:    func(h HistoryEvent) interface{} { return h.SignalExternalWorkflowExecutionFailedEventAttributes },
+	EventTypeExternalWorkflowExecutionSignaled:        func(h HistoryEvent) interface{} { return h.ExternalWorkflowExecutionSignaledEventAttributes },
+	EventTypeRequestCancelExternalWorkflowExecutionInitiated: func(h HistoryEvent) interface{} {
+		return h.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes
+	},
+	EventTypeRequestCancelExternalWorkflowExecutionFailed: func(h HistoryEvent) interface{} { return h.RequestCancelExternalWorkflowExecutionFailedEventAttributes },
+	EventTypeExternalWorkflowExecutionCancelRequested:     func(h HistoryEvent) interface{} { return h.ExternalWorkflowExecutionCancelRequestedEventAttributes },
 }
 
 type HistoryEvent struct {
@@ -249,11 +254,14 @@ type HistoryEvent struct {
 	WorkflowExecutionTimedOutEventAttributes                       *WorkflowExecutionTimedOutEventAttributes                       `json:"workflowExecutionTimedOutEventAttributes,omitempty"`
 }
 
-func (*HistoryEvent) String() string {
+func (h HistoryEvent) String() string {
 	var buffer bytes.Buffer
-
-	buffer.WriteString("a")
-
+	buffer.WriteString("HistoryEvent{ ")
+	buffer.WriteString(fmt.Sprintf("EventId: %d,", h.EventId))
+	buffer.WriteString(fmt.Sprintf("EventTimestamp: %d, ", h.EventTimestamp))
+	buffer.WriteString(fmt.Sprintf("EventType:, %s", h.EventType))
+	buffer.WriteString(fmt.Sprintf("%+v", EventTypes[h.EventType](h)))
+	buffer.WriteString(" }")
 	return buffer.String()
 }
 
@@ -554,19 +562,19 @@ const (
 	DecisionTypeStartChildWorkflowExecution            = "StartChildWorkflowExecution"
 )
 
-var DecisionTypes = []string{
-	DecisionTypeScheduleActivityTask,
-	DecisionTypeRequestCancelActivityTask,
-	DecisionTypeCompleteWorkflowExecution,
-	DecisionTypeFailWorkflowExecution,
-	DecisionTypeCancelWorkflowExecution,
-	DecisionTypeContinueAsNewWorkflowExecution,
-	DecisionTypeRecordMarker,
-	DecisionTypeStartTimer,
-	DecisionTypeCancelTimer,
-	DecisionTypeSignalExternalWorkflowExecution,
-	DecisionTypeRequestCancelExternalWorkflowExecution,
-	DecisionTypeStartChildWorkflowExecution,
+var DecisionTypes = map[string]func(*Decision) interface{}{
+	DecisionTypeScheduleActivityTask:                   func(d *Decision) interface{} { return d.ScheduleActivityTaskDecisionAttributes },
+	DecisionTypeRequestCancelActivityTask:              func(d *Decision) interface{} { return d.RequestCancelActivityTaskDecisionAttributes },
+	DecisionTypeCompleteWorkflowExecution:              func(d *Decision) interface{} { return d.CompleteWorkflowExecutionDecisionAttributes },
+	DecisionTypeFailWorkflowExecution:                  func(d *Decision) interface{} { return d.FailWorkflowExecutionDecisionAttributes },
+	DecisionTypeCancelWorkflowExecution:                func(d *Decision) interface{} { return d.CancelWorkflowExecutionDecisionAttributes },
+	DecisionTypeContinueAsNewWorkflowExecution:         func(d *Decision) interface{} { return d.ContinueAsNewWorkflowExecutionDecisionAttributes },
+	DecisionTypeRecordMarker:                           func(d *Decision) interface{} { return d.RecordMarkerDecisionAttributes },
+	DecisionTypeStartTimer:                             func(d *Decision) interface{} { return d.StartTimerDecisionAttributes },
+	DecisionTypeCancelTimer:                            func(d *Decision) interface{} { return d.CancelTimerDecisionAttributes },
+	DecisionTypeSignalExternalWorkflowExecution:        func(d *Decision) interface{} { return d.SignalExternalWorkflowExecutionDecisionAttributes },
+	DecisionTypeRequestCancelExternalWorkflowExecution: func(d *Decision) interface{} { return d.RequestCancelExternalWorkflowExecutionDecisionAttributes },
+	DecisionTypeStartChildWorkflowExecution:            func(d *Decision) interface{} { return d.StartChildWorkflowExecutionDecisionAttributes },
 }
 
 type Decision struct {
@@ -583,6 +591,15 @@ type Decision struct {
 	SignalExternalWorkflowExecutionDecisionAttributes        *SignalExternalWorkflowExecutionDecisionAttributes        `json:"signalExternalWorkflowExecutionDecisionAttributes,omitempty"`
 	StartChildWorkflowExecutionDecisionAttributes            *StartChildWorkflowExecutionDecisionAttributes            `json:"startChildWorkflowExecutionDecisionAttributes,omitempty"`
 	StartTimerDecisionAttributes                             *StartTimerDecisionAttributes                             `json:"startTimerDecisionAttributes,omitempty"`
+}
+
+func (d *Decision) String() string {
+	var buffer bytes.Buffer
+	buffer.WriteString("Decisiomn{ ")
+	buffer.WriteString(fmt.Sprintf("DecisionType: %d,", d.DecisionType))
+	buffer.WriteString(fmt.Sprintf("%+v", DecisionTypes[d.DecisionType](d)))
+	buffer.WriteString(" }")
+	return buffer.String()
 }
 
 type CancelTimerDecisionAttributes struct {
