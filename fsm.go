@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-// The marker name used when recording the current state and data of a workflow
+// constants used as marker names or signal names
 const (
 	STATE_MARKER        = "FSM.State"
 	ERROR_SIGNAL        = "FSM.Error"
