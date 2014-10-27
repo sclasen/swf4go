@@ -86,7 +86,7 @@ func TestFSM(t *testing.T) {
 		PreviousStartedEventId: 3,
 	}
 
-	if state, _ := fsm.findSerializedState(secondEvents); state.State != "working" {
+	if state, _ := fsm.findSerializedState(secondEvents); state.StateName != "working" {
 		t.Fatal("current state is not 'working'", secondEvents)
 	}
 
@@ -184,7 +184,7 @@ func TestPanicRecovery(t *testing.T) {
 	}
 	f := &FSM{}
 	f.AddInitialState(s)
-	_, err := f.decide(s, HistoryEvent{}, nil)
+	_, err := f.panicSafeDecide(s, HistoryEvent{}, nil)
 	if err == nil {
 		t.Fatal("fatallz")
 	} else {

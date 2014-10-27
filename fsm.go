@@ -81,20 +81,25 @@ func (f *FSM) DefaultErrorState() *FSMState {
 		Decider: func(f *FSM, h HistoryEvent, data interface{}) *Outcome {
 			switch h.EventType {
 			case EventTypeWorkflowExecutionSignaled:
-				{
-					switch h.WorkflowExecutionSignaledEventAttributes.SignalName {
-					case ERROR_SIGNAL:
-						err := &SerializedDecisionError{}
-						f.Serializer().Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
-						f.log("action=default-handle-error at=handle-decision-error error=%+v", err)
-						f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowId)
-					case SYSTEM_ERROR_SIGNAL:
-						err := &SerializedSystemError{}
-						f.Serializer().Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
-						f.log("action=default-handle-error at=handle-system-error error=%+v", err)
-						f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowId)
-					}
+			{
+				switch h.WorkflowExecutionSignaledEventAttributes.SignalName {
+				case ERROR_SIGNAL:
+					err := &SerializedDecisionError{}
+					f.Serializer().Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
+					f.log("action=default-handle-error at=handle-decision-error error=%+v", err)
+					f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowId)
+				case SYSTEM_ERROR_SIGNAL:
+					err := &SerializedSystemError{}
+					f.Serializer().Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
+					f.log("action=default-handle-error at=handle-system-error error=%+v", err)
+					f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowId)
+				default:
+					f.log("action=default-handle-error at=process-signal-event event=%+v", h)
 				}
+
+			}
+			default:
+				f.log("action=default-handle-error at=process-event event=%+v", h)
 			}
 			return &Outcome{NextState: "error", Data: data, Decisions: []*Decision{}}
 		},
@@ -142,27 +147,49 @@ func (f *FSM) Start() {
 }
 
 func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
+	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
-	serializedState, err := f.findSerializedState(decisionTask.Events)
-
-	if err != nil {
-		return f.captureSystemError(execution, "FindSerializedStateError", decisionTask.Events, err)
-	}
-
-	f.log("action=tick at=find-current-state state=%s", serializedState.StateName)
-	data := reflect.New(reflect.TypeOf(f.DataType)).Interface()
-	err = f.Serializer().Deserialize(serializedState.StateData, data)
-	if err != nil {
-		f.log("action=tick at=error=deserialize-state-failed")
-		return f.captureSystemError(execution, "DeserializeStateError", decisionTask.Events, err)
-	}
-
-	f.log("action=tick at=find-current-data data=%v", data)
-	lastEvents := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
-
 	outcome := new(Outcome)
-	outcome.Data = data
-	outcome.NextState = serializedState.StateName
+
+	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
+	if len(errorEvents) > 0 {
+		outcome.Data = nil
+		outcome.NextState = f.errorState.Name
+		for i := len(errorEvents) - 1; i >= 0; i-- {
+			e := errorEvents[i]
+			anOutcome, err := f.panicSafeDecide(f.errorState, e, outcome.Data)
+			if err != nil {
+				f.log("at=error error=decision-execution-error state=%s next-state=%", f.errorState.Name, outcome.NextState)
+				return f.captureDecisionError(execution, i, errorEvents, outcome.NextState, outcome.Data, err)
+			}
+			outcome.Data = anOutcome.Data
+			outcome.NextState = anOutcome.NextState
+			outcome.Decisions = append(outcome.Decisions, anOutcome.Decisions...)
+		}
+
+	}
+
+    //if there was no error processing, we recover the state + data from the expected marker
+ 	if outcome.Data == nil && outcome.NextState == "" {
+		serializedState, err := f.findSerializedState(decisionTask.Events)
+
+		if err != nil {
+			return f.captureSystemError(execution, "FindSerializedStateError", decisionTask.Events, err)
+		}
+
+		f.log("action=tick at=find-current-state state=%s", serializedState.StateName)
+		data := reflect.New(reflect.TypeOf(f.DataType)).Interface()
+		err = f.Serializer().Deserialize(serializedState.StateData, data)
+		if err != nil {
+			f.log("action=tick at=error=deserialize-state-failed")
+			return f.captureSystemError(execution, "DeserializeStateError", decisionTask.Events, err)
+		}
+
+		f.log("action=tick at=find-current-data data=%v", data)
+
+		outcome.Data = data
+		outcome.NextState = serializedState.StateName
+	}
 
 	//iterate through events oldest to newest, calling the decider for the current state.
 	//if the outcome changes the state use the right FSMState
@@ -308,27 +335,37 @@ func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, erro
 	return nil, errors.New("Cant Find Current Data")
 }
 
-func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) []HistoryEvent {
+func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryEvent, []HistoryEvent) {
 	lastEvents := make([]HistoryEvent, 0)
+	errorEvents := make([]HistoryEvent, 0)
+
 	for _, event := range events {
 		if event.EventId == prevStarted {
-			return lastEvents
+			return lastEvents, errorEvents
 		} else {
 			switch event.EventType {
 			case EventTypeDecisionTaskCompleted, EventTypeDecisionTaskScheduled,
-				EventTypeDecisionTaskStarted, EventTypeDecisionTaskTimedOut:
-				//no-op
+			EventTypeDecisionTaskStarted, EventTypeDecisionTaskTimedOut:
+				//no-op, dont even process these?
 			case EventTypeMarkerRecorded:
 				if !f.isStateMarker(event) {
 					lastEvents = append(lastEvents, event)
 				}
+			case EventTypeWorkflowExecutionSignaled:
+			{
+				if f.isErrorSignal(event) {
+					errorEvents = append(errorEvents, event)
+				} else {
+					lastEvents = append(lastEvents, event)
+				}
+			}
 			default:
 				lastEvents = append(lastEvents, event)
 			}
 		}
 	}
 
-	return lastEvents
+	return lastEvents, errorEvents
 }
 
 func (f *FSM) appendState(outcome *Outcome) ([]*Decision, error) {
@@ -356,6 +393,19 @@ func (f *FSM) Stop() {
 
 func (f *FSM) isStateMarker(e HistoryEvent) bool {
 	return e.EventType == EventTypeMarkerRecorded && e.MarkerRecordedEventAttributes.MarkerName == STATE_MARKER
+}
+
+func (f *FSM) isErrorSignal(e HistoryEvent) bool {
+	if e.EventType == EventTypeWorkflowExecutionSignaled {
+		switch e.WorkflowExecutionSignaledEventAttributes.SignalName {
+		case SYSTEM_ERROR_SIGNAL, ERROR_SIGNAL:
+			return true
+		default:
+			return false
+		}
+	} else {
+		return false
+	}
 }
 
 func (f *FSM) Serializer() StateSerializer {
