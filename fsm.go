@@ -150,13 +150,13 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 
 	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
 	if len(errorEvents) > 0 {
-		outcome.Data = nil
+		outcome.Data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
 		outcome.NextState = f.errorState.Name
 		for i := len(errorEvents) - 1; i >= 0; i-- {
 			e := errorEvents[i]
 			anOutcome, err := f.panicSafeDecide(f.errorState, e, outcome.Data)
 			if err != nil {
-				f.log("at=error error=decision-execution-error state=%s next-state=%", f.errorState.Name, outcome.NextState)
+				f.log("at=error error=error-handling-decision-execution-error state=%s next-state=%", f.errorState.Name, outcome.NextState)
 				return append(outcome.Decisions, f.captureDecisionError(execution, i, errorEvents, outcome.NextState, outcome.Data, err)...)
 			}
 			outcome.Data = anOutcome.Data
@@ -228,12 +228,12 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 //if the outcome is good good if its an error, we capture the error state above
 
 func (f *FSM) panicSafeDecide(state *FSMState, event HistoryEvent, data interface{}) (anOutcome *Outcome, anErr error) {
-	defer func() {
+	/*defer func() {
 		if r := recover(); r != nil {
-			f.log("at=error error=decide-panic-recovery")
+			f.log("at=error error=decide-panic-recovery %v", r)
 			anErr = errors.New("panic in decider, capture error state")
 		}
-	}()
+	}()*/
 	anOutcome = state.Decider(f, event, data)
 	return
 }
@@ -475,5 +475,10 @@ func TypedDecider(decider interface{}) Decider {
 }
 
 func (m MarshalledDecider) Decide(f *FSM, h HistoryEvent, data interface{}) *Outcome {
+
+	// reflection will asplode if we try to use nil
+	if data == nil {
+		data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
+	}
 	return m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0].Interface().(*Outcome)
 }

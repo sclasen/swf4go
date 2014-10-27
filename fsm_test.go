@@ -14,7 +14,6 @@ func TestFSM(t *testing.T) {
 		Name:           "test-fsm",
 		DecisionWorker: &DecisionWorker{StateSerializer: JsonStateSerializer{}, idGenerator: UUIDGenerator{}},
 		DataType:       TestData{},
-		states:         make(map[string]*FSMState),
 	}
 
 	fsm.AddInitialState(&FSMState{
@@ -189,5 +188,82 @@ func TestPanicRecovery(t *testing.T) {
 		t.Fatal("fatallz")
 	} else {
 		log.Println(err)
+	}
+}
+
+func TestErrorHandling(t *testing.T) {
+	fsm := FSM{
+		Name:           "test-fsm",
+		DecisionWorker: &DecisionWorker{StateSerializer: JsonStateSerializer{}, idGenerator: UUIDGenerator{}},
+		DataType:       TestData{},
+	}
+
+	fsm.AddInitialState(&FSMState{
+		Name: "ok",
+		Decider: func(f *FSM, h HistoryEvent, d interface{}) *Outcome {
+			if h.EventType == EventTypeWorkflowExecutionSignaled && d.(*TestData).States[0] == "recovered" {
+				log.Println("recovered")
+				return &Outcome{NextState: "ok", Data: d}
+			} else {
+				t.Fatalf("ok state did not get recovered %s", h)
+				return nil
+			}
+		},
+	})
+
+	fsm.AddErrorState(&FSMState{
+		Name: "error",
+		Decider: func(f *FSM, h HistoryEvent, d interface{}) *Outcome {
+			if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == ERROR_SIGNAL {
+				log.Println("in error recovery")
+				return &Outcome{
+					NextState: "ok",
+					Data:      &TestData{States: []string{"recovered"}},
+				}
+			} else {
+				t.Fatalf("error handler got unexpected event")
+				return nil
+			}
+		},
+	})
+
+	events := []HistoryEvent{
+		HistoryEvent{
+			EventId:   2,
+			EventType: EventTypeWorkflowExecutionSignaled,
+			WorkflowExecutionSignaledEventAttributes: &WorkflowExecutionSignaledEventAttributes{
+				SignalName: "NOT AN ERROR",
+				Input:      "Hi",
+			},
+		},
+		HistoryEvent{
+			EventId:   1,
+			EventType: EventTypeWorkflowExecutionSignaled,
+			WorkflowExecutionSignaledEventAttributes: &WorkflowExecutionSignaledEventAttributes{
+				SignalName: ERROR_SIGNAL,
+				Input:      "{}",
+			},
+		},
+	}
+
+	resp := &PollForDecisionTaskResponse{
+		Events:                 events,
+		StartedEventId:         1,
+		PreviousStartedEventId: 0,
+	}
+
+	decisions := fsm.Tick(resp)
+	if len(decisions) != 1 && decisions[0].DecisionType != DecisionTypeRecordMarker {
+		t.Fatalf("no state marker!")
+	}
+	//Try with TypedDecider
+	id := fsm.initialState.Decider
+	fsm.initialState.Decider = TypedDecider(func(f *FSM, h HistoryEvent, d *TestData) *Outcome { return id(f, h, d) })
+	ie := fsm.errorState.Decider
+	fsm.errorState.Decider = TypedDecider(func(f *FSM, h HistoryEvent, d *TestData) *Outcome { return ie(f, h, d) })
+
+	decisions2 := fsm.Tick(resp)
+	if len(decisions2) != 1 && decisions2[0].DecisionType != DecisionTypeRecordMarker {
+		t.Fatalf("no state marker for typed decider!")
 	}
 }
