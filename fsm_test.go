@@ -1,8 +1,12 @@
 package swf
 
 import (
+	"log"
 	"testing"
 )
+
+//Todo add tests of error handling mechanism
+//assert that the decisions have the mark and the signal external...hmm need workflow id for signal external.
 
 func TestFSM(t *testing.T) {
 
@@ -64,7 +68,7 @@ func TestFSM(t *testing.T) {
 		PreviousStartedEventId: 0,
 	}
 
-	decisions, _ := fsm.Tick(first)
+	decisions := fsm.Tick(first)
 
 	if !Find(decisions, stateMarkerPredicate) {
 		t.Fatal("No Record State Marker")
@@ -86,7 +90,7 @@ func TestFSM(t *testing.T) {
 		t.Fatal("current state is not 'working'", secondEvents)
 	}
 
-	secondDecisions, _ := fsm.Tick(second)
+	secondDecisions := fsm.Tick(second)
 
 	if !Find(secondDecisions, stateMarkerPredicate) {
 		t.Fatal("No Record State Marker")
@@ -168,5 +172,22 @@ func TestMarshalledDecider(t *testing.T) {
 
 	if outcome.NextState != "ok" {
 		t.Fatal("NextState was not 'ok'")
+	}
+}
+
+func TestPanicRecovery(t *testing.T) {
+	s := &FSMState{
+		Name: "panic",
+		Decider: func(f *FSM, e HistoryEvent, data interface{}) *Outcome {
+			panic("can you handle it?")
+		},
+	}
+	f := &FSM{}
+	f.AddInitialState(s)
+	_, err := f.decide(s, HistoryEvent{}, nil)
+	if err == nil {
+		t.Fatal("fatallz")
+	} else {
+		log.Println(err)
 	}
 }
