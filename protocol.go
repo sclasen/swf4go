@@ -1,5 +1,7 @@
 package swf
 
+import "bytes"
+
 type ErrorResponse struct {
 	StatusCode int
 	Type       string `json:"__type"`
@@ -144,6 +146,56 @@ const (
 	EventTypeExternalWorkflowExecutionCancelRequested        = "ExternalWorkflowExecutionCancelRequested"
 )
 
+var EventTypes = []string{
+	EventTypeWorkflowExecutionStarted,
+	EventTypeWorkflowExecutionCancelRequested,
+	EventTypeWorkflowExecutionCompleted,
+	EventTypeCompleteWorkflowExecutionFailed,
+	EventTypeWorkflowExecutionFailed,
+	EventTypeFailWorkflowExecutionFailed,
+	EventTypeWorkflowExecutionTimedOut,
+	EventTypeWorkflowExecutionCanceled,
+	EventTypeCancelWorkflowExecutionFailed,
+	EventTypeWorkflowExecutionContinuedAsNew,
+	EventTypeContinueAsNewWorkflowExecutionFailed,
+	EventTypeWorkflowExecutionTerminated,
+	EventTypeDecisionTaskScheduled,
+	EventTypeDecisionTaskStarted,
+	EventTypeDecisionTaskCompleted,
+	EventTypeDecisionTaskTimedOut,
+	EventTypeActivityTaskScheduled,
+	EventTypeScheduleActivityTaskFailed,
+	EventTypeActivityTaskStarted,
+	EventTypeActivityTaskCompleted,
+	EventTypeActivityTaskFailed,
+	EventTypeActivityTaskTimedOut,
+	EventTypeActivityTaskCanceled,
+	EventTypeActivityTaskCancelRequested,
+	EventTypeRequestCancelActivityTaskFailed,
+	EventTypeWorkflowExecutionSignaled,
+	EventTypeMarkerRecorded,
+	EventTypeRecordMarkerFailed,
+	EventTypeTimerStarted,
+	EventTypeStartTimerFailed,
+	EventTypeTimerFired,
+	EventTypeTimerCanceled,
+	EventTypeCancelTimerFailed,
+	EventTypeStartChildWorkflowExecutionInitiated,
+	EventTypeStartChildWorkflowExecutionFailed,
+	EventTypeChildWorkflowExecutionStarted,
+	EventTypeChildWorkflowExecutionCompleted,
+	EventTypeChildWorkflowExecutionFailed,
+	EventTypeChildWorkflowExecutionTimedOut,
+	EventTypeChildWorkflowExecutionCanceled,
+	EventTypeChildWorkflowExecutionTerminated,
+	EventTypeSignalExternalWorkflowExecutionInitiated,
+	EventTypeSignalExternalWorkflowExecutionFailed,
+	EventTypeExternalWorkflowExecutionSignaled,
+	EventTypeRequestCancelExternalWorkflowExecutionInitiated,
+	EventTypeRequestCancelExternalWorkflowExecutionFailed,
+	EventTypeExternalWorkflowExecutionCancelRequested,
+}
+
 type HistoryEvent struct {
 	ActivityTaskCancelRequestedEventAttributes                     *ActivityTaskCancelRequestedEventAttributes                     `json:"activityTaskCancelRequestedEventAttributes,omitempty"`
 	ActivityTaskCanceledEventAttributes                            *ActivityTaskCanceledEventAttributes                            `json:"activityTaskCanceledEventAttributes,omitempty"`
@@ -195,6 +247,14 @@ type HistoryEvent struct {
 	WorkflowExecutionStartedEventAttributes                        *WorkflowExecutionStartedEventAttributes                        `json:"workflowExecutionStartedEventAttributes,omitempty"`
 	WorkflowExecutionTerminatedEventAttributes                     *WorkflowExecutionTerminatedEventAttributes                     `json:"workflowExecutionTerminatedEventAttributes,omitempty"`
 	WorkflowExecutionTimedOutEventAttributes                       *WorkflowExecutionTimedOutEventAttributes                       `json:"workflowExecutionTimedOutEventAttributes,omitempty"`
+}
+
+func (*HistoryEvent) String() string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString("a")
+
+	return buffer.String()
 }
 
 type ActivityTaskCancelRequestedEventAttributes struct {
@@ -493,6 +553,21 @@ const (
 	DecisionTypeRequestCancelExternalWorkflowExecution = "RequestCancelExternalWorkflowExecution"
 	DecisionTypeStartChildWorkflowExecution            = "StartChildWorkflowExecution"
 )
+
+var DecisionTypes = []string{
+	DecisionTypeScheduleActivityTask,
+	DecisionTypeRequestCancelActivityTask,
+	DecisionTypeCompleteWorkflowExecution,
+	DecisionTypeFailWorkflowExecution,
+	DecisionTypeCancelWorkflowExecution,
+	DecisionTypeContinueAsNewWorkflowExecution,
+	DecisionTypeRecordMarker,
+	DecisionTypeStartTimer,
+	DecisionTypeCancelTimer,
+	DecisionTypeSignalExternalWorkflowExecution,
+	DecisionTypeRequestCancelExternalWorkflowExecution,
+	DecisionTypeStartChildWorkflowExecution,
+}
 
 type Decision struct {
 	CancelTimerDecisionAttributes                            *CancelTimerDecisionAttributes                            `json:"cancelTimerDecisionAttributes,omitempty"`
