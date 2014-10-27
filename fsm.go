@@ -158,6 +158,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 			anOutcome, err := f.panicSafeDecide(f.errorState, e, outcome.Data)
 			if err != nil {
 				f.log("at=error error=error-handling-decision-execution-error state=%s next-state=%", f.errorState.Name, outcome.NextState)
+				//we wont get here if panics are allowed
 				return append(outcome.Decisions, f.captureDecisionError(execution, i, errorEvents, outcome.NextState, outcome.Data, err)...)
 			}
 			outcome.Data = anOutcome.Data
@@ -172,6 +173,10 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 		serializedState, err := f.findSerializedState(decisionTask.Events)
 
 		if err != nil {
+			f.log("action=tick at=error=find-serialized-state-failed")
+			if f.allowPanics {
+				panic(err)
+			}
 			return append(outcome.Decisions, f.captureSystemError(execution, "FindSerializedStateError", decisionTask.Events, err)...)
 		}
 
@@ -180,6 +185,9 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 		err = f.Serializer().Deserialize(serializedState.StateData, data)
 		if err != nil {
 			f.log("action=tick at=error=deserialize-state-failed")
+			if f.allowPanics {
+				panic(err)
+			}
 			return append(outcome.Decisions, f.captureSystemError(execution, "DeserializeStateError", decisionTask.Events, err)...)
 		}
 
@@ -199,6 +207,9 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 			anOutcome, err := f.panicSafeDecide(fsmState, e, outcome.Data)
 			if err != nil {
 				f.log("at=error error=decision-execution-error state=%s next-state=%", fsmState.Name, outcome.NextState)
+				if f.allowPanics {
+					panic(err)
+				}
 				return append(outcome.Decisions, f.captureDecisionError(execution, i, lastEvents, outcome.NextState, outcome.Data, err)...)
 			}
 
@@ -221,6 +232,9 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	final, err := f.appendState(outcome)
 	if err != nil {
 		f.log("action=tick at=error error=state-serialization-error error-type=system")
+		if f.allowPanics {
+			panic(err)
+		}
 		return append(outcome.Decisions, f.captureSystemError(execution, "StateSerializationError", []HistoryEvent{}, err)...)
 	}
 	return final
