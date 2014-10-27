@@ -51,6 +51,7 @@ type FSM struct {
 	initialState   *FSMState
 	errorState     *FSMState
 	stop           chan bool
+	allowPanics    bool //makes testing easier
 }
 
 func (f *FSM) AddInitialState(state *FSMState) {
@@ -228,12 +229,16 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 //if the outcome is good good if its an error, we capture the error state above
 
 func (f *FSM) panicSafeDecide(state *FSMState, event HistoryEvent, data interface{}) (anOutcome *Outcome, anErr error) {
-	/*defer func() {
-		if r := recover(); r != nil {
-			f.log("at=error error=decide-panic-recovery %v", r)
-			anErr = errors.New("panic in decider, capture error state")
+	defer func() {
+		if !f.allowPanics {
+			if r := recover(); r != nil {
+				f.log("at=error error=decide-panic-recovery %v", r)
+				anErr = errors.New("panic in decider, capture error state")
+			}
+		} else {
+			log.Printf("at=panic-safe-decide-allowing-panic fsm-allow-panics=%t", f.allowPanics)
 		}
-	}()*/
+	}()
 	anOutcome = state.Decider(f, event, data)
 	return
 }

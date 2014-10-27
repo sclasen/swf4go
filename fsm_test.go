@@ -196,6 +196,7 @@ func TestErrorHandling(t *testing.T) {
 		Name:           "test-fsm",
 		DecisionWorker: &DecisionWorker{StateSerializer: JsonStateSerializer{}, idGenerator: UUIDGenerator{}},
 		DataType:       TestData{},
+		allowPanics:    true,
 	}
 
 	fsm.AddInitialState(&FSMState{
