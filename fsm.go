@@ -116,8 +116,8 @@ func (f *FSM) Start() {
 		f.stop = make(chan bool)
 	}
 
+	poller := f.DecisionWorker.PollTaskList(f.Domain, f.Identity, f.TaskList, f.Input)
 	go func() {
-		poller := f.DecisionWorker.PollTaskList(f.Domain, f.Identity, f.TaskList, f.Input)
 		for {
 			select {
 			case decisionTask, ok := <-f.Input:
