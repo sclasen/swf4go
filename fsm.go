@@ -24,11 +24,6 @@ type Decider func(*FSM, HistoryEvent, interface{}) *Outcome
 // the FSM will unmarshal data from the event into this struct
 type EventDataType func(HistoryEvent) interface{}
 
-type ErrorHandler func(*FSM, *FSMState, HistoryEvent, []HistoryEvent, interface{}, error) *Outcome
-
-// on error state marker FSM.Error, serialize ErrorState(HistoryEvent, []HistoryEvent, interface{[])
-// signal self with signal = "ERROR"
-
 // Outcome is created by Deciders
 type Outcome struct {
 	Data      interface{}
@@ -52,7 +47,6 @@ type FSM struct {
 	Input          chan *PollForDecisionTaskResponse
 	DataType       interface{}
 	EventDataType  EventDataType
-	ErrorHandler   ErrorHandler
 	states         map[string]*FSMState
 	initialState   *FSMState
 	errorState     *FSMState
@@ -70,7 +64,8 @@ func (f *FSM) AddState(state *FSMState) {
 	f.states[state.Name] = state
 }
 
-//ErrorStates should return an outcome with nil Data and "" as NextState if they wish for the
+//ErrorStates should return an outcome with nil Data and "" as NextState if they wish for the normal state recovery mechanism
+//to load current state and data.
 
 func (f *FSM) AddErrorState(state *FSMState) {
 	f.AddState(state)
