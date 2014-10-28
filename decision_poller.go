@@ -2,6 +2,7 @@ package swf
 
 import "log"
 
+// PollDecisionTaskList returns a started DecisionTaskPoller.
 func (c *Client) PollDecisionTaskList(domain string, identity string, taskList string, taskChannel chan *PollForDecisionTaskResponse) *DecisionTaskPoller {
 	poller := &DecisionTaskPoller{
 		client:   c,
@@ -16,6 +17,7 @@ func (c *Client) PollDecisionTaskList(domain string, identity string, taskList s
 
 }
 
+// DecisionTaskPoller polls a given task list in a domain for decision tasks, and sends tasks on its Tasks channel.
 type DecisionTaskPoller struct {
 	client   DecisionWorkerClient
 	Identity string
@@ -54,6 +56,7 @@ func (p *DecisionTaskPoller) start() {
 	}()
 }
 
+// Stop signals the poller to stop polling after any in-flight poll requests return.
 func (p *DecisionTaskPoller) Stop() {
 	p.stop <- true
 }
