@@ -1,13 +1,13 @@
 package swf
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"reflect"
-	"encoding/json"
 	"strings"
-	"bytes"
 )
 
 // constants used as marker names or signal names
@@ -382,12 +382,10 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryE
 					lastEvents = append(lastEvents, event)
 				}
 			case EventTypeWorkflowExecutionSignaled:
-				{
-					if f.isErrorSignal(event) {
-						errorEvents = append(errorEvents, event)
-					} else {
-						lastEvents = append(lastEvents, event)
-					}
+				if f.isErrorSignal(event) {
+					errorEvents = append(errorEvents, event)
+				} else {
+					lastEvents = append(lastEvents, event)
 				}
 			default:
 				lastEvents = append(lastEvents, event)
