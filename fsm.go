@@ -87,12 +87,12 @@ func (f *FSM) DefaultErrorState() *FSMState {
 					switch h.WorkflowExecutionSignaledEventAttributes.SignalName {
 					case ERROR_SIGNAL:
 						err := &SerializedDecisionError{}
-						f.Serializer.Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
+						f.Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
 						f.log("action=default-handle-error at=handle-decision-error error=%+v", err)
 						f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowId)
 					case SYSTEM_ERROR_SIGNAL:
 						err := &SerializedSystemError{}
-						f.Serializer.Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
+						f.Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
 						f.log("action=default-handle-error at=handle-system-error error=%+v", err)
 						f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowId)
 					default:
@@ -156,6 +156,28 @@ func (f *FSM) Start() {
 			}
 		}
 	}()
+}
+
+// Serialize uses the FSM.Serializer to serialize data to a string.
+// If there is an error in serialization this func will panic, so this should usually only be used inside Deciders
+// where the panics are recovered and proper errors are recorded in the workflow.
+func (f *FSM)Serialize(data interface{}) string {
+	serialized, err := f.Serializer.Serialize(data)
+	if err != nil {
+		panic(err)
+	}
+	return serialized
+}
+
+// Deserialize uses the FSM.Serializer to deserialize data from a string.
+// If there is an error in deserialization this func will panic, so this should usually only be used inside Deciders
+// where the panics are recovered and proper errors are recorded in the workflow.
+func (f *FSM)Deserialize(serialized string, data interface{}){
+	err := f.Serializer.Deserialize(serialized, data)
+	if err != nil {
+		panic(err)
+	}
+	return
 }
 
 func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
@@ -335,11 +357,7 @@ func (f *FSM) EventData(event HistoryEvent) interface{} {
 			serialized = event.WorkflowExecutionContinuedAsNewEventAttributes.Input
 		}
 		if serialized != "" {
-			err := f.Serializer.Deserialize(serialized, eventData)
-			if err != nil {
-				f.log("action=EventData at=error error=unable-to-deserialize")
-				panic("Unable to Deserialize Event Data")
-			}
+			f.Deserialize(serialized, eventData)
 		}
 	}
 
