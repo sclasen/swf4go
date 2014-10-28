@@ -2,31 +2,9 @@ package swf
 
 import "log"
 
-type ActivityWorker struct {
-	Client          *Client
-	StateSerializer StateSerializer
-	IdGenerator     IdGenerator
-}
-
-func NewActivityWorker(client *Client, stateSerializer StateSerializer, idGenerator IdGenerator) *ActivityWorker {
-	return &ActivityWorker{Client: client, StateSerializer: stateSerializer, IdGenerator: idGenerator}
-}
-
-func (a *ActivityWorker) CompleteActivity(taskToken string, result interface{}) error {
-	serialized, err := a.StateSerializer.Serialize(result)
-	if err != nil {
-		return err
-	}
-
-	return a.Client.RespondActivityTaskCompleted(RespondActivityTaskCompletedRequest{
-		TaskToken: taskToken,
-		Result:    serialized,
-	})
-}
-
-func (d *ActivityWorker) PollTaskList(domain string, identity string, taskList string) *ActivityTaskPoller {
+func (c *Client) PollActivityTaskList(domain string, identity string, taskList string) *ActivityTaskPoller {
 	poller := &ActivityTaskPoller{
-		client:   d.Client,
+		client:   c,
 		Domain:   domain,
 		Identity: identity,
 		TaskList: taskList,
