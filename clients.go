@@ -3,6 +3,7 @@ package swf
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/bmizerany/aws4"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -10,7 +11,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-    "github.com/bmizerany/aws4"
 )
 
 type WorkflowClient interface {

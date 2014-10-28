@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"encoding/json"
+	"strings"
+	"bytes"
 )
 
 // constants used as marker names or signal names
@@ -39,19 +42,20 @@ type FSMState struct {
 
 // FSM models the decision handling logic a workflow in SWF
 type FSM struct {
-	Name           string
-	Domain         string
-	TaskList       string
-	Identity       string
-	DecisionWorker *DecisionWorker
-	Input          chan *PollForDecisionTaskResponse
-	DataType       interface{}
-	EventDataType  EventDataType
-	states         map[string]*FSMState
-	initialState   *FSMState
-	errorState     *FSMState
-	stop           chan bool
-	allowPanics    bool //makes testing easier
+	Name          string
+	Domain        string
+	TaskList      string
+	Identity      string
+	Client        *Client
+	Input         chan *PollForDecisionTaskResponse
+	DataType      interface{}
+	EventDataType EventDataType
+	Serializer    StateSerializer
+	states        map[string]*FSMState
+	initialState  *FSMState
+	errorState    *FSMState
+	stop          chan bool
+	allowPanics   bool //makes testing easier
 }
 
 func (f *FSM) AddInitialState(state *FSMState) {
@@ -83,12 +87,12 @@ func (f *FSM) DefaultErrorState() *FSMState {
 					switch h.WorkflowExecutionSignaledEventAttributes.SignalName {
 					case ERROR_SIGNAL:
 						err := &SerializedDecisionError{}
-						f.Serializer().Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
+						f.Serializer.Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
 						f.log("action=default-handle-error at=handle-decision-error error=%+v", err)
 						f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowId)
 					case SYSTEM_ERROR_SIGNAL:
 						err := &SerializedSystemError{}
-						f.Serializer().Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
+						f.Serializer.Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
 						f.log("action=default-handle-error at=handle-system-error error=%+v", err)
 						f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowId)
 					default:
@@ -117,14 +121,24 @@ func (f *FSM) Start() {
 		f.stop = make(chan bool)
 	}
 
-	poller := f.DecisionWorker.PollTaskList(f.Domain, f.Identity, f.TaskList, f.Input)
+	if f.Serializer == nil {
+		f.log("action=start at=no-serializer defaulting-to=JsonSerializer")
+		f.Serializer = &JsonStateSerializer{}
+	}
+
+	poller := f.Client.PollDecisionTaskList(f.Domain, f.Identity, f.TaskList, f.Input)
 	go func() {
 		for {
 			select {
 			case decisionTask, ok := <-f.Input:
 				if ok {
 					decisions := f.Tick(decisionTask)
-					err := f.DecisionWorker.Decide(decisionTask.TaskToken, decisions)
+					err := f.Client.RespondDecisionTaskCompleted(
+						RespondDecisionTaskCompletedRequest{
+							Decisions: decisions,
+							TaskToken: decisionTask.TaskToken,
+						})
+
 					if err != nil {
 						f.log("action=tick at=decide-request-failed error=%s", err.Error())
 						//TODO Retry the Decide?
@@ -182,7 +196,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 
 		f.log("action=tick at=find-current-state state=%s", serializedState.StateName)
 		data := reflect.New(reflect.TypeOf(f.DataType)).Interface()
-		err = f.Serializer().Deserialize(serializedState.StateData, data)
+		err = f.Serializer.Deserialize(serializedState.StateData, data)
 		if err != nil {
 			f.log("action=tick at=error=deserialize-state-failed")
 			if f.allowPanics {
@@ -284,7 +298,7 @@ func (f *FSM) eventIds(events []HistoryEvent) []int {
 
 func (f *FSM) captureError(signal string, execution WorkflowExecution, error interface{}) []*Decision {
 	decisions := f.EmptyDecisions()
-	r, err := f.DecisionWorker.RecordMarker(signal, error)
+	r, err := f.recordMarker(signal, error)
 	if err != nil {
 		//really bail
 		panic("giving up, cant even create a RecordMarker decsion")
@@ -321,7 +335,7 @@ func (f *FSM) EventData(event HistoryEvent) interface{} {
 			serialized = event.WorkflowExecutionContinuedAsNewEventAttributes.Input
 		}
 		if serialized != "" {
-			err := f.Serializer().Deserialize(serialized, eventData)
+			err := f.Serializer.Deserialize(serialized, eventData)
 			if err != nil {
 				f.log("action=EventData at=error error=unable-to-deserialize")
 				panic("Unable to Deserialize Event Data")
@@ -342,7 +356,7 @@ func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, erro
 	for _, event := range events {
 		if f.isStateMarker(event) {
 			state := &SerializedState{}
-			err := f.Serializer().Deserialize(event.MarkerRecordedEventAttributes.Details, state)
+			err := f.Serializer.Deserialize(event.MarkerRecordedEventAttributes.Details, state)
 			return state, err
 		} else if event.EventType == EventTypeWorkflowExecutionStarted {
 			return &SerializedState{StateName: f.initialState.Name, StateData: event.WorkflowExecutionStartedEventAttributes.Input}, nil
@@ -386,14 +400,14 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryE
 
 func (f *FSM) appendState(outcome *Outcome) ([]*Decision, error) {
 
-	serializedData, err := f.Serializer().Serialize(outcome.Data)
+	serializedData, err := f.Serializer.Serialize(outcome.Data)
 
 	state := SerializedState{
 		StateName: outcome.NextState,
 		StateData: serializedData,
 	}
 
-	d, err := f.DecisionWorker.RecordMarker(STATE_MARKER, state)
+	d, err := f.recordMarker(STATE_MARKER, state)
 	if err != nil {
 		return nil, err
 	}
@@ -401,6 +415,25 @@ func (f *FSM) appendState(outcome *Outcome) ([]*Decision, error) {
 	decisions = append(decisions, d)
 	decisions = append(decisions, outcome.Decisions...)
 	return decisions, nil
+}
+
+func (f *FSM) recordMarker(markerName string, details interface{}) (*Decision, error) {
+	serialized, err := f.Serializer.Serialize(details)
+	if err != nil {
+		return nil, err
+	}
+
+	return f.recordStringMarker(markerName, serialized), nil
+}
+
+func (f *FSM) recordStringMarker(markerName string, details string) *Decision {
+	return &Decision{
+		DecisionType: DecisionTypeRecordMarker,
+		RecordMarkerDecisionAttributes: &RecordMarkerDecisionAttributes{
+			MarkerName: markerName,
+			Details:    details,
+		},
+	}
 }
 
 func (f *FSM) Stop() {
@@ -422,10 +455,6 @@ func (f *FSM) isErrorSignal(e HistoryEvent) bool {
 	} else {
 		return false
 	}
-}
-
-func (f *FSM) Serializer() StateSerializer {
-	return f.DecisionWorker.StateSerializer
 }
 
 func (f *FSM) EmptyDecisions() []*Decision {
@@ -452,6 +481,26 @@ type SerializedSystemError struct {
 
 type DecisionErrorPointer struct {
 	Error error
+}
+
+type StateSerializer interface {
+	Serialize(state interface{}) (string, error)
+	Deserialize(serialized string, state interface{}) error
+}
+
+type JsonStateSerializer struct{}
+
+func (j JsonStateSerializer) Serialize(state interface{}) (string, error) {
+	var b bytes.Buffer
+	if err := json.NewEncoder(&b).Encode(state); err != nil {
+		return "", err
+	}
+	return b.String(), nil
+}
+
+func (j JsonStateSerializer) Deserialize(serialized string, state interface{}) error {
+	err := json.NewDecoder(strings.NewReader(serialized)).Decode(state)
+	return err
 }
 
 /*tigertonic-like marhslling of data*/

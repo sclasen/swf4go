@@ -1,6 +1,7 @@
 package swf
 
 import (
+	"code.google.com/p/go-uuid/uuid"
 	"log"
 	"testing"
 )
@@ -11,9 +12,9 @@ import (
 func TestFSM(t *testing.T) {
 
 	fsm := FSM{
-		Name:           "test-fsm",
-		DecisionWorker: &DecisionWorker{StateSerializer: JsonStateSerializer{}, idGenerator: UUIDGenerator{}},
-		DataType:       TestData{},
+		Name:       "test-fsm",
+		DataType:   TestData{},
+		Serializer: JsonStateSerializer{},
 	}
 
 	fsm.AddInitialState(&FSMState{
@@ -21,7 +22,16 @@ func TestFSM(t *testing.T) {
 		Decider: func(f *FSM, lastEvent HistoryEvent, data interface{}) *Outcome {
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "start")
-			decision, _ := f.DecisionWorker.ScheduleActivityTaskDecision("activity", "activityVersion", "taskList", testData)
+			serialized, _ := f.Serializer.Serialize(testData)
+			decision := &Decision{
+				DecisionType: DecisionTypeScheduleActivityTask,
+				ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
+					ActivityId:   uuid.New(),
+					ActivityType: ActivityType{Name: "activity", Version: "activityVersion"},
+					TaskList:     TaskList{Name: "taskList"},
+					Input:        serialized,
+				},
+			}
 			return &Outcome{
 				NextState: "working",
 				Data:      testData,
@@ -34,12 +44,26 @@ func TestFSM(t *testing.T) {
 		Name: "working",
 		Decider: TypedDecider(func(f *FSM, lastEvent HistoryEvent, testData *TestData) *Outcome {
 			testData.States = append(testData.States, "working")
+			serialized, _ := f.Serializer.Serialize(testData)
 			var decisions = f.EmptyDecisions()
-			if lastEvent.EventType == "ActivityTaskCompleted" {
-				decision, _ := f.DecisionWorker.CompleteWorkflowExecution(testData)
+			if lastEvent.EventType == EventTypeActivityTaskCompleted {
+				decision := &Decision{
+					DecisionType: DecisionTypeCompleteWorkflowExecution,
+					CompleteWorkflowExecutionDecisionAttributes: &CompleteWorkflowExecutionDecisionAttributes{
+						Result: serialized,
+					},
+				}
 				decisions = append(decisions, decision)
-			} else if lastEvent.EventType == "ActivityTaskFailed" {
-				decision, _ := f.DecisionWorker.ScheduleActivityTaskDecision("activity", "activityVersion", "taskList", testData)
+			} else if lastEvent.EventType == EventTypeActivityTaskFailed {
+				decision := &Decision{
+					DecisionType: DecisionTypeScheduleActivityTask,
+					ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
+						ActivityId:   uuid.New(),
+						ActivityType: ActivityType{Name: "activity", Version: "activityVersion"},
+						TaskList:     TaskList{Name: "taskList"},
+						Input:        serialized,
+					},
+				}
 				decisions = append(decisions, decision)
 			}
 			return &Outcome{
@@ -193,10 +217,10 @@ func TestPanicRecovery(t *testing.T) {
 
 func TestErrorHandling(t *testing.T) {
 	fsm := FSM{
-		Name:           "test-fsm",
-		DecisionWorker: &DecisionWorker{StateSerializer: JsonStateSerializer{}, idGenerator: UUIDGenerator{}},
-		DataType:       TestData{},
-		allowPanics:    true,
+		Name:        "test-fsm",
+		DataType:    TestData{},
+		Serializer:  JsonStateSerializer{},
+		allowPanics: true,
 	}
 
 	fsm.AddInitialState(&FSMState{
