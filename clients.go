@@ -76,12 +76,12 @@ func (r *Region) URL() string {
 }
 
 var (
-	USEast1       = &Region{"us-east-1", "https://swf.us-east-1.amazonaws.com"}
-	USWest1       = &Region{"us-west-1", "https://swf.us-west-1.amazonaws.com"}
-	USWest2       = &Region{"us-west-2", "https://swf.us-west-2.amazonaws.com"}
-	EUWest1       = &Region{"eu-west-1", "https://swf.eu-west-1.amazonaws.com"}
-	APNorthEast1  = &Region{"ap-northeast-1", "https://swf.ap-northeast-1.amazonaws.com"}
-	APSouthEast1  = &Region{"ap-southeast-1", "https://swf.ap-southeast-1.amazonaws.com"}
+	USEast1      = &Region{"us-east-1", "https://swf.us-east-1.amazonaws.com"}
+	USWest1      = &Region{"us-west-1", "https://swf.us-west-1.amazonaws.com"}
+	USWest2      = &Region{"us-west-2", "https://swf.us-west-2.amazonaws.com"}
+	EUWest1      = &Region{"eu-west-1", "https://swf.eu-west-1.amazonaws.com"}
+	APNorthEast1 = &Region{"ap-northeast-1", "https://swf.ap-northeast-1.amazonaws.com"}
+	APSouthEast1 = &Region{"ap-southeast-1", "https://swf.ap-southeast-1.amazonaws.com"}
 )
 
 // Client is the implementation of the WorkflowClient, DecisionWorkerClient, ActivityWorkerClient, WorkflowAdminClient, and WorkflowInfoClient interfaces.
@@ -208,7 +208,6 @@ func (c *Client) DeprecateDomain(request DeprecateDomain) error {
 	err := c.swfReqNoResponse("DeprecateDomain", request)
 	return err
 }
-
 
 // CountClosedWorkflowExecutions executes http://docs.aws.amazon.com/amazonswf/latest/apireference/API_CountClosedWorkflowExecutions.html
 func (c *Client) CountClosedWorkflowExecutions(request CountClosedWorkflowExecutionsRequest) (*CountResponse, error) {

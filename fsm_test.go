@@ -147,7 +147,7 @@ func completeWorkflowPredicate(d *Decision) bool {
 }
 
 func DecisionsToEvents(decisions []*Decision) []HistoryEvent {
-	events := make([]HistoryEvent, 0)
+	var events []HistoryEvent
 	for _, d := range decisions {
 		if scheduleActivityPredicate(d) {
 			event := HistoryEvent{
@@ -229,10 +229,10 @@ func TestErrorHandling(t *testing.T) {
 			if h.EventType == EventTypeWorkflowExecutionSignaled && d.(*TestData).States[0] == "recovered" {
 				log.Println("recovered")
 				return &Outcome{NextState: "ok", Data: d}
-			} else {
-				t.Fatalf("ok state did not get recovered %s", h)
-				return nil
 			}
+			t.Fatalf("ok state did not get recovered %s", h)
+			return nil
+
 		},
 	})
 
@@ -245,10 +245,10 @@ func TestErrorHandling(t *testing.T) {
 					NextState: "ok",
 					Data:      &TestData{States: []string{"recovered"}},
 				}
-			} else {
-				t.Fatalf("error handler got unexpected event")
-				return nil
 			}
+			t.Fatalf("error handler got unexpected event")
+			return nil
+
 		},
 	})
 
