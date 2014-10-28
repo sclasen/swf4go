@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+    "github.com/bmizerany/aws4"
 )
 
 type WorkflowClient interface {
@@ -77,20 +78,20 @@ var (
 )
 
 type Client struct {
-	keys   *Keys
+	keys   *aws4.Keys
 	Region *Region
 	Debug  bool
 }
 
 func NewClient(key string, secret string, region *Region) *Client {
 	return &Client{
-		keys:   &Keys{AccessKey: key, SecretKey: secret},
+		keys:   &aws4.Keys{AccessKey: key, SecretKey: secret},
 		Region: region,
 	}
 }
 
-func (c *Client) Service() *Service {
-	return &Service{Name: "swf", Region: c.Region.Name}
+func (c *Client) Service() *aws4.Service {
+	return &aws4.Service{Name: "swf", Region: c.Region.Name}
 }
 
 func (c *Client) StartWorkflow(request StartWorkflowRequest) (*StartWorkflowResponse, error) {
