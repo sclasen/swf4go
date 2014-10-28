@@ -258,7 +258,7 @@ func (h HistoryEvent) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("HistoryEvent{ ")
 	buffer.WriteString(fmt.Sprintf("EventId: %d,", h.EventId))
-	buffer.WriteString(fmt.Sprintf("EventTimestamp: %d, ", h.EventTimestamp))
+	buffer.WriteString(fmt.Sprintf("EventTimestamp: %f, ", h.EventTimestamp))
 	buffer.WriteString(fmt.Sprintf("EventType:, %s", h.EventType))
 	buffer.WriteString(fmt.Sprintf("%+v", EventTypes[h.EventType](h)))
 	buffer.WriteString(" }")
@@ -596,7 +596,7 @@ type Decision struct {
 func (d *Decision) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("Decisiomn{ ")
-	buffer.WriteString(fmt.Sprintf("DecisionType: %d,", d.DecisionType))
+	buffer.WriteString(fmt.Sprintf("DecisionType: %s,", d.DecisionType))
 	buffer.WriteString(fmt.Sprintf("%+v", DecisionTypes[d.DecisionType](d)))
 	buffer.WriteString(" }")
 	return buffer.String()
@@ -736,7 +736,7 @@ type DeprecateDomain struct {
 
 type RegisterActivityType struct {
 	DefaultTaskHeartbeatTimeout       string    `json:"defaultTaskHeartbeatTimeout,omitempty"`
-	DefaultTaskList                   *TaskList `json:"defaultTaskList",omitempty`
+	DefaultTaskList                   *TaskList `json:"defaultTaskList,omitempty"`
 	DefaultTaskScheduleToCloseTimeout string    `json:"defaultTaskScheduleToCloseTimeout,omitempty"`
 	DefaultTaskScheduleToStartTimeout string    `json:"defaultTaskScheduleToStartTimeout,omitempty"`
 	DefaultTaskStartToCloseTimeout    string    `json:"defaultTaskStartToCloseTimeout,omitempty"`

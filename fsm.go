@@ -468,7 +468,7 @@ type SerializedDecisionError struct {
 	ErrorEventId        int         `json:"errorEventIds"`
 	UnprocessedEventIds []int       `json:"unprocessedEventIds"`
 	StateName           string      `json:"stateName"`
-	StateData           interface{} `json:"stateData`
+	StateData           interface{} `json:"stateData"`
 }
 
 type SerializedSystemError struct {
