@@ -36,32 +36,47 @@ type Outcome struct {
 
 // FSMState defines the behavior of one state of an FSM
 type FSMState struct {
-	Name    string
+	// Name is the name of the state. When returning an Outcome, the NextState should match the Name of an FSMState in your FSM.
+	Name string
+	// Decider decides an Outcome given the current state, data, and an event.
 	Decider Decider
 }
 
 // FSM models the decision handling logic a workflow in SWF
 type FSM struct {
-	Name          string
-	Domain        string
-	TaskList      string
-	Identity      string
-	Client        *Client
-	Input         chan *PollForDecisionTaskResponse
-	DataType      interface{}
+	//Name of the fsm. Used when emitting logs. Should probably be set to the name of the workflow associated with the fsm.
+	Name string
+	// Domain of the workflow associated with the FSM.
+	Domain string
+	// TaskList that the underlying poller will poll for decision tasks.
+	TaskList string
+	// Identity used in PollForDecisionTaskRequests, can be empty.
+	Identity string
+	// Client used to make SWF api requests.
+	Client *Client
+	// Input channel to send DecisionTasks to the FSM on.
+	Input chan *PollForDecisionTaskResponse
+	// DataType of the data struct associated with this FSM.
+	// The data is automatically peristed to and loaded from workflow history by the FSM.
+	DataType interface{}
+	// EventDataType returns a zero value struct to deserialize the payload of a HistoryEvent.
 	EventDataType EventDataType
-	Serializer    StateSerializer
-	states        map[string]*FSMState
-	initialState  *FSMState
-	errorState    *FSMState
-	stop          chan bool
-	allowPanics   bool //makes testing easier
+	// Serializer used to serialize/deserialise state from workflow history.
+	Serializer   StateSerializer
+	states       map[string]*FSMState
+	initialState *FSMState
+	errorState   *FSMState
+	stop         chan bool
+	allowPanics  bool //makes testing easier
 }
 
+// AddInitialState adds a state to the FSM and uses it as the initial state when a workflow execution is started.
 func (f *FSM) AddInitialState(state *FSMState) {
 	f.AddState(state)
 	f.initialState = state
 }
+
+// AddState adds a state to the FSM.
 func (f *FSM) AddState(state *FSMState) {
 	if f.states == nil {
 		f.states = make(map[string]*FSMState)
@@ -72,11 +87,17 @@ func (f *FSM) AddState(state *FSMState) {
 //ErrorStates should return an outcome with nil Data and "" as NextState if they wish for the normal state recovery mechanism
 //to load current state and data.
 
+// AddErrorState adds an error handling state to your FSM. This is a special FSMState that should at a minimum handle
+// WorkflowSignaled events where the signal name is FSM.Error and the event data is a SerializedDecisionError, or the
+// signal name is FSM.SystemError and the event data is a SerializedSystemError. The error state should take care of transitioning
+// the workflow back into a working state, by making decisions, updating data and/or choosing a new state.
 func (f *FSM) AddErrorState(state *FSMState) {
 	f.AddState(state)
 	f.errorState = state
 }
 
+// DefaultErrorState is the error state used in an FSM if one has not been set. It simply emits logs admonishing you to add
+// a proper error state to your FSM.
 func (f *FSM) DefaultErrorState() *FSMState {
 	return &FSMState{
 		Name: "error",
@@ -108,6 +129,7 @@ func (f *FSM) DefaultErrorState() *FSMState {
 	}
 }
 
+// Start begins processing DecisionTasks with the FSM.
 func (f *FSM) Start() {
 	if f.initialState == nil {
 		panic("No Initial State Defined For FSM")
@@ -161,7 +183,7 @@ func (f *FSM) Start() {
 // Serialize uses the FSM.Serializer to serialize data to a string.
 // If there is an error in serialization this func will panic, so this should usually only be used inside Deciders
 // where the panics are recovered and proper errors are recorded in the workflow.
-func (f *FSM)Serialize(data interface{}) string {
+func (f *FSM) Serialize(data interface{}) string {
 	serialized, err := f.Serializer.Serialize(data)
 	if err != nil {
 		panic(err)
@@ -172,7 +194,7 @@ func (f *FSM)Serialize(data interface{}) string {
 // Deserialize uses the FSM.Serializer to deserialize data from a string.
 // If there is an error in deserialization this func will panic, so this should usually only be used inside Deciders
 // where the panics are recovered and proper errors are recorded in the workflow.
-func (f *FSM)Deserialize(serialized string, data interface{}){
+func (f *FSM) Deserialize(serialized string, data interface{}) {
 	err := f.Serializer.Deserialize(serialized, data)
 	if err != nil {
 		panic(err)
@@ -180,6 +202,8 @@ func (f *FSM)Deserialize(serialized string, data interface{}){
 	return
 }
 
+// Tick is called when the DecisionTaskPoller receives a PollForDecisionTaskResponse in its polling loop.
+// It is exported to facilitate testing.
 func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
@@ -337,6 +361,13 @@ func (f *FSM) captureError(signal string, execution WorkflowExecution, error int
 	return append(decisions, d)
 }
 
+// EventData works in combination with the FSM.Serializer and the FSM.EventDataType function to provide
+// deserialization of data sent in a HistoryEvent. For example if you know that any WorkflowExecutionSignaled
+// event that your FSM receives will contain a serialized Foo struct, and your EventDataType func returns a zero value Foo,
+// for WorkflowExecutionSignaled events, you can use EventData plus a type assertion to get back the deserialized Foo.
+//   if event.EventType == swf.EventTypeWorkflowExecutionSignaled {
+//       f.EventData(event).(*Foo)
+//   }
 func (f *FSM) EventData(event HistoryEvent) interface{} {
 	eventData := f.EventDataType(event)
 
@@ -384,31 +415,31 @@ func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, erro
 }
 
 func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryEvent, []HistoryEvent) {
-	lastEvents := make([]HistoryEvent, 0)
-	errorEvents := make([]HistoryEvent, 0)
+	var lastEvents []HistoryEvent
+	var errorEvents []HistoryEvent
 
 	for _, event := range events {
 		if event.EventId == prevStarted {
 			return lastEvents, errorEvents
-		} else {
-			switch event.EventType {
-			case EventTypeDecisionTaskCompleted, EventTypeDecisionTaskScheduled,
-				EventTypeDecisionTaskStarted, EventTypeDecisionTaskTimedOut:
-				//no-op, dont even process these?
-			case EventTypeMarkerRecorded:
-				if !f.isStateMarker(event) {
-					lastEvents = append(lastEvents, event)
-				}
-			case EventTypeWorkflowExecutionSignaled:
-				if f.isErrorSignal(event) {
-					errorEvents = append(errorEvents, event)
-				} else {
-					lastEvents = append(lastEvents, event)
-				}
-			default:
+		}
+		switch event.EventType {
+		case EventTypeDecisionTaskCompleted, EventTypeDecisionTaskScheduled,
+			EventTypeDecisionTaskStarted, EventTypeDecisionTaskTimedOut:
+			//no-op, dont even process these?
+		case EventTypeMarkerRecorded:
+			if !f.isStateMarker(event) {
 				lastEvents = append(lastEvents, event)
 			}
+		case EventTypeWorkflowExecutionSignaled:
+			if f.isErrorSignal(event) {
+				errorEvents = append(errorEvents, event)
+			} else {
+				lastEvents = append(lastEvents, event)
+			}
+		default:
+			lastEvents = append(lastEvents, event)
 		}
+
 	}
 
 	return lastEvents, errorEvents
@@ -452,6 +483,7 @@ func (f *FSM) recordStringMarker(markerName string, details string) *Decision {
 	}
 }
 
+// Stop causes the DecisionTask select loop to exit, and to stop the DecisionTaskPoller
 func (f *FSM) Stop() {
 	f.stop <- true
 }
@@ -473,15 +505,20 @@ func (f *FSM) isErrorSignal(e HistoryEvent) bool {
 	}
 }
 
+// EmptyDecisions is a helper method to give you an empty decisions array for use in your Deciders.
 func (f *FSM) EmptyDecisions() []*Decision {
 	return make([]*Decision, 0)
 }
 
+// SerializedState is a wrapper struct that allows serializing the current state and current data for the FSM in
+// a MarkerRecorded event in the workflow history.
 type SerializedState struct {
 	StateName string `json:"stateName"`
 	StateData string `json:"stateData"`
 }
 
+// SerializedDecisionError is a wrapper struct that allows serializing the context in which an error in a Decider occurred
+// into a WorkflowSignaledEvent in the workflow history.
 type SerializedDecisionError struct {
 	ErrorEventId        int         `json:"errorEventIds"`
 	UnprocessedEventIds []int       `json:"unprocessedEventIds"`
@@ -489,21 +526,22 @@ type SerializedDecisionError struct {
 	StateData           interface{} `json:"stateData"`
 }
 
+// SerializedSystemError is a wrapper struct that allows serializing the context in which an error internal to FSM processing has occurred
+// into a WorkflowSignaledEvent in the workflow history. These errors are generally in finding the current state and data for a workflow, or
+// in serializing and deserializing said state.
 type SerializedSystemError struct {
 	ErrorType           string      `json:"errorType"`
 	Error               interface{} `json:"error"`
 	UnprocessedEventIds []int       `json:"unprocessedEventIds"`
 }
 
-type DecisionErrorPointer struct {
-	Error error
-}
-
+// StateSerializer defines the interface for serializing state to and deserializing state from the workflow history.
 type StateSerializer interface {
 	Serialize(state interface{}) (string, error)
 	Deserialize(serialized string, state interface{}) error
 }
 
+// JsonStateSerializer is a StateSerializer that uses go json serialization.
 type JsonStateSerializer struct{}
 
 func (j JsonStateSerializer) Serialize(state interface{}) (string, error) {
@@ -519,11 +557,15 @@ func (j JsonStateSerializer) Deserialize(serialized string, state interface{}) e
 	return err
 }
 
-/*tigertonic-like marhslling of data*/
+/*tigertonic-like marhsalling of data from interface{} to specific type*/
+
+// MarshalledDecider is used to convert a standard decider with data of type interface{} to a typed decider
+// which has data of user specified type FSM.DataType
 type MarshalledDecider struct {
 	v reflect.Value
 }
 
+// TypedDecider wraps a user specified typed decider in a standard decider.
 func TypedDecider(decider interface{}) Decider {
 	t := reflect.TypeOf(decider)
 	if reflect.Func != t.Kind() {
@@ -558,6 +600,7 @@ func TypedDecider(decider interface{}) Decider {
 	return MarshalledDecider{reflect.ValueOf(decider)}.Decide
 }
 
+// Decide uses reflection to call the user specified, typed decider.
 func (m MarshalledDecider) Decide(f *FSM, h HistoryEvent, data interface{}) *Outcome {
 
 	// reflection will asplode if we try to use nil
