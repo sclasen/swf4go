@@ -28,7 +28,7 @@ func TestFSM(t *testing.T) {
 				ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
 					ActivityId:   uuid.New(),
 					ActivityType: ActivityType{Name: "activity", Version: "activityVersion"},
-					TaskList:     TaskList{Name: "taskList"},
+					TaskList:     &TaskList{Name: "taskList"},
 					Input:        serialized,
 				},
 			}
@@ -60,7 +60,7 @@ func TestFSM(t *testing.T) {
 					ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
 						ActivityId:   uuid.New(),
 						ActivityType: ActivityType{Name: "activity", Version: "activityVersion"},
-						TaskList:     TaskList{Name: "taskList"},
+						TaskList:     &TaskList{Name: "taskList"},
 						Input:        serialized,
 					},
 				}
