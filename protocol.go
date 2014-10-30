@@ -784,7 +784,7 @@ type ScheduleActivityTaskDecisionAttributes struct {
 	ScheduleToCloseTimeout string       `json:"scheduleToCloseTimeout,omitempty"`
 	ScheduleToStartTimeout string       `json:"scheduleToStartTimeout,omitempty"`
 	StartToCloseTimeout    string       `json:"startToCloseTimeout,omitempty"`
-	TaskList               TaskList     `json:"taskList,omitempty"`
+	TaskList               *TaskList    `json:"taskList,omitempty"`
 }
 
 // SignalExternalWorkflowExecutionDecisionAttributes models the swf json protocol.
