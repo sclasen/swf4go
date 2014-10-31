@@ -35,11 +35,9 @@ func TestFSM(t *testing.T) {
 					Input:        serialized,
 				},
 			}
-			return &Outcome{
-				NextState: "working",
-				Data:      testData,
-				Decisions: []*Decision{decision},
-			}
+
+			return f.Goto("working", testData, []*Decision{decision})
+
 		},
 	})
 
@@ -69,11 +67,8 @@ func TestFSM(t *testing.T) {
 				}
 				decisions = append(decisions, decision)
 			}
-			return &Outcome{
-				NextState: "working",
-				Data:      testData,
-				Decisions: decisions,
-			}
+
+			return f.Stay(testData, decisions)
 		}),
 	})
 
@@ -196,7 +191,7 @@ func TestMarshalledDecider(t *testing.T) {
 
 	outcome := wrapped(&FSMContext{}, HistoryEvent{}, TestData{States: []string{"marshalled"}})
 
-	if outcome.NextState != "ok" {
+	if outcome.(TransitionOutcome).state != "ok" {
 		t.Fatal("NextState was not 'ok'")
 	}
 }
@@ -231,7 +226,7 @@ func TestErrorHandling(t *testing.T) {
 		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) *Outcome {
 			if h.EventType == EventTypeWorkflowExecutionSignaled && d.(*TestData).States[0] == "recovered" {
 				log.Println("recovered")
-				return &Outcome{NextState: "ok", Data: d}
+				return f.Stay(d, nil)
 			}
 			t.Fatalf("ok state did not get recovered %s", h)
 			return nil
@@ -244,10 +239,7 @@ func TestErrorHandling(t *testing.T) {
 		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) *Outcome {
 			if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == ERROR_SIGNAL {
 				log.Println("in error recovery")
-				return &Outcome{
-					NextState: "ok",
-					Data:      &TestData{States: []string{"recovered"}},
-				}
+				return f.Goto("ok", &TestData{States: []string{"recovered"}}, nil)
 			}
 			t.Fatalf("error handler got unexpected event")
 			return nil
