@@ -4,12 +4,14 @@ import (
 	"log"
 )
 
+// TypesMigrator is composed of a DomainMigrator, a WorkflowTypeMigrator and an ActivityTypeMigrator.
 type TypesMigrator struct {
 	DomainMigrator       *DomainMigrator
 	WorkflowTypeMigrator *WorkflowTypeMigrator
 	ActivityTypeMigrator *ActivityTypeMigrator
 }
 
+// Migrate runs Migrate on the underlying DomainMigrator, a WorkflowTypeMigrator and ActivityTypeMigrator.
 func (t *TypesMigrator) Migrate() {
 	if t.ActivityTypeMigrator == nil {
 		t.ActivityTypeMigrator = new(ActivityTypeMigrator)
@@ -25,12 +27,14 @@ func (t *TypesMigrator) Migrate() {
 	t.ActivityTypeMigrator.Migrate()
 }
 
+// DomainMigrator will register or deprecate the configured domains as required.
 type DomainMigrator struct {
 	RegisteredDomains []RegisterDomain
 	DeprecatedDomains []DeprecateDomain
 	Client            *Client
 }
 
+// Migrate asserts that DeprecatedDomains are deprecated or deprecates them, then asserts that RegisteredDomains are registered or registers them.
 func (d *DomainMigrator) Migrate() {
 	for _, dd := range d.DeprecatedDomains {
 		if d.isDeprecated(dd.Name) {
@@ -55,9 +59,10 @@ func (d *DomainMigrator) isRegisteredNotDeprecated(rd RegisterDomain) bool {
 	if err != nil {
 		if err.Type == ErrorTypeUnknownResourceFault {
 			return false
-		} else {
-			panic(err)
 		}
+
+		panic(err)
+
 	}
 
 	return desc.DomainInfo.Status == StatusRegistered
@@ -73,7 +78,7 @@ func (d *DomainMigrator) register(rd RegisterDomain) {
 func (d *DomainMigrator) isDeprecated(domain string) bool {
 	desc, err := d.describe(domain)
 	if err != nil {
-		log.Printf("action=migrate at=is-dep domain=%s error=%s", err.Error())
+		log.Printf("action=migrate at=is-dep domain=%s error=%s", domain, err.Error())
 		return false
 	}
 
@@ -95,12 +100,14 @@ func (d *DomainMigrator) describe(domain string) (*DescribeDomainResponse, *Erro
 	return resp, nil
 }
 
+// WorkflowTypeMigrator will register or deprecate the configured workflow types as required.
 type WorkflowTypeMigrator struct {
 	RegisteredWorkflowTypes []RegisterWorkflowType
 	DeprecatedWorkflowTypes []DeprecateWorkflowType
 	Client                  *Client
 }
 
+// Migrate asserts that DeprecatedWorkflowTypes are deprecated or deprecates them, then asserts that RegisteredWorkflowTypes are registered or registers them.
 func (w *WorkflowTypeMigrator) Migrate() {
 	for _, dd := range w.DeprecatedWorkflowTypes {
 		if w.isDeprecated(dd.Domain, dd.WorkflowType.Name, dd.WorkflowType.Version) {
@@ -125,9 +132,10 @@ func (w *WorkflowTypeMigrator) isRegisteredNotDeprecated(rd RegisterWorkflowType
 	if err != nil {
 		if err.Type == ErrorTypeUnknownResourceFault {
 			return false
-		} else {
-			panic(err)
 		}
+
+		panic(err)
+
 	}
 
 	return desc.TypeInfo.Status == StatusRegistered
@@ -165,12 +173,14 @@ func (w *WorkflowTypeMigrator) describe(domain string, name string, version stri
 	return resp, nil
 }
 
+// ActivityTypeMigrator will register or deprecate the configured activity types as required.
 type ActivityTypeMigrator struct {
 	RegisteredActivityTypes []RegisterActivityType
 	DeprecatedActivityTypes []DeprecateActivityType
 	Client                  *Client
 }
 
+// Migrate asserts that DeprecatedActivityTypes are deprecated or deprecates them, then asserts that RegisteredActivityTypes are registered or registers them.
 func (a *ActivityTypeMigrator) Migrate() {
 	for _, d := range a.DeprecatedActivityTypes {
 		if a.isDeprecated(d.Domain, d.ActivityType.Name, d.ActivityType.Version) {
@@ -195,9 +205,10 @@ func (a *ActivityTypeMigrator) isRegisteredNotDeprecated(rd RegisterActivityType
 	if err != nil {
 		if err.Type == ErrorTypeUnknownResourceFault {
 			return false
-		} else {
-			panic(err)
 		}
+
+		panic(err)
+
 	}
 
 	return desc.TypeInfo.Status == StatusRegistered
