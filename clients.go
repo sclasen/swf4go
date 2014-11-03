@@ -64,24 +64,24 @@ type WorkflowInfoClient interface {
 	ListDomains(request ListDomainsRequest) (*ListDomainsResponse, error)
 }
 
-// Region specifies the AWS region that a client should connect to.
-type Region struct {
-	Name     string
-	Endpoint string
+type KinesisClient interface {
+	PutRecord(request PutRecordRequest) (*PutRecordResponse, error)
 }
 
-// URL returns the swf endpoint for the Region.
-func (r *Region) URL() string {
-	return r.Endpoint
+// Region specifies the AWS region that a client should connect to.
+type Region struct {
+	Name            string
+	SWFEndpoint     string
+	KinesisEndpoint string
 }
 
 var (
-	USEast1      = &Region{"us-east-1", "https://swf.us-east-1.amazonaws.com"}
-	USWest1      = &Region{"us-west-1", "https://swf.us-west-1.amazonaws.com"}
-	USWest2      = &Region{"us-west-2", "https://swf.us-west-2.amazonaws.com"}
-	EUWest1      = &Region{"eu-west-1", "https://swf.eu-west-1.amazonaws.com"}
-	APNorthEast1 = &Region{"ap-northeast-1", "https://swf.ap-northeast-1.amazonaws.com"}
-	APSouthEast1 = &Region{"ap-southeast-1", "https://swf.ap-southeast-1.amazonaws.com"}
+	USEast1      = &Region{"us-east-1", "https://swf.us-east-1.amazonaws.com", "https://kinesis.us-east-1.amazonaws.com"}
+	USWest1      = &Region{"us-west-1", "https://swf.us-west-1.amazonaws.com", "https://kinesis.us-west-1.amazonaws.com"}
+	USWest2      = &Region{"us-west-2", "https://swf.us-west-2.amazonaws.com", "https://kinesis.us-west-2.amazonaws.com"}
+	EUWest1      = &Region{"eu-west-1", "https://swf.eu-west-1.amazonaws.com", "https://kinesis.eu-west-1.amazonaws.com"}
+	APNorthEast1 = &Region{"ap-northeast-1", "https://swf.ap-northeast-1.amazonaws.com", "https://kinesis.ap-northeast-1.amazonaws.com"}
+	APSouthEast1 = &Region{"ap-southeast-1", "https://swf.ap-southeast-1.amazonaws.com", "https://kinesis.ap-southeast-1.amazonaws.com"}
 )
 
 // Client is the implementation of the WorkflowClient, DecisionWorkerClient, ActivityWorkerClient, WorkflowAdminClient, and WorkflowInfoClient interfaces.
@@ -99,8 +99,8 @@ func NewClient(key string, secret string, region *Region) *Client {
 	}
 }
 
-func (c *Client) service() *aws4.Service {
-	return &aws4.Service{Name: "swf", Region: c.Region.Name}
+func (c *Client) service(svc string) *aws4.Service {
+	return &aws4.Service{Name: svc, Region: c.Region.Name}
 }
 
 // StartWorkflow executes http://docs.aws.amazon.com/amazonswf/latest/apireference/API_StartWorkflowExecution.html
@@ -307,8 +307,36 @@ func (c *Client) ListDomains(request ListDomainsRequest) (*ListDomainsResponse, 
 	return resp, err
 }
 
+func (c *Client) PutRecord(request PutRecordRequest) (*PutRecordResponse, error) {
+	resp := &PutRecordResponse{}
+	err := c.kinesisReqWithResponse("PutRecord", request, resp)
+	return resp, err
+}
+
 func (c *Client) swfReqWithResponse(operation string, request interface{}, response interface{}) error {
-	resp, err := c.prepareAndExecuteRequest(operation, request)
+	resp, err := c.prepareAndExecuteRequest("swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		errResp := new(ErrorResponse)
+		if err := json.NewDecoder(resp.Body).Decode(errResp); err != nil {
+			return err
+		}
+		return errResp
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(response)
+	if c.Debug {
+		pretty, _ := json.MarshalIndent(response, "", "    ")
+		log.Println(string(pretty))
+	}
+	return err
+}
+
+func (c *Client) kinesisReqWithResponse(operation string, request interface{}, response interface{}) error {
+	resp, err := c.prepareAndExecuteRequest("kinesis", c.Region.KinesisEndpoint, "Kinesis_20131202."+operation, "application/x-amz-json-1.1", request)
 	if err != nil {
 		return err
 	}
@@ -330,7 +358,7 @@ func (c *Client) swfReqWithResponse(operation string, request interface{}, respo
 }
 
 func (c *Client) swfReqNoResponse(operation string, request interface{}) error {
-	resp, err := c.prepareAndExecuteRequest(operation, request)
+	resp, err := c.prepareAndExecuteRequest("swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
 	if err != nil {
 		return err
 	}
@@ -345,22 +373,22 @@ func (c *Client) swfReqNoResponse(operation string, request interface{}) error {
 	return err
 }
 
-func (c *Client) prepareAndExecuteRequest(operation string, request interface{}) (*http.Response, error) {
+func (c *Client) prepareAndExecuteRequest(service string, url string, target string, contentType string, request interface{}) (*http.Response, error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(request); err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("POST", c.Region.URL(), &b)
+	req, err := http.NewRequest("POST", url, &b)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
-	req.Header.Set("X-Amz-Target", "SimpleWorkflowService."+operation)
-	req.Header.Set("Content-Type", "application/x-amz-json-1.0")
+	req.Header.Set("X-Amz-Target", target)
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Connection", "Keep-Alive")
 
-	err = c.sign(req)
+	err = c.sign(service, req)
 	if err != nil {
 		return nil, err
 	}
@@ -390,8 +418,8 @@ func (c *Client) prepareAndExecuteRequest(operation string, request interface{})
 	return resp, nil
 }
 
-func (c *Client) sign(request *http.Request) error {
-	return c.service().Sign(c.keys, request)
+func (c *Client) sign(svc string, request *http.Request) error {
+	return c.service(svc).Sign(c.keys, request)
 }
 
 func multiln(s string) {

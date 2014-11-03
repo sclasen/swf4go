@@ -1219,3 +1219,18 @@ type ActivityTypeInfo struct {
 	Status          string       `json:"status"`
 	ActivityType    ActivityType `json:"activityType"`
 }
+
+// yes the json for kinesis has initial caps.
+
+type PutRecordRequest struct {
+	Data                      []byte
+	ExplicitHashKey           string `json:"ExplicitHashKey,omitempty"`
+	PartitionKey              string
+	SequenceNumberForOrdering string `json:"SequenceNumberForOrdering,omitempty"`
+	StreamName                string
+}
+
+type PutRecordResponse struct {
+	SequenceNumber string
+	ShardId        string
+}

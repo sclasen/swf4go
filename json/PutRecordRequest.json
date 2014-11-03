@@ -1,0 +1,7 @@
+{
+    "Data": "blob",
+    "ExplicitHashKey": "string",
+    "PartitionKey": "string",
+    "SequenceNumberForOrdering": "string",
+    "StreamName": "string"
+}
