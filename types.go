@@ -11,6 +11,21 @@ type TypesMigrator struct {
 	ActivityTypeMigrator *ActivityTypeMigrator
 }
 
+// NewTypesMigrator will create a TypesMigrator that will migrate the given domains, workflows, and activities. Pass nil if you dont need a given domain, workflow or activity registered or deprecated.
+func NewTypesMigrator(client *Client, registerDomains []RegisterDomain, deprecateDomains []DeprecateDomain, registerWorkflows []RegisterWorkflowType, deprecateWorkflows []DeprecateWorkflowType, registerActivities []RegisterActivityType, deprecateActivities []DeprecateActivityType) *TypesMigrator {
+	return &TypesMigrator{
+		DomainMigrator: &DomainMigrator{
+			RegisteredDomains: registerDomains, DeprecatedDomains: deprecateDomains, Client:client,
+		},
+		WorkflowTypeMigrator: &WorkflowTypeMigrator{
+			RegisteredWorkflowTypes: registerWorkflows, DeprecatedWorkflowTypes: deprecateWorkflows, Client:client,
+		},
+		ActivityTypeMigrator: &ActivityTypeMigrator{
+			RegisteredActivityTypes: registerActivities, DeprecatedActivityTypes: deprecateActivities, Client:client,
+		},
+	}
+}
+
 // Migrate runs Migrate on the underlying DomainMigrator, a WorkflowTypeMigrator and ActivityTypeMigrator.
 func (t *TypesMigrator) Migrate() {
 	if t.ActivityTypeMigrator == nil {
