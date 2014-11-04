@@ -242,7 +242,7 @@ type HistoryEvent struct {
 	DecisionTaskStartedEventAttributes                             *DecisionTaskStartedEventAttributes                             `json:"decisionTaskStartedEventAttributes,omitempty"`
 	DecisionTaskTimedOutEventAttributes                            *DecisionTaskTimedOutEventAttributes                            `json:"decisionTaskTimedOutEventAttributes,omitempty"`
 	EventId                                                        int                                                             `json:"eventId"`
-	EventTimestamp                                                 float32                                                         `json:"eventTimestamp"`
+	EventTimestamp                                                 *SWFTime                                                         `json:"eventTimestamp"`
 	EventType                                                      string                                                          `json:"eventType"`
 	ExternalWorkflowExecutionCancelRequestedEventAttributes        *ExternalWorkflowExecutionCancelRequestedEventAttributes        `json:"externalWorkflowExecutionCancelRequestedEventAttributes,omitempty"`
 	ExternalWorkflowExecutionSignaledEventAttributes               *ExternalWorkflowExecutionSignaledEventAttributes               `json:"externalWorkflowExecutionSignaledEventAttributes,omitempty"`
@@ -1015,7 +1015,7 @@ type DescribeWorkflowExecutionRequest struct {
 type DescribeWorkflowExecutionResponse struct {
 	ExecutionConfiguration      ExecutionConfiguration `json:"executionConfiguration"`
 	ExecutionInfo               WorkflowExecutionInfo  `json:"executionInfo"`
-	LatestActivityTaskTimestamp float32                `json:"latestActivityTaskTimestamp"`
+	LatestActivityTaskTimestamp *SWFTime                `json:"latestActivityTaskTimestamp"`
 	LatestExecutionContext      string                 `json:"latestExecutionContext"`
 	OpenCounts                  OpenCounts             `json:"openCounts"`
 }
@@ -1143,11 +1143,11 @@ type ListOpenWorkflowExecutionsResponse struct {
 type WorkflowExecutionInfo struct {
 	CancelRequested bool              `json:"cancelRequested"`
 	CloseStatus     string            `json:"closeStatus"`
-	CloseTimestamp  float32           `json:"closeTimestamp"`
+	CloseTimestamp  *SWFTime           `json:"closeTimestamp"`
 	Execution       WorkflowExecution `json:"execution"`
 	ExecutionStatus string            `json:"executionStatus"`
 	Parent          WorkflowExecution `json:"parent"`
-	StartTimestamp  float32           `json:"startTimestamp"`
+	StartTimestamp  *SWFTime           `json:"startTimestamp"`
 	TagList         []string          `json:"tagList"`
 	WorkflowType    WorkflowType      `json:"workflowType"`
 }
@@ -1165,8 +1165,8 @@ type CountResponse struct {
 
 // TimeFilter models the swf json protocol.
 type TimeFilter struct {
-	LatestDate float32 `json:"latestDate,omitempty"`
-	OldestDate float32 `json:"oldestDate"`
+	LatestDate *SWFTime `json:"latestDate,omitempty"`
+	OldestDate *SWFTime `json:"oldestDate"`
 }
 
 // ExecutionFilter models the swf json protocol.
@@ -1258,5 +1258,3 @@ func (s *SWFTime) MarshalJSON() ([]byte, error) {
 	timestamp := s.Time.Unix()
 	return []byte(strconv.FormatFloat(float64(timestamp), 'g', -1, 64)), nil
 }
-
-
