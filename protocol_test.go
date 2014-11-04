@@ -6,7 +6,7 @@ import (
 )
 
 func TestDateFormatting(t *testing.T) {
-	swftime := SWFTime{time.Now()}
+	swftime := Time{time.Now()}
 
 	b, err := swftime.MarshalJSON()
 
@@ -14,7 +14,7 @@ func TestDateFormatting(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testTime := new(SWFTime)
+	testTime := new(Time)
 	err = testTime.UnmarshalJSON(b)
 
 	if err != nil {
