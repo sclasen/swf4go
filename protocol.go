@@ -1212,8 +1212,8 @@ type ActivityType struct {
 
 // WorkflowTypeInfo models the swf json protocol.
 type WorkflowTypeInfo struct {
-	CreationDate    *SWFTime     `json:"creationDate"`
-	DeprecationDate *SWFTime     `json:"deprecationDate"`
+	CreationDate    *Time        `json:"creationDate"`
+	DeprecationDate *Time        `json:"deprecationDate"`
 	Description     string       `json:"description"`
 	Status          string       `json:"status"`
 	WorkflowType    WorkflowType `json:"workflowType"`
