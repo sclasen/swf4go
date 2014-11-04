@@ -62,12 +62,14 @@ type FSM struct {
 	// EventDataType returns a zero value struct to deserialize the payload of a HistoryEvent.
 	EventDataType EventDataType
 	// Serializer used to serialize/deserialise state from workflow history.
-	Serializer   StateSerializer
-	states       map[string]*FSMState
-	initialState *FSMState
-	errorState   *FSMState
-	stop         chan bool
-	allowPanics  bool //makes testing easier
+	Serializer StateSerializer
+	// Kinesis stream in the same region to replicate state to.
+	KinesisStream string
+	states        map[string]*FSMState
+	initialState  *FSMState
+	errorState    *FSMState
+	stop          chan bool
+	allowPanics   bool //makes testing easier
 }
 
 // AddInitialState adds a state to the FSM and uses it as the initial state when a workflow execution is started.
@@ -165,6 +167,26 @@ func (f *FSM) Start() {
 						f.log("action=tick at=decide-request-failed error=%s", err.Error())
 					}
 
+					if f.KinesisStream != "" {
+						stateToReplicate := f.stateFromDecisions(decisions)
+						if stateToReplicate != "" {
+							resp, err := f.Client.PutRecord(PutRecordRequest{
+								StreamName: f.KinesisStream,
+								//partition by workflow
+								PartitionKey: decisionTask.WorkflowExecution.WorkflowId,
+								//sequence by StartedEventId, this way even if we end up sending these out of order to kinesis, they should come out in order.
+								SequenceNumberForOrdering: fmt.Sprintf("%d", decisionTask.StartedEventId),
+								Data: []byte(stateToReplicate),
+							})
+							if err != nil {
+								f.log("action=tick at=replicate-state-failed error=%s", err.Error())
+							} else {
+								f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardId, resp.SequenceNumber)
+							}
+							//todo error handling retries etc.
+						}
+					}
+
 				} else {
 					f.log("action=tick at=error error=task-channel-closed action=stopping-poller")
 					poller.Stop()
@@ -177,6 +199,15 @@ func (f *FSM) Start() {
 			}
 		}
 	}()
+}
+
+func (f *FSM) stateFromDecisions(decisions []*Decision) string {
+	for _, d := range decisions {
+		if d.DecisionType == DecisionTypeRecordMarker && d.RecordMarkerDecisionAttributes.MarkerName == STATE_MARKER {
+			return d.RecordMarkerDecisionAttributes.Details
+		}
+	}
+	return ""
 }
 
 // Serialize uses the FSM.Serializer to serialize data to a string.
