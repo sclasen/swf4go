@@ -12,6 +12,12 @@ type ErrorResponse struct {
 	Message    string `json:"message"`
 }
 
+const (
+	StatusRegistered              = "REGISTERED"
+	StatusDeprecated              = "DEPRECATED"
+	ErrorTypeUnknownResourceFault = "com.amazonaws.swf.base.model#UnknownResourceFault"
+)
+
 func (err *ErrorResponse) Error() string {
 	return err.Type + ": " + err.Message
 }
