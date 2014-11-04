@@ -3,6 +3,8 @@ package swf
 import (
 	"bytes"
 	"fmt"
+	"strconv"
+	"time"
 )
 
 // ErrorResponse models the swf json protocol.
@@ -240,7 +242,7 @@ type HistoryEvent struct {
 	DecisionTaskStartedEventAttributes                             *DecisionTaskStartedEventAttributes                             `json:"decisionTaskStartedEventAttributes,omitempty"`
 	DecisionTaskTimedOutEventAttributes                            *DecisionTaskTimedOutEventAttributes                            `json:"decisionTaskTimedOutEventAttributes,omitempty"`
 	EventId                                                        int                                                             `json:"eventId"`
-	EventTimestamp                                                 float32                                                         `json:"eventTimestamp"`
+	EventTimestamp                                                 *Time                                                           `json:"eventTimestamp"`
 	EventType                                                      string                                                          `json:"eventType"`
 	ExternalWorkflowExecutionCancelRequestedEventAttributes        *ExternalWorkflowExecutionCancelRequestedEventAttributes        `json:"externalWorkflowExecutionCancelRequestedEventAttributes,omitempty"`
 	ExternalWorkflowExecutionSignaledEventAttributes               *ExternalWorkflowExecutionSignaledEventAttributes               `json:"externalWorkflowExecutionSignaledEventAttributes,omitempty"`
@@ -1013,7 +1015,7 @@ type DescribeWorkflowExecutionRequest struct {
 type DescribeWorkflowExecutionResponse struct {
 	ExecutionConfiguration      ExecutionConfiguration `json:"executionConfiguration"`
 	ExecutionInfo               WorkflowExecutionInfo  `json:"executionInfo"`
-	LatestActivityTaskTimestamp float32                `json:"latestActivityTaskTimestamp"`
+	LatestActivityTaskTimestamp *Time                  `json:"latestActivityTaskTimestamp"`
 	LatestExecutionContext      string                 `json:"latestExecutionContext"`
 	OpenCounts                  OpenCounts             `json:"openCounts"`
 }
@@ -1141,11 +1143,11 @@ type ListOpenWorkflowExecutionsResponse struct {
 type WorkflowExecutionInfo struct {
 	CancelRequested bool              `json:"cancelRequested"`
 	CloseStatus     string            `json:"closeStatus"`
-	CloseTimestamp  float32           `json:"closeTimestamp"`
+	CloseTimestamp  *Time             `json:"closeTimestamp"`
 	Execution       WorkflowExecution `json:"execution"`
 	ExecutionStatus string            `json:"executionStatus"`
 	Parent          WorkflowExecution `json:"parent"`
-	StartTimestamp  float32           `json:"startTimestamp"`
+	StartTimestamp  *Time             `json:"startTimestamp"`
 	TagList         []string          `json:"tagList"`
 	WorkflowType    WorkflowType      `json:"workflowType"`
 }
@@ -1163,8 +1165,8 @@ type CountResponse struct {
 
 // TimeFilter models the swf json protocol.
 type TimeFilter struct {
-	LatestDate float32 `json:"latestDate,omitempty"`
-	OldestDate float32 `json:"oldestDate"`
+	LatestDate *Time `json:"latestDate,omitempty"`
+	OldestDate *Time `json:"oldestDate"`
 }
 
 // ExecutionFilter models the swf json protocol.
@@ -1210,8 +1212,8 @@ type ActivityType struct {
 
 // WorkflowTypeInfo models the swf json protocol.
 type WorkflowTypeInfo struct {
-	CreationDate    float32      `json:"creationDate"`
-	DeprecationDate float32      `json:"deprecationDate"`
+	CreationDate    *Time        `json:"creationDate"`
+	DeprecationDate *Time        `json:"deprecationDate"`
 	Description     string       `json:"description"`
 	Status          string       `json:"status"`
 	WorkflowType    WorkflowType `json:"workflowType"`
@@ -1219,8 +1221,8 @@ type WorkflowTypeInfo struct {
 
 // ActivityTypeInfo models the swf json protocol.
 type ActivityTypeInfo struct {
-	CreationDate    float32      `json:"creationDate"`
-	DeprecationDate float32      `json:"deprecationDate"`
+	CreationDate    *Time        `json:"creationDate"`
+	DeprecationDate *Time        `json:"deprecationDate"`
 	Description     string       `json:"description"`
 	Status          string       `json:"status"`
 	ActivityType    ActivityType `json:"activityType"`
@@ -1239,4 +1241,20 @@ type PutRecordRequest struct {
 type PutRecordResponse struct {
 	SequenceNumber string
 	ShardId        string
+}
+
+type Time struct{ time.Time }
+
+func (s *Time) UnmarshalJSON(b []byte) error {
+	timestamp, err := strconv.ParseFloat(string(b), 64)
+	if err != nil {
+		return err
+	}
+	s.Time = time.Unix(int64(timestamp), 0)
+	return nil
+}
+
+func (s *Time) MarshalJSON() ([]byte, error) {
+	timestamp := s.Time.Unix()
+	return []byte(strconv.FormatFloat(float64(timestamp), 'g', -1, 64)), nil
 }

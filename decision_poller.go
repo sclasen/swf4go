@@ -1,6 +1,9 @@
 package swf
 
-import "log"
+import (
+	"log"
+	"time"
+)
 
 // PollDecisionTaskList returns a started DecisionTaskPoller.
 func (c *Client) PollDecisionTaskList(domain string, identity string, taskList string, taskChannel chan *PollForDecisionTaskResponse) *DecisionTaskPoller {
@@ -45,6 +48,7 @@ func (p *DecisionTaskPoller) start() {
 				} else {
 					if resp.TaskToken != "" {
 						log.Printf("component=DecisionTaskPoller at=decision-task-recieved workflow=%s", resp.WorkflowType.Name)
+						p.logTaskLatency(resp)
 						p.Tasks <- resp
 					} else {
 						log.Println("component=DecisionTaskPoller at=decision-task-empty-response")
@@ -54,6 +58,15 @@ func (p *DecisionTaskPoller) start() {
 
 		}
 	}()
+}
+
+func (p *DecisionTaskPoller) logTaskLatency(resp *PollForDecisionTaskResponse) {
+	for _, e := range resp.Events {
+		if e.EventId == resp.StartedEventId {
+			elapsed := time.Since(e.EventTimestamp.Time)
+			log.Printf("component=DecisionTaskPoller at=decision-task-latency latency=%s workflow=%s", elapsed, resp.WorkflowType.Name)
+		}
+	}
 }
 
 // Stop signals the poller to stop polling after any in-flight poll requests return.

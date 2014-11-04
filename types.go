@@ -15,13 +15,13 @@ type TypesMigrator struct {
 func NewTypesMigrator(client *Client, registerDomains []RegisterDomain, deprecateDomains []DeprecateDomain, registerWorkflows []RegisterWorkflowType, deprecateWorkflows []DeprecateWorkflowType, registerActivities []RegisterActivityType, deprecateActivities []DeprecateActivityType) *TypesMigrator {
 	return &TypesMigrator{
 		DomainMigrator: &DomainMigrator{
-			RegisteredDomains: registerDomains, DeprecatedDomains: deprecateDomains, Client:client,
+			RegisteredDomains: registerDomains, DeprecatedDomains: deprecateDomains, Client: client,
 		},
 		WorkflowTypeMigrator: &WorkflowTypeMigrator{
-			RegisteredWorkflowTypes: registerWorkflows, DeprecatedWorkflowTypes: deprecateWorkflows, Client:client,
+			RegisteredWorkflowTypes: registerWorkflows, DeprecatedWorkflowTypes: deprecateWorkflows, Client: client,
 		},
 		ActivityTypeMigrator: &ActivityTypeMigrator{
-			RegisteredActivityTypes: registerActivities, DeprecatedActivityTypes: deprecateActivities, Client:client,
+			RegisteredActivityTypes: registerActivities, DeprecatedActivityTypes: deprecateActivities, Client: client,
 		},
 	}
 }
