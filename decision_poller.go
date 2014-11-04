@@ -41,7 +41,7 @@ func (p *DecisionTaskPoller) start() {
 					TaskList:     TaskList{Name: p.TaskList},
 				})
 				if err != nil {
-					panic(p)
+					log.Printf("component=DecisionTaskPoller at=error error=%s", err.Error())
 				} else {
 					if resp.TaskToken != "" {
 						log.Printf("component=DecisionTaskPoller at=decision-task-recieved workflow=%s", resp.WorkflowType.Name)

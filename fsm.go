@@ -163,16 +163,15 @@ func (f *FSM) Start() {
 
 					if err != nil {
 						f.log("action=tick at=decide-request-failed error=%s", err.Error())
-						//TODO Retry the Decide?
-						poller.Stop()
-						return
 					}
 
 				} else {
+					f.log("action=tick at=error error=task-channel-closed action=stopping-poller")
 					poller.Stop()
 					return
 				}
 			case <-f.stop:
+				f.log("action=tick at=stop action=stopping-poller")
 				poller.Stop()
 				return
 			}

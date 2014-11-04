@@ -41,7 +41,7 @@ func (p *ActivityTaskPoller) start() {
 					TaskList: TaskList{Name: p.TaskList},
 				})
 				if err != nil {
-					log.Printf("%s in %+v", err, p)
+					log.Printf("component=ActivityTaskPoller at=error error=%s", err.Error())
 				} else {
 					if resp.TaskToken != "" {
 						log.Printf("component=ActivityTaskPoller at=activity-task-recieved activity=%s", resp.ActivityType.Name)
