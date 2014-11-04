@@ -64,7 +64,7 @@ func (p *DecisionTaskPoller) logTaskLatency(resp *PollForDecisionTaskResponse) {
 	for _, e := range resp.Events {
 		if e.EventId == resp.StartedEventId {
 			elapsed := time.Since(e.EventTimestamp.Time)
-			log.Printf("component=DecisionTaskPoller at=decision-task-latency seconds=%s workflow=%s", elapsed, resp.WorkflowType.Name)
+			log.Printf("component=DecisionTaskPoller at=decision-task-latency latency=%s workflow=%s", elapsed, resp.WorkflowType.Name)
 		}
 	}
 }
