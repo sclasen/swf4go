@@ -14,6 +14,12 @@ func TestPollerManager(t *testing.T) {
 
 	for i := 1; i < 10; i++ {
 		p := TestPoller{strconv.FormatInt(int64(i), 10), make(chan bool, 1), make(chan bool, 1)}
+		mgr.Register(p.name, p.stop, p.stopAck)
+		mgr.Deregister(p.name)
+	}
+
+	for i := 1; i < 10; i++ {
+		p := TestPoller{strconv.FormatInt(int64(i), 10), make(chan bool, 1), make(chan bool, 1)}
 		go p.eventLoop()
 		mgr.Register(p.name, p.stop, p.stopAck)
 	}
