@@ -1,0 +1,185 @@
+package swf
+
+import (
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+)
+
+// DecisionTaskPoller returns a DecisionTaskPoller whick can be used to poll the given task list.
+func (c *Client) DecisionTaskPoller(domain string, identity string, taskList string) *DecisionTaskPoller {
+	return &DecisionTaskPoller{
+		client:   c,
+		Domain:   domain,
+		Identity: identity,
+		TaskList: taskList,
+	}
+}
+
+// DecisionTaskPoller polls a given task list in a domain for decision tasks.
+type DecisionTaskPoller struct {
+	client   DecisionWorkerClient
+	Identity string
+	Domain   string
+	TaskList string
+}
+
+// Poll polls the task list for a task. If there is a task it returns the task and true. If there is no task or an error polling, it returns nil and false.
+func (p *DecisionTaskPoller) Poll() (*PollForDecisionTaskResponse, bool) {
+	resp, err := p.client.PollForDecisionTask(PollForDecisionTaskRequest{
+		Domain:       p.Domain,
+		Identity:     p.Identity,
+		ReverseOrder: true,
+		TaskList:     TaskList{Name: p.TaskList},
+	})
+	if err != nil {
+		log.Printf("component=DecisionTaskPoller at=error error=%s", err.Error())
+		return nil, false
+	} else {
+		if resp.TaskToken != "" {
+			log.Printf("component=DecisionTaskPoller at=decision-task-recieved workflow=%s", resp.WorkflowType.Name)
+			p.logTaskLatency(resp)
+			return resp, true
+		} else {
+			log.Println("component=DecisionTaskPoller at=decision-task-empty-response")
+			return nil, false
+		}
+	}
+}
+
+func (p *DecisionTaskPoller) logTaskLatency(resp *PollForDecisionTaskResponse) {
+	for _, e := range resp.Events {
+		if e.EventId == resp.StartedEventId {
+			elapsed := time.Since(e.EventTimestamp.Time)
+			log.Printf("component=DecisionTaskPoller at=decision-task-latency latency=%s workflow=%s", elapsed, resp.WorkflowType.Name)
+		}
+	}
+}
+
+// ActivityTaskPoller returns an ActivityTaskPoller.
+func (c *Client) ActivityTaskPoller(domain string, identity string, taskList string) *ActivityTaskPoller {
+	return &ActivityTaskPoller{
+		client:   c,
+		Domain:   domain,
+		Identity: identity,
+		TaskList: taskList,
+	}
+}
+
+// ActivityTaskPoller polls a given task list in a domain for activity tasks, and sends tasks on its Tasks channel.
+type ActivityTaskPoller struct {
+	client   *Client
+	Identity string
+	Domain   string
+	TaskList string
+}
+
+// Poll polls the task list for a task. If there is a task it returns the task and true. If there is no task or an error polling, it returns nil and false.
+func (p *ActivityTaskPoller) Poll() (*PollForActivityTaskResponse, bool) {
+	resp, err := p.client.PollForActivityTask(PollForActivityTaskRequest{
+		Domain:   p.Domain,
+		Identity: p.Identity,
+		TaskList: TaskList{Name: p.TaskList},
+	})
+	if err != nil {
+		log.Printf("component=ActivityTaskPoller at=error error=%s", err.Error())
+		return nil, false
+	} else {
+		if resp.TaskToken != "" {
+			log.Printf("component=ActivityTaskPoller at=activity-task-recieved activity=%s", resp.ActivityType.Name)
+			return resp, true
+		} else {
+			log.Println("component=ActivityTaskPoller at=activity-task-empty-response")
+			return nil, false
+		}
+	}
+}
+
+// PollerShtudownManager facilitates cleanly shutting down pollers in response to os.Signals before allowing the application to exit. When it receives an os.Signal it will
+// send to each of the stopChan that have been registered, then recieve from each of the ackChan that have been registered.  Once this dance is done, it will call system.Exit(0).
+type PollerShtudownManager struct {
+	exitChan                chan os.Signal
+	registeredPollers       map[string]*registeredPoller
+	registerChannelsInput   chan *registeredPoller
+	deregisterChannelsInput chan string
+	exitOnSignal            bool
+}
+
+type registeredPoller struct {
+	name           string
+	stopChannel    chan bool
+	stopAckChannel chan bool
+}
+
+func RegisterPollerShutdownManager() *PollerShtudownManager {
+
+	mgr := &PollerShtudownManager{
+		exitChan:                make(chan os.Signal),
+		registeredPollers:       make(map[string]*registeredPoller),
+		registerChannelsInput:   make(chan *registeredPoller),
+		deregisterChannelsInput: make(chan string),
+		exitOnSignal:            true,
+	}
+
+	signal.Notify(mgr.exitChan, syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+
+	go mgr.eventLoop()
+
+	return mgr
+
+}
+
+func (p *PollerShtudownManager) eventLoop() {
+	for {
+		select {
+		case sig, ok := <-p.exitChan:
+			if ok {
+				log.Printf("component=PollerShtudownManager at=singal signal=%s", sig)
+				for _, r := range p.registeredPollers {
+					log.Printf("component=PollerShtudownManager at=sending-stop name=%s", r.name)
+					r.stopChannel <- true
+				}
+				for _, r := range p.registeredPollers {
+					log.Printf("component=PollerShtudownManager at=awaiting-stop-ack name=%s", r.name)
+					<-r.stopAckChannel
+					log.Printf("component=PollerShtudownManager at=stop-ack name=%s", r.name)
+				}
+				if p.exitOnSignal {
+					log.Println("component=PollerShtudownManager at=calling-os.Exit(0)")
+					os.Exit(0)
+				}
+			} else {
+				log.Println("component=PollerShtudownManager at=signal-error")
+			}
+		case register, ok := <-p.registerChannelsInput:
+			if ok {
+				log.Printf("component=PollerShtudownManager at=register name=%s", register.name)
+				p.registeredPollers[register.name] = register
+			} else {
+				log.Printf("component=PollerShtudownManager at=register-error name=%s", register.name)
+			}
+		case deregister, ok := <-p.deregisterChannelsInput:
+			if ok {
+				log.Printf("component=PollerShtudownManager at=deregister name=%s", deregister)
+				delete(p.registeredPollers, deregister)
+			} else {
+				log.Printf("component=PollerShtudownManager at=deregister-error name=%s", deregister)
+			}
+		}
+	}
+}
+
+// Register registers a named pair of channels to the shutdown manager. Buffered channels please!
+func (p *PollerShtudownManager) Register(name string, stopChan chan bool, ackChan chan bool) {
+	p.registerChannelsInput <- &registeredPoller{name, stopChan, ackChan}
+}
+
+// Removes a registered pair of channels from the shutdown manager.
+func (p *PollerShtudownManager) Deregister(name string) {
+	p.deregisterChannelsInput <- name
+}
