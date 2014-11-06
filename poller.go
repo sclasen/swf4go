@@ -49,6 +49,29 @@ func (p *DecisionTaskPoller) Poll() (*PollForDecisionTaskResponse, bool) {
 	}
 }
 
+// PollUntilShutdownBy will poll until signaled to shutdown by the PollerShutdownManager. this func blocks, so run it in a goroutine if necessary.
+// The implementation calls Poll() and invokes the callback whenever a valid PollForDecisionTaskResponse is received.
+func (p *DecisionTaskPoller) PollUntilShutdownBy(mgr *PollerShtudownManager, pollerName string, onTask func(*PollForDecisionTaskResponse)) {
+	stop := make(chan bool, 1)
+	stopAck := make(chan bool, 1)
+	mgr.Register(pollerName, stop, stopAck)
+	for {
+		select {
+		case <-stop:
+			log.Printf("component=DecisionTaskPoller fn=PollUntilShutdownBy at=recieved-stop action=shutting-down poller=%s", pollerName)
+			stopAck <- true
+			return
+		default:
+			task, ok := p.Poll()
+			if ok {
+				onTask(task)
+			} else {
+				log.Printf("component=DecisionTaskPoller fn=PollUntilShutdownBy at=poll-nok  poller=%s", pollerName)
+			}
+		}
+	}
+}
+
 func (p *DecisionTaskPoller) logTaskLatency(resp *PollForDecisionTaskResponse) {
 	for _, e := range resp.Events {
 		if e.EventId == resp.StartedEventId {
@@ -93,6 +116,29 @@ func (p *ActivityTaskPoller) Poll() (*PollForActivityTaskResponse, bool) {
 		} else {
 			log.Println("component=ActivityTaskPoller at=activity-task-empty-response")
 			return nil, false
+		}
+	}
+}
+
+// PollUntilShutdownBy will poll until signaled to shutdown by the PollerShutdownManager. this func blocks, so run it in a goroutine if necessary.
+// The implementation calls Poll() and invokes the callback whenever a valid PollForActivityTaskResponse is received.
+func (p *ActivityTaskPoller) PollUntilShutdownBy(mgr *PollerShtudownManager, pollerName string, onTask func(*PollForActivityTaskResponse)) {
+	stop := make(chan bool, 1)
+	stopAck := make(chan bool, 1)
+	mgr.Register(pollerName, stop, stopAck)
+	for {
+		select {
+		case <-stop:
+			log.Printf("component=ActivityTaskPoller fn=PollUntilShutdownBy at=recieved-stop action=shutting-down poller=%s", pollerName)
+			stopAck <- true
+			return
+		default:
+			task, ok := p.Poll()
+			if ok {
+				onTask(task)
+			} else {
+				log.Printf("component=ActivityTaskPoller fn=PollUntilShutdownBy at=poll-nok  poller=%s", pollerName)
+			}
 		}
 	}
 }

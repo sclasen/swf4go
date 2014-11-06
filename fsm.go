@@ -169,53 +169,39 @@ func (f *FSM) Start() {
 	f.Init()
 	f.PollerShtudownManager.Register(f.Name, f.stop, f.stopAck)
 	poller := f.Client.DecisionTaskPoller(f.Domain, f.Identity, f.TaskList)
-	go func() {
-		for {
-			select {
-			case <-f.stop:
-				f.log("action=stop")
-				f.stopAck <- true
-				return
-			default:
-				decisionTask, ok := poller.Poll()
-				if ok {
-					decisions := f.Tick(decisionTask)
-					err := f.Client.RespondDecisionTaskCompleted(
-						RespondDecisionTaskCompletedRequest{
-							Decisions: decisions,
-							TaskToken: decisionTask.TaskToken,
-						})
+	go poller.PollUntilShutdownBy(f.PollerShtudownManager, f.Name, func(decisionTask *PollForDecisionTaskResponse) {
+		decisions := f.Tick(decisionTask)
+		err := f.Client.RespondDecisionTaskCompleted(
+			RespondDecisionTaskCompletedRequest{
+				Decisions: decisions,
+				TaskToken: decisionTask.TaskToken,
+			})
 
-					if err != nil {
-						f.log("action=tick at=decide-request-failed error=%s", err.Error())
-					}
+		if err != nil {
+			f.log("action=tick at=decide-request-failed error=%s", err.Error())
+		}
 
-					if f.KinesisStream != "" {
-						stateToReplicate := f.stateFromDecisions(decisions)
-						if stateToReplicate != "" {
-							resp, err := f.Client.PutRecord(PutRecordRequest{
-								StreamName: f.KinesisStream,
-								//partition by workflow
-								PartitionKey: decisionTask.WorkflowExecution.WorkflowId,
-								//sequence by StartedEventId, this way even if we end up sending these out of order to kinesis, they should come out in order.
-								SequenceNumberForOrdering: fmt.Sprintf("%d", decisionTask.StartedEventId),
-								Data: []byte(stateToReplicate),
-							})
-							if err != nil {
-								f.log("action=tick at=replicate-state-failed error=%s", err.Error())
-							} else {
-								f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardId, resp.SequenceNumber)
-							}
-							//todo error handling retries etc.
-						}
-					}
-
+		if f.KinesisStream != "" {
+			stateToReplicate := f.stateFromDecisions(decisions)
+			if stateToReplicate != "" {
+				resp, err := f.Client.PutRecord(PutRecordRequest{
+					StreamName: f.KinesisStream,
+					//partition by workflow
+					PartitionKey: decisionTask.WorkflowExecution.WorkflowId,
+					//sequence by StartedEventId, this way even if we end up sending these out of order to kinesis, they should come out in order.
+					SequenceNumberForOrdering: fmt.Sprintf("%d", decisionTask.StartedEventId),
+					Data: []byte(stateToReplicate),
+				})
+				if err != nil {
+					f.log("action=tick at=replicate-state-failed error=%s", err.Error())
 				} else {
-					f.log("action=poll at=nok")
+					f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardId, resp.SequenceNumber)
 				}
+				//todo error handling retries etc.
 			}
 		}
-	}()
+
+	})
 }
 
 func (f *FSM) stateFromDecisions(decisions []*Decision) string {
