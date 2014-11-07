@@ -10,9 +10,9 @@ Client
 The Client in this library understands how to make requests to and receive responses from every endpoint in the SWF API, as well as
 the PutRecord endpoint for Kinesis. (This will be explained later).
 
-(Decision|Activity)TaskPoller
+TaskPollers
 
-These Pollers facilitate proper usage of the PollForDecisionTask and PollForActivityTask endpoints in the SWF API. These endpoints are used by
+DecisionTaskPoller and ActivityTaskPoller facilitate proper usage of the PollForDecisionTask and PollForActivityTask endpoints in the SWF API. These endpoints are used by
 DecisionTask and ActivityTask workers to claim tasks on which to work. The endpoints use long polling. SWF will keep the request open for up to
 60 seconds before returning an 'empty' response. If a task is generated before that time, a non-empty task is delivered (and assigned to) a particular
 polling client.
