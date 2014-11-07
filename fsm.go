@@ -56,8 +56,6 @@ type FSM struct {
 	Identity string
 	// Client used to make SWF api requests.
 	Client *Client
-	// Input channel to send DecisionTasks to the FSM on.
-	Input chan *PollForDecisionTaskResponse
 	// DataType of the data struct associated with this FSM.
 	// The data is automatically peristed to and loaded from workflow history by the FSM.
 	DataType interface{}
