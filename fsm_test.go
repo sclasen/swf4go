@@ -369,7 +369,8 @@ func ExampleFSM() {
 		return nil
 	}
 	//the FSM we will create will oscillate between 2 states,
-
+    //waitForSignal -> will wait till the workflow is started or signalled, and update the StateData based on the Hello message received, set a timer, and transition to waitForTimer
+	//waitForTimer -> will wait till the timer set by waitForSignal fires, and will signal the workflow with a Hello message, and transition to waitFotSignal
 	waitForSignal := func(f *FSMContext, h HistoryEvent, d *StateData) *Outcome {
 		decisions := f.EmptyDecisions()
 		switch h.EventType {
@@ -390,12 +391,10 @@ func ExampleFSM() {
 			decisions = append(decisions, timerDecision)
 			return &Outcome{NextState: "waitForTimer", Data: d, Decisions: decisions}
 		}
-
+		//if the event was unexpected just stay here
 		return &Outcome{NextState: "waitForSignal", Data: d, Decisions: decisions}
 
 	}
-
-	waitForSignalState := &FSMState{Name: "waitForSignal", Decider: TypedDecider(waitForSignal)}
 
 	waitForTimer := func(f *FSMContext, h HistoryEvent, d *StateData) *Outcome {
 		decisions := f.EmptyDecisions()
@@ -417,11 +416,15 @@ func ExampleFSM() {
 
 			return &Outcome{NextState: "waitForSignal", Data: d, Decisions: decisions}
 		}
+		//if the event was unexpected just stay here
 		return &Outcome{NextState: "waitForTimer", Data: d, Decisions: decisions}
 	}
 
-	waitForTimerState := &FSMState{Name: "waitForTimer", Decider: TypedDecider(waitForTimer)}
 
+	//create the FSMState by passing the decider function through TypedDecider(),
+	//which lets you use d *State data rather than d interface{} in your decider.
+	waitForSignalState := &FSMState{Name: "waitForSignal", Decider: TypedDecider(waitForSignal)}
+	waitForTimerState := &FSMState{Name: "waitForTimer", Decider: TypedDecider(waitForTimer)}
 	//wire it up in an fsm
 	fsm := &FSM{
 		Name:          "example-fsm",
@@ -437,6 +440,5 @@ func ExampleFSM() {
 	fsm.AddState(waitForTimerState)
 
 	//start it up!
-
 	fsm.Start()
 }
