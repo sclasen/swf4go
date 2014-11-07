@@ -1,4 +1,3 @@
-package swf
 /*
 Package swf provides a full implementation of a client api for Amazon Simple Workflow Service
 http://docs.aws.amazon.com/amazonswf/latest/apireference/
@@ -50,12 +49,7 @@ Substituting the relevant swf/swf4go concepts, we get
 
 
 */
-
-
-
-/*
-
- */
+package swf
 
 
 
