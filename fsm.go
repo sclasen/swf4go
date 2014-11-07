@@ -8,6 +8,8 @@ import (
 	"log"
 	"reflect"
 	"strings"
+	"code.google.com/p/goprotobuf/proto"
+	"encoding/base64"
 )
 
 // constants used as marker names or signal names
@@ -589,6 +591,27 @@ func (j JsonStateSerializer) Deserialize(serialized string, state interface{}) e
 	err := json.NewDecoder(strings.NewReader(serialized)).Decode(state)
 	return err
 }
+
+type ProtobufStateSerializer struct{}
+
+func (p ProtobufStateSerializer) Serialize(state interface{}) (string, error) {
+	bin, err := proto.Marshal(state.(proto.Message))
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(bin), nil
+}
+
+func (p ProtobufStateSerializer) Deserialize(serialized string, state interface{}) error {
+	bin, err := base64.StdEncoding.DecodeString(serialized)
+	if err != nil {
+		return err
+	}
+	err = proto.Unmarshal(bin, state.(proto.Message))
+
+	return err
+}
+
 
 /*tigertonic-like marhsalling of data from interface{} to specific type*/
 
