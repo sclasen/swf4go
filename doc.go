@@ -50,8 +50,3 @@ Substituting the relevant swf/swf4go concepts, we get
 
 */
 package swf
-
-
-
-
-
