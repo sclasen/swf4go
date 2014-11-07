@@ -65,11 +65,14 @@ type FSM struct {
 	Serializer StateSerializer
 	// Kinesis stream in the same region to replicate state to.
 	KinesisStream string
-	states        map[string]*FSMState
-	initialState  *FSMState
-	errorState    *FSMState
-	stop          chan bool
-	allowPanics   bool //makes testing easier
+	//PollerShtudownManager is used when the FSM is managing the polling
+	PollerShtudownManager *PollerShtudownManager
+	states                map[string]*FSMState
+	initialState          *FSMState
+	errorState            *FSMState
+	stop                  chan bool
+	stopAck               chan bool
+	allowPanics           bool //makes testing easier
 }
 
 // AddInitialState adds a state to the FSM and uses it as the initial state when a workflow execution is started.
@@ -131,8 +134,9 @@ func (f *FSM) DefaultErrorState() *FSMState {
 	}
 }
 
-// Start begins processing DecisionTasks with the FSM.
-func (f *FSM) Start() {
+// Init initializaed any optional, unspecified values such as the error state, stop channel, serializer, PollerShtudownManager.
+// it gets called by Start(), so you should only call this if you are manually managing polling for tasks, and calling Tick yourself.
+func (f *FSM) Init() {
 	if f.initialState == nil {
 		panic("No Initial State Defined For FSM")
 	}
@@ -142,7 +146,11 @@ func (f *FSM) Start() {
 	}
 
 	if f.stop == nil {
-		f.stop = make(chan bool)
+		f.stop = make(chan bool, 1)
+	}
+
+	if f.stopAck == nil {
+		f.stopAck = make(chan bool, 1)
 	}
 
 	if f.Serializer == nil {
@@ -150,55 +158,50 @@ func (f *FSM) Start() {
 		f.Serializer = &JsonStateSerializer{}
 	}
 
-	poller := f.Client.PollDecisionTaskList(f.Domain, f.Identity, f.TaskList, f.Input)
-	go func() {
-		for {
-			select {
-			case decisionTask, ok := <-f.Input:
-				if ok {
-					decisions := f.Tick(decisionTask)
-					err := f.Client.RespondDecisionTaskCompleted(
-						RespondDecisionTaskCompletedRequest{
-							Decisions: decisions,
-							TaskToken: decisionTask.TaskToken,
-						})
+	if f.PollerShtudownManager == nil {
+		f.PollerShtudownManager = RegisterPollerShutdownManager()
+	}
+}
 
-					if err != nil {
-						f.log("action=tick at=decide-request-failed error=%s", err.Error())
-					}
+// Start begins processing DecisionTasks with the FSM. It creates a DecisionTaskPoller and spawns a goroutine that continues polling until Stop() is called and any in-flight polls have completed.
+// If you wish to manage polling and calling Tick() yourself, you dont need to start the FSM, just call Init().
+func (f *FSM) Start() {
+	f.Init()
+	f.PollerShtudownManager.Register(f.Name, f.stop, f.stopAck)
+	poller := f.Client.DecisionTaskPoller(f.Domain, f.Identity, f.TaskList)
+	go poller.PollUntilShutdownBy(f.PollerShtudownManager, f.Name, func(decisionTask *PollForDecisionTaskResponse) {
+		decisions := f.Tick(decisionTask)
+		err := f.Client.RespondDecisionTaskCompleted(
+			RespondDecisionTaskCompletedRequest{
+				Decisions: decisions,
+				TaskToken: decisionTask.TaskToken,
+			})
 
-					if f.KinesisStream != "" {
-						stateToReplicate := f.stateFromDecisions(decisions)
-						if stateToReplicate != "" {
-							resp, err := f.Client.PutRecord(PutRecordRequest{
-								StreamName: f.KinesisStream,
-								//partition by workflow
-								PartitionKey: decisionTask.WorkflowExecution.WorkflowId,
-								//sequence by StartedEventId, this way even if we end up sending these out of order to kinesis, they should come out in order.
-								SequenceNumberForOrdering: fmt.Sprintf("%d", decisionTask.StartedEventId),
-								Data: []byte(stateToReplicate),
-							})
-							if err != nil {
-								f.log("action=tick at=replicate-state-failed error=%s", err.Error())
-							} else {
-								f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardId, resp.SequenceNumber)
-							}
-							//todo error handling retries etc.
-						}
-					}
+		if err != nil {
+			f.log("action=tick at=decide-request-failed error=%s", err.Error())
+		}
 
+		if f.KinesisStream != "" {
+			stateToReplicate := f.stateFromDecisions(decisions)
+			if stateToReplicate != "" {
+				resp, err := f.Client.PutRecord(PutRecordRequest{
+					StreamName: f.KinesisStream,
+					//partition by workflow
+					PartitionKey: decisionTask.WorkflowExecution.WorkflowId,
+					//sequence by StartedEventId, this way even if we end up sending these out of order to kinesis, they should come out in order.
+					SequenceNumberForOrdering: fmt.Sprintf("%d", decisionTask.StartedEventId),
+					Data: []byte(stateToReplicate),
+				})
+				if err != nil {
+					f.log("action=tick at=replicate-state-failed error=%s", err.Error())
 				} else {
-					f.log("action=tick at=error error=task-channel-closed action=stopping-poller")
-					poller.Stop()
-					return
+					f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardId, resp.SequenceNumber)
 				}
-			case <-f.stop:
-				f.log("action=tick at=stop action=stopping-poller")
-				poller.Stop()
-				return
+				//todo error handling retries etc.
 			}
 		}
-	}()
+
+	})
 }
 
 func (f *FSM) stateFromDecisions(decisions []*Decision) string {
