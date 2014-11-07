@@ -5,8 +5,6 @@
 // implementations of pollers for both decision and activty tasks.
 //
 //
-package swf
-
 // Client
 //
 // The Client in this library understands how to make requests to and receive responses from every endpoint in the SWF API, as well as
@@ -52,6 +50,8 @@ package swf
 //
 //
 //
+
+package swf
 
 
 
