@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/go-uuid/uuid"
 	"log"
 	"testing"
+	"github.com/sclasen/swf4go/Godeps/_workspace/src/code.google.com/p/goprotobuf/proto"
 )
 
 //Todo add tests of error handling mechanism
@@ -291,4 +292,57 @@ func TestErrorHandling(t *testing.T) {
 	if len(decisions2) != 1 && decisions2[0].DecisionType != DecisionTypeRecordMarker {
 		t.Fatalf("no state marker for typed decider!")
 	}
+}
+
+func TestProtobufSerialization(t *testing.T){
+	ser := &ProtobufStateSerializer{}
+	key := "FOO"
+	val := "BAR"
+	init := &ConfigVar{Key:&key, Str:&val}
+	serialized, err := ser.Serialize(init)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Println(serialized)
+
+    deserialized := new(ConfigVar)
+	err = ser.Deserialize(serialized, deserialized)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if init.GetKey() != deserialized.GetKey() {
+		t.Fatal(init, deserialized)
+	}
+
+	if init.GetStr() != deserialized.GetStr() {
+		t.Fatal(init, deserialized)
+	}
+}
+
+//This is c&p from som generated code
+
+type ConfigVar struct {
+	Key              *string `protobuf:"bytes,1,req,name=key" json:"key,omitempty"`
+	Str              *string `protobuf:"bytes,2,opt,name=str" json:"str,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *ConfigVar) Reset()         { *m = ConfigVar{} }
+func (m *ConfigVar) String() string { return proto.CompactTextString(m) }
+func (*ConfigVar) ProtoMessage()    {}
+
+func (m *ConfigVar) GetKey() string {
+	if m != nil && m.Key != nil {
+		return *m.Key
+	}
+	return ""
+}
+
+func (m *ConfigVar) GetStr() string {
+	if m != nil && m.Str != nil {
+		return *m.Str
+	}
+	return ""
 }
