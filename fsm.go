@@ -2,14 +2,14 @@ package swf
 
 import (
 	"bytes"
+	"code.google.com/p/goprotobuf/proto"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"reflect"
 	"strings"
-	"code.google.com/p/goprotobuf/proto"
-	"encoding/base64"
 )
 
 // constants used as marker names or signal names
@@ -23,7 +23,7 @@ const (
 // the interface{} parameter that is passed to the decider is safe to
 // be asserted to be the type of the DataType field in the FSM
 // Alternatively you can use the TypedDecider to avoid having to do the assertion.
-type Decider func(*FSM, HistoryEvent, interface{}) *Outcome
+type Decider func(*FSMContext, HistoryEvent, interface{}) *Outcome
 
 // EventDataType should return an empty struct of the correct type based on the event
 // the FSM will unmarshal data from the event into this struct
@@ -106,7 +106,7 @@ func (f *FSM) AddErrorState(state *FSMState) {
 func (f *FSM) DefaultErrorState() *FSMState {
 	return &FSMState{
 		Name: "error",
-		Decider: func(f *FSM, h HistoryEvent, data interface{}) *Outcome {
+		Decider: func(fsm *FSMContext, h HistoryEvent, data interface{}) *Outcome {
 			switch h.EventType {
 			case EventTypeWorkflowExecutionSignaled:
 				{
@@ -241,14 +241,14 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
 	outcome := new(Outcome)
-
+	context := &FSMContext{f, decisionTask.WorkflowType, decisionTask.WorkflowExecution}
 	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
 	if len(errorEvents) > 0 {
 		outcome.Data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
 		outcome.NextState = f.errorState.Name
 		for i := len(errorEvents) - 1; i >= 0; i-- {
 			e := errorEvents[i]
-			anOutcome, err := f.panicSafeDecide(f.errorState, e, outcome.Data)
+			anOutcome, err := f.panicSafeDecide(f.errorState, context, e, outcome.Data)
 			if err != nil {
 				f.log("at=error error=error-handling-decision-execution-error state=%s next-state=%", f.errorState.Name, outcome.NextState)
 				//we wont get here if panics are allowed
@@ -297,7 +297,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 		f.log("action=tick at=history id=%d type=%s", e.EventId, e.EventType)
 		fsmState, ok := f.states[outcome.NextState]
 		if ok {
-			anOutcome, err := f.panicSafeDecide(fsmState, e, outcome.Data)
+			anOutcome, err := f.panicSafeDecide(fsmState, context, e, outcome.Data)
 			if err != nil {
 				f.log("at=error error=decision-execution-error state=%s next-state=%", fsmState.Name, outcome.NextState)
 				if f.allowPanics {
@@ -335,7 +335,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 
 //if the outcome is good good if its an error, we capture the error state above
 
-func (f *FSM) panicSafeDecide(state *FSMState, event HistoryEvent, data interface{}) (anOutcome *Outcome, anErr error) {
+func (f *FSM) panicSafeDecide(state *FSMState, context *FSMContext, event HistoryEvent, data interface{}) (anOutcome *Outcome, anErr error) {
 	defer func() {
 		if !f.allowPanics {
 			if r := recover(); r != nil {
@@ -346,7 +346,7 @@ func (f *FSM) panicSafeDecide(state *FSMState, event HistoryEvent, data interfac
 			log.Printf("at=panic-safe-decide-allowing-panic fsm-allow-panics=%t", f.allowPanics)
 		}
 	}()
-	anOutcome = state.Decider(f, event, data)
+	anOutcome = state.Decider(context, event, data)
 	return
 }
 
@@ -610,7 +610,6 @@ func (p ProtobufStateSerializer) Deserialize(serialized string, state interface{
 	return err
 }
 
-
 /*tigertonic-like marhsalling of data from interface{} to specific type*/
 
 // MarshalledDecider is used to convert a standard decider with data of type interface{} to a typed decider
@@ -631,9 +630,9 @@ func TypedDecider(decider interface{}) Decider {
 			t.NumIn(),
 		))
 	}
-	if "*swf.FSM" != t.In(0).String() {
+	if "*swf.FSMContext" != t.In(0).String() {
 		panic(fmt.Sprintf(
-			"type of first argument was %v, not *swf.FSM",
+			"type of first argument was %v, not *swf.FSMContext",
 			t.In(0),
 		))
 	}
@@ -655,11 +654,37 @@ func TypedDecider(decider interface{}) Decider {
 }
 
 // Decide uses reflection to call the user specified, typed decider.
-func (m MarshalledDecider) Decide(f *FSM, h HistoryEvent, data interface{}) *Outcome {
+func (m MarshalledDecider) Decide(f *FSMContext, h HistoryEvent, data interface{}) *Outcome {
 
 	// reflection will asplode if we try to use nil
 	if data == nil {
-		data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
+		data = reflect.New(reflect.TypeOf(f.fsm.DataType)).Interface()
 	}
 	return m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0].Interface().(*Outcome)
+}
+
+type FSMContext struct {
+	fsm *FSM
+	WorkflowType
+	WorkflowExecution
+}
+
+func (f *FSMContext) EventData(h HistoryEvent) interface{} {
+	return f.fsm.EventData(h)
+}
+
+func (f *FSMContext) Serialize(data interface{}) string {
+	return f.fsm.Serialize(data)
+}
+
+func (f *FSMContext) Serializer() StateSerializer {
+	return f.fsm.Serializer
+}
+
+func (f *FSMContext) Deserialize(serialized string, data interface{}) {
+	f.fsm.Deserialize(serialized, data)
+}
+
+func (f *FSMContext) EmptyDecisions() []*Decision {
+	return f.fsm.EmptyDecisions()
 }

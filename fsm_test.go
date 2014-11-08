@@ -2,9 +2,11 @@ package swf
 
 import (
 	"code.google.com/p/go-uuid/uuid"
-	"log"
-	"testing"
 	"github.com/sclasen/swf4go/Godeps/_workspace/src/code.google.com/p/goprotobuf/proto"
+	"log"
+	"strconv"
+	"testing"
+	"time"
 )
 
 //Todo add tests of error handling mechanism
@@ -20,10 +22,10 @@ func TestFSM(t *testing.T) {
 
 	fsm.AddInitialState(&FSMState{
 		Name: "start",
-		Decider: func(f *FSM, lastEvent HistoryEvent, data interface{}) *Outcome {
+		Decider: func(f *FSMContext, lastEvent HistoryEvent, data interface{}) *Outcome {
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "start")
-			serialized, _ := f.Serializer.Serialize(testData)
+			serialized := f.Serialize(testData)
 			decision := &Decision{
 				DecisionType: DecisionTypeScheduleActivityTask,
 				ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
@@ -43,9 +45,9 @@ func TestFSM(t *testing.T) {
 
 	fsm.AddState(&FSMState{
 		Name: "working",
-		Decider: TypedDecider(func(f *FSM, lastEvent HistoryEvent, testData *TestData) *Outcome {
+		Decider: TypedDecider(func(f *FSMContext, lastEvent HistoryEvent, testData *TestData) *Outcome {
 			testData.States = append(testData.States, "working")
-			serialized, _ := f.Serializer.Serialize(testData)
+			serialized := f.Serialize(testData)
 			var decisions = f.EmptyDecisions()
 			if lastEvent.EventType == EventTypeActivityTaskCompleted {
 				decision := &Decision{
@@ -183,7 +185,7 @@ type TestData struct {
 }
 
 func TestMarshalledDecider(t *testing.T) {
-	typedDecider := func(f *FSM, h HistoryEvent, d TestData) *Outcome {
+	typedDecider := func(f *FSMContext, h HistoryEvent, d TestData) *Outcome {
 		if d.States[0] != "marshalled" {
 			t.Fail()
 		}
@@ -192,7 +194,7 @@ func TestMarshalledDecider(t *testing.T) {
 
 	wrapped := TypedDecider(typedDecider)
 
-	outcome := wrapped(&FSM{}, HistoryEvent{}, TestData{States: []string{"marshalled"}})
+	outcome := wrapped(&FSMContext{}, HistoryEvent{}, TestData{States: []string{"marshalled"}})
 
 	if outcome.NextState != "ok" {
 		t.Fatal("NextState was not 'ok'")
@@ -202,13 +204,13 @@ func TestMarshalledDecider(t *testing.T) {
 func TestPanicRecovery(t *testing.T) {
 	s := &FSMState{
 		Name: "panic",
-		Decider: func(f *FSM, e HistoryEvent, data interface{}) *Outcome {
+		Decider: func(f *FSMContext, e HistoryEvent, data interface{}) *Outcome {
 			panic("can you handle it?")
 		},
 	}
 	f := &FSM{}
 	f.AddInitialState(s)
-	_, err := f.panicSafeDecide(s, HistoryEvent{}, nil)
+	_, err := f.panicSafeDecide(s, new(FSMContext), HistoryEvent{}, nil)
 	if err == nil {
 		t.Fatal("fatallz")
 	} else {
@@ -226,7 +228,7 @@ func TestErrorHandling(t *testing.T) {
 
 	fsm.AddInitialState(&FSMState{
 		Name: "ok",
-		Decider: func(f *FSM, h HistoryEvent, d interface{}) *Outcome {
+		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) *Outcome {
 			if h.EventType == EventTypeWorkflowExecutionSignaled && d.(*TestData).States[0] == "recovered" {
 				log.Println("recovered")
 				return &Outcome{NextState: "ok", Data: d}
@@ -239,7 +241,7 @@ func TestErrorHandling(t *testing.T) {
 
 	fsm.AddErrorState(&FSMState{
 		Name: "error",
-		Decider: func(f *FSM, h HistoryEvent, d interface{}) *Outcome {
+		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) *Outcome {
 			if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == ERROR_SIGNAL {
 				log.Println("in error recovery")
 				return &Outcome{
@@ -284,9 +286,9 @@ func TestErrorHandling(t *testing.T) {
 	}
 	//Try with TypedDecider
 	id := fsm.initialState.Decider
-	fsm.initialState.Decider = TypedDecider(func(f *FSM, h HistoryEvent, d *TestData) *Outcome { return id(f, h, d) })
+	fsm.initialState.Decider = TypedDecider(func(f *FSMContext, h HistoryEvent, d *TestData) *Outcome { return id(f, h, d) })
 	ie := fsm.errorState.Decider
-	fsm.errorState.Decider = TypedDecider(func(f *FSM, h HistoryEvent, d *TestData) *Outcome { return ie(f, h, d) })
+	fsm.errorState.Decider = TypedDecider(func(f *FSMContext, h HistoryEvent, d *TestData) *Outcome { return ie(f, h, d) })
 
 	decisions2 := fsm.Tick(resp)
 	if len(decisions2) != 1 && decisions2[0].DecisionType != DecisionTypeRecordMarker {
@@ -294,11 +296,11 @@ func TestErrorHandling(t *testing.T) {
 	}
 }
 
-func TestProtobufSerialization(t *testing.T){
+func TestProtobufSerialization(t *testing.T) {
 	ser := &ProtobufStateSerializer{}
 	key := "FOO"
 	val := "BAR"
-	init := &ConfigVar{Key:&key, Str:&val}
+	init := &ConfigVar{Key: &key, Str: &val}
 	serialized, err := ser.Serialize(init)
 	if err != nil {
 		t.Fatal(err)
@@ -306,7 +308,7 @@ func TestProtobufSerialization(t *testing.T){
 
 	log.Println(serialized)
 
-    deserialized := new(ConfigVar)
+	deserialized := new(ConfigVar)
 	err = ser.Deserialize(serialized, deserialized)
 	if err != nil {
 		t.Fatal(err)
@@ -345,4 +347,98 @@ func (m *ConfigVar) GetStr() string {
 		return *m.Str
 	}
 	return ""
+}
+
+func ExampleFSM() {
+	// create with swf.NewClient
+	var client *Client
+	// data type that will be managed by the FSM
+	type StateData struct {
+		Message string `json:"message,omitempty"`
+		Count   int    `json:"count,omitempty"`
+	}
+	//event type that will be signalled to the FSM with signal name "hello"
+	type Hello struct {
+		Message string `json:"message,omitempty"`
+	}
+	//EventData func to give us the type(s) of data expected in the payload of event(s)
+	eventData := func(h HistoryEvent) interface{} {
+		if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == "hello" {
+			return new(Hello)
+		}
+		return nil
+	}
+	//the FSM we will create will oscillate between 2 states,
+    //waitForSignal -> will wait till the workflow is started or signalled, and update the StateData based on the Hello message received, set a timer, and transition to waitForTimer
+	//waitForTimer -> will wait till the timer set by waitForSignal fires, and will signal the workflow with a Hello message, and transition to waitFotSignal
+	waitForSignal := func(f *FSMContext, h HistoryEvent, d *StateData) *Outcome {
+		decisions := f.EmptyDecisions()
+		switch h.EventType {
+		case EventTypeWorkflowExecutionStarted, EventTypeWorkflowExecutionSignaled:
+			if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == "hello" {
+				hello := f.EventData(h).(*Hello)
+				d.Count += 1
+				d.Message = hello.Message
+			}
+			timeoutSeconds := "5" //swf uses stringy numbers in many places
+			timerDecision := &Decision{
+				DecisionType: DecisionTypeStartTimer,
+				StartTimerDecisionAttributes: &StartTimerDecisionAttributes{
+					StartToFireTimeout: timeoutSeconds,
+					TimerId:            "timeToSignal",
+				},
+			}
+			decisions = append(decisions, timerDecision)
+			return &Outcome{NextState: "waitForTimer", Data: d, Decisions: decisions}
+		}
+		//if the event was unexpected just stay here
+		return &Outcome{NextState: "waitForSignal", Data: d, Decisions: decisions}
+
+	}
+
+	waitForTimer := func(f *FSMContext, h HistoryEvent, d *StateData) *Outcome {
+		decisions := f.EmptyDecisions()
+		switch h.EventType {
+		case EventTypeTimerFired:
+			//every time the timer fires, signal the workflow with a Hello
+			message := strconv.FormatInt(time.Now().Unix(), 10)
+			signalInput := &Hello{message}
+			signalDecision := &Decision{
+				DecisionType: DecisionTypeSignalExternalWorkflowExecution,
+				SignalExternalWorkflowExecutionDecisionAttributes: &SignalExternalWorkflowExecutionDecisionAttributes{
+					SignalName: "hello",
+					Input:      f.Serialize(signalInput),
+					RunId:      f.RunId,
+					WorkflowId: f.WorkflowId,
+				},
+			}
+			decisions = append(decisions, signalDecision)
+
+			return &Outcome{NextState: "waitForSignal", Data: d, Decisions: decisions}
+		}
+		//if the event was unexpected just stay here
+		return &Outcome{NextState: "waitForTimer", Data: d, Decisions: decisions}
+	}
+
+
+	//create the FSMState by passing the decider function through TypedDecider(),
+	//which lets you use d *State data rather than d interface{} in your decider.
+	waitForSignalState := &FSMState{Name: "waitForSignal", Decider: TypedDecider(waitForSignal)}
+	waitForTimerState := &FSMState{Name: "waitForTimer", Decider: TypedDecider(waitForTimer)}
+	//wire it up in an fsm
+	fsm := &FSM{
+		Name:          "example-fsm",
+		Client:        client,
+		DataType:      StateData{},
+		EventDataType: eventData,
+		Domain:        "exaple-swf-domain",
+		TaskList:      "example-decision-task-list-to-poll",
+		Serializer:    &JsonStateSerializer{},
+	}
+    //add states to FSM
+	fsm.AddInitialState(waitForSignalState)
+	fsm.AddState(waitForTimerState)
+
+	//start it up!
+	fsm.Start()
 }
