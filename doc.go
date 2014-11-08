@@ -47,7 +47,7 @@ Substituting the relevant swf/swf4go concepts, we get
 
    (Your main data struct) x (an swf.HistoryEvent) -> (zero or more swf.Decisions), (A possibly updated main data struct)
 
-See the <a href="#example-FSM">FSM Example</a> for a complete usage example.
+See the http://godoc.org/github.com/sclasen/swf4go#example-FSM for a complete usage example.
 
 */
 package swf
