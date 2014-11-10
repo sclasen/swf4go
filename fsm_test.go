@@ -422,7 +422,7 @@ func ExampleFSM() {
 
 
 	//create the FSMState by passing the decider function through TypedDecider(),
-	//which lets you use d *State data rather than d interface{} in your decider.
+	//which lets you use d *StateData rather than d interface{} in your decider.
 	waitForSignalState := &FSMState{Name: "waitForSignal", Decider: TypedDecider(waitForSignal)}
 	waitForTimerState := &FSMState{Name: "waitForTimer", Decider: TypedDecider(waitForTimer)}
 	//wire it up in an fsm

@@ -8,7 +8,7 @@ implementations of pollers for both decision and activty tasks.
 Client
 
 The Client in this library understands how to make requests to and receive responses from every endpoint in the SWF API, as well as
-the PutRecord endpoint for Kinesis. (This will be explained later).
+the PutRecord endpoint for Kinesis.
 
 TaskPollers
 
