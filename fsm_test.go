@@ -22,7 +22,7 @@ func TestFSM(t *testing.T) {
 
 	fsm.AddInitialState(&FSMState{
 		Name: "start",
-		Decider: func(f *FSMContext, lastEvent HistoryEvent, data interface{}) *Outcome {
+		Decider: func(f *FSMContext, lastEvent HistoryEvent, data interface{}) Outcome {
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "start")
 			serialized := f.Serialize(testData)
@@ -35,17 +35,15 @@ func TestFSM(t *testing.T) {
 					Input:        serialized,
 				},
 			}
-			return &Outcome{
-				NextState: "working",
-				Data:      testData,
-				Decisions: []*Decision{decision},
-			}
+
+			return f.Goto("working", testData, []*Decision{decision})
+
 		},
 	})
 
 	fsm.AddState(&FSMState{
 		Name: "working",
-		Decider: TypedDecider(func(f *FSMContext, lastEvent HistoryEvent, testData *TestData) *Outcome {
+		Decider: TypedDecider(func(f *FSMContext, lastEvent HistoryEvent, testData *TestData) Outcome {
 			testData.States = append(testData.States, "working")
 			serialized := f.Serialize(testData)
 			var decisions = f.EmptyDecisions()
@@ -69,11 +67,8 @@ func TestFSM(t *testing.T) {
 				}
 				decisions = append(decisions, decision)
 			}
-			return &Outcome{
-				NextState: "working",
-				Data:      testData,
-				Decisions: decisions,
-			}
+
+			return f.Stay(testData, decisions)
 		}),
 	})
 
@@ -185,18 +180,18 @@ type TestData struct {
 }
 
 func TestMarshalledDecider(t *testing.T) {
-	typedDecider := func(f *FSMContext, h HistoryEvent, d TestData) *Outcome {
+	typedDecider := func(f *FSMContext, h HistoryEvent, d TestData) Outcome {
 		if d.States[0] != "marshalled" {
 			t.Fail()
 		}
-		return &Outcome{NextState: "ok"}
+		return f.Goto("ok", d, nil)
 	}
 
 	wrapped := TypedDecider(typedDecider)
 
 	outcome := wrapped(&FSMContext{}, HistoryEvent{}, TestData{States: []string{"marshalled"}})
 
-	if outcome.NextState != "ok" {
+	if outcome.(TransitionOutcome).state != "ok" {
 		t.Fatal("NextState was not 'ok'")
 	}
 }
@@ -204,7 +199,7 @@ func TestMarshalledDecider(t *testing.T) {
 func TestPanicRecovery(t *testing.T) {
 	s := &FSMState{
 		Name: "panic",
-		Decider: func(f *FSMContext, e HistoryEvent, data interface{}) *Outcome {
+		Decider: func(f *FSMContext, e HistoryEvent, data interface{}) Outcome {
 			panic("can you handle it?")
 		},
 	}
@@ -228,10 +223,10 @@ func TestErrorHandling(t *testing.T) {
 
 	fsm.AddInitialState(&FSMState{
 		Name: "ok",
-		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) *Outcome {
+		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) Outcome {
 			if h.EventType == EventTypeWorkflowExecutionSignaled && d.(*TestData).States[0] == "recovered" {
 				log.Println("recovered")
-				return &Outcome{NextState: "ok", Data: d}
+				return f.Stay(d, nil)
 			}
 			t.Fatalf("ok state did not get recovered %s", h)
 			return nil
@@ -241,13 +236,10 @@ func TestErrorHandling(t *testing.T) {
 
 	fsm.AddErrorState(&FSMState{
 		Name: "error",
-		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) *Outcome {
+		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) Outcome {
 			if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == ERROR_SIGNAL {
 				log.Println("in error recovery")
-				return &Outcome{
-					NextState: "ok",
-					Data:      &TestData{States: []string{"recovered"}},
-				}
+				return f.Goto("ok", &TestData{States: []string{"recovered"}}, nil)
 			}
 			t.Fatalf("error handler got unexpected event")
 			return nil
@@ -286,9 +278,9 @@ func TestErrorHandling(t *testing.T) {
 	}
 	//Try with TypedDecider
 	id := fsm.initialState.Decider
-	fsm.initialState.Decider = TypedDecider(func(f *FSMContext, h HistoryEvent, d *TestData) *Outcome { return id(f, h, d) })
+	fsm.initialState.Decider = TypedDecider(func(f *FSMContext, h HistoryEvent, d *TestData) Outcome { return id(f, h, d) })
 	ie := fsm.errorState.Decider
-	fsm.errorState.Decider = TypedDecider(func(f *FSMContext, h HistoryEvent, d *TestData) *Outcome { return ie(f, h, d) })
+	fsm.errorState.Decider = TypedDecider(func(f *FSMContext, h HistoryEvent, d *TestData) Outcome { return ie(f, h, d) })
 
 	decisions2 := fsm.Tick(resp)
 	if len(decisions2) != 1 && decisions2[0].DecisionType != DecisionTypeRecordMarker {
@@ -371,7 +363,7 @@ func ExampleFSM() {
 	//the FSM we will create will oscillate between 2 states,
     //waitForSignal -> will wait till the workflow is started or signalled, and update the StateData based on the Hello message received, set a timer, and transition to waitForTimer
 	//waitForTimer -> will wait till the timer set by waitForSignal fires, and will signal the workflow with a Hello message, and transition to waitFotSignal
-	waitForSignal := func(f *FSMContext, h HistoryEvent, d *StateData) *Outcome {
+	waitForSignal := func(f *FSMContext, h HistoryEvent, d *StateData) Outcome {
 		decisions := f.EmptyDecisions()
 		switch h.EventType {
 		case EventTypeWorkflowExecutionStarted, EventTypeWorkflowExecutionSignaled:
@@ -389,14 +381,14 @@ func ExampleFSM() {
 				},
 			}
 			decisions = append(decisions, timerDecision)
-			return &Outcome{NextState: "waitForTimer", Data: d, Decisions: decisions}
+			return f.Goto("waitForTimer", d, decisions)
 		}
 		//if the event was unexpected just stay here
-		return &Outcome{NextState: "waitForSignal", Data: d, Decisions: decisions}
+		return f.Stay(d, decisions)
 
 	}
 
-	waitForTimer := func(f *FSMContext, h HistoryEvent, d *StateData) *Outcome {
+	waitForTimer := func(f *FSMContext, h HistoryEvent, d *StateData) Outcome {
 		decisions := f.EmptyDecisions()
 		switch h.EventType {
 		case EventTypeTimerFired:
@@ -414,10 +406,10 @@ func ExampleFSM() {
 			}
 			decisions = append(decisions, signalDecision)
 
-			return &Outcome{NextState: "waitForSignal", Data: d, Decisions: decisions}
+			return f.Goto("waitForSignal", d, decisions)
 		}
 		//if the event was unexpected just stay here
-		return &Outcome{NextState: "waitForTimer", Data: d, Decisions: decisions}
+		return f.Stay(d, decisions)
 	}
 
 

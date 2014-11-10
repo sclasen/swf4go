@@ -23,18 +23,56 @@ const (
 // the interface{} parameter that is passed to the decider is safe to
 // be asserted to be the type of the DataType field in the FSM
 // Alternatively you can use the TypedDecider to avoid having to do the assertion.
-type Decider func(*FSMContext, HistoryEvent, interface{}) *Outcome
+type Decider func(*FSMContext, HistoryEvent, interface{}) Outcome
 
 // EventDataType should return an empty struct of the correct type based on the event
 // the FSM will unmarshal data from the event into this struct
 type EventDataType func(HistoryEvent) interface{}
 
-// Outcome is created by Deciders
-type Outcome struct {
-	Data      interface{}
-	NextState string
-	Decisions []*Decision
+type Outcome interface {
+	Data() interface{}
+	Decisions() []*Decision
 }
+
+type TransitionOutcome struct {
+	data      interface{}
+	state     string
+	decisions []*Decision
+}
+
+func (t TransitionOutcome) Data() interface{} { return t.data }
+
+func (t TransitionOutcome) Decisions() []*Decision { return t.decisions }
+
+type StayOutcome struct {
+	data      interface{}
+	decisions []*Decision
+}
+
+func (s StayOutcome) Data() interface{} { return s.data }
+
+func (s StayOutcome) Decisions() []*Decision { return s.decisions }
+
+//this can do things like check that the last decision is a termination?
+type TerminationOutcome struct {
+	data      interface{}
+	decisions []*Decision
+}
+
+func (t TerminationOutcome) Data() interface{} { return t.data }
+
+func (t TerminationOutcome) Decisions() []*Decision { return t.decisions }
+
+//This could be used to purposefully put the workflow into an error state.
+type ErrorOutcome struct {
+	state     string
+	data      interface{}
+	decisions []*Decision
+}
+
+func (e ErrorOutcome) Data() interface{} { return e.data }
+
+func (e ErrorOutcome) Decisions() []*Decision { return e.decisions }
 
 // FSMState defines the behavior of one state of an FSM
 type FSMState struct {
@@ -106,7 +144,7 @@ func (f *FSM) AddErrorState(state *FSMState) {
 func (f *FSM) DefaultErrorState() *FSMState {
 	return &FSMState{
 		Name: "error",
-		Decider: func(fsm *FSMContext, h HistoryEvent, data interface{}) *Outcome {
+		Decider: func(fsm *FSMContext, h HistoryEvent, data interface{}) Outcome {
 			switch h.EventType {
 			case EventTypeWorkflowExecutionSignaled:
 				{
@@ -129,7 +167,7 @@ func (f *FSM) DefaultErrorState() *FSMState {
 			default:
 				f.log("action=default-handle-error at=process-event event=%+v", h)
 			}
-			return &Outcome{NextState: "error", Data: data, Decisions: []*Decision{}}
+			return fsm.Error(data, []*Decision{})
 		},
 	}
 }
@@ -240,29 +278,27 @@ func (f *FSM) Deserialize(serialized string, data interface{}) {
 func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
-	outcome := new(Outcome)
+	outcome := new(TransitionOutcome)
 	context := &FSMContext{f, decisionTask.WorkflowType, decisionTask.WorkflowExecution}
 	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
 	if len(errorEvents) > 0 {
-		outcome.Data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
-		outcome.NextState = f.errorState.Name
+		outcome.data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
+		outcome.state = f.errorState.Name
 		for i := len(errorEvents) - 1; i >= 0; i-- {
 			e := errorEvents[i]
-			anOutcome, err := f.panicSafeDecide(f.errorState, context, e, outcome.Data)
+			anOutcome, err := f.panicSafeDecide(f.errorState, context, e, outcome.data)
 			if err != nil {
-				f.log("at=error error=error-handling-decision-execution-error state=%s next-state=%", f.errorState.Name, outcome.NextState)
+				f.log("at=error error=error-handling-decision-execution-error state=%s next-state=%", f.errorState.Name, outcome.state)
 				//we wont get here if panics are allowed
-				return append(outcome.Decisions, f.captureDecisionError(execution, i, errorEvents, outcome.NextState, outcome.Data, err)...)
+				return append(outcome.decisions, f.captureDecisionError(execution, i, errorEvents, outcome.state, outcome.data, err)...)
 			}
-			outcome.Data = anOutcome.Data
-			outcome.NextState = anOutcome.NextState
-			outcome.Decisions = append(outcome.Decisions, anOutcome.Decisions...)
+			f.mergeOutcomes(outcome, anOutcome)
 		}
 
 	}
 
 	//if there was no error processing, we recover the state + data from the expected marker
-	if outcome.Data == nil && outcome.NextState == "" {
+	if outcome.data == nil && outcome.state == "" {
 		serializedState, err := f.findSerializedState(decisionTask.Events)
 
 		if err != nil {
@@ -270,7 +306,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 			if f.allowPanics {
 				panic(err)
 			}
-			return append(outcome.Decisions, f.captureSystemError(execution, "FindSerializedStateError", decisionTask.Events, err)...)
+			return append(outcome.decisions, f.captureSystemError(execution, "FindSerializedStateError", decisionTask.Events, err)...)
 		}
 
 		f.log("action=tick at=find-current-state state=%s", serializedState.StateName)
@@ -281,13 +317,13 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 			if f.allowPanics {
 				panic(err)
 			}
-			return append(outcome.Decisions, f.captureSystemError(execution, "DeserializeStateError", decisionTask.Events, err)...)
+			return append(outcome.decisions, f.captureSystemError(execution, "DeserializeStateError", decisionTask.Events, err)...)
 		}
 
 		f.log("action=tick at=find-current-data data=%v", data)
 
-		outcome.Data = data
-		outcome.NextState = serializedState.StateName
+		outcome.data = data
+		outcome.state = serializedState.StateName
 	}
 
 	//iterate through events oldest to newest, calling the decider for the current state.
@@ -295,31 +331,31 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	for i := len(lastEvents) - 1; i >= 0; i-- {
 		e := lastEvents[i]
 		f.log("action=tick at=history id=%d type=%s", e.EventId, e.EventType)
-		fsmState, ok := f.states[outcome.NextState]
+		fsmState, ok := f.states[outcome.state]
 		if ok {
-			anOutcome, err := f.panicSafeDecide(fsmState, context, e, outcome.Data)
+			anOutcome, err := f.panicSafeDecide(fsmState, context, e, outcome.data)
 			if err != nil {
-				f.log("at=error error=decision-execution-error state=%s next-state=%", fsmState.Name, outcome.NextState)
+				f.log("at=error error=decision-execution-error state=%s next-state=%", fsmState.Name, outcome.state)
 				if f.allowPanics {
 					panic(err)
 				}
-				return append(outcome.Decisions, f.captureDecisionError(execution, i, lastEvents, outcome.NextState, outcome.Data, err)...)
+				return append(outcome.decisions, f.captureDecisionError(execution, i, lastEvents, outcome.state, outcome.data, err)...)
 			}
 
-			f.log("action=tick at=decided-event state=%s next-state=%s decisions=%d", outcome.NextState, anOutcome.NextState, len(anOutcome.Decisions))
-			outcome.Data = anOutcome.Data
-			outcome.NextState = anOutcome.NextState
-			outcome.Decisions = append(outcome.Decisions, anOutcome.Decisions...)
+			curr := outcome.state
+			f.mergeOutcomes(outcome, anOutcome)
+			f.log("action=tick at=decided-event state=%s next-state=%s decisions=%d", curr, outcome.state, len(anOutcome.Decisions()))
+
 		} else {
-			f.log("action=tick at=error error=marked-state-not-in-fsm state=%s", outcome.NextState)
-			return append(outcome.Decisions, f.captureSystemError(execution, "MissingFsmStateError", lastEvents[i:], errors.New(outcome.NextState))...)
+			f.log("action=tick at=error error=marked-state-not-in-fsm state=%s", outcome.state)
+			return append(outcome.decisions, f.captureSystemError(execution, "MissingFsmStateError", lastEvents[i:], errors.New(outcome.state))...)
 		}
 	}
 
-	f.log("action=tick at=events-processed next-state=%s decisions=%d", outcome.NextState, len(outcome.Decisions))
+	f.log("action=tick at=events-processed next-state=%s decisions=%d", outcome.state, len(outcome.decisions))
 
-	for _, d := range outcome.Decisions {
-		f.log("action=tick at=decide next-state=%s decision=%s", outcome.NextState, d.DecisionType)
+	for _, d := range outcome.decisions {
+		f.log("action=tick at=decide next-state=%s decision=%s", outcome.state, d.DecisionType)
 	}
 
 	final, err := f.appendState(outcome)
@@ -328,14 +364,67 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 		if f.allowPanics {
 			panic(err)
 		}
-		return append(outcome.Decisions, f.captureSystemError(execution, "StateSerializationError", []HistoryEvent{}, err)...)
+		return append(outcome.decisions, f.captureSystemError(execution, "StateSerializationError", []HistoryEvent{}, err)...)
 	}
 	return final
 }
 
+func (f *FSMContext) Stay(data interface{}, decisions []*Decision) Outcome {
+	return StayOutcome{
+		data:      data,
+		decisions: decisions,
+	}
+}
+
+func (f *FSMContext) Goto(state string, data interface{}, decisions []*Decision) Outcome {
+	return TransitionOutcome{
+		state:     state,
+		data:      data,
+		decisions: decisions,
+	}
+}
+
+func (f *FSMContext) Terminate(data interface{}, decisions []*Decision) Outcome {
+	return TerminationOutcome{
+		data:      data,
+		decisions: decisions,
+	}
+}
+
+func (f *FSMContext) Error(data interface{}, decisions []*Decision) Outcome {
+	return ErrorOutcome{
+		state:     "error",
+		data:      data,
+		decisions: decisions,
+	}
+}
+
+func (f *FSM) mergeOutcomes(final *TransitionOutcome, intermediate Outcome) {
+	switch i := intermediate.(type) {
+	case TransitionOutcome:
+		final.state = i.state
+		final.decisions = append(final.decisions, i.decisions...)
+		final.data = i.data
+	case StayOutcome:
+		final.decisions = append(final.decisions, i.decisions...)
+		final.data = i.data
+	case TerminationOutcome:
+		final.state = "TERMINATED"
+		final.decisions = append(final.decisions, i.decisions...)
+		final.data = i.data
+	case ErrorOutcome:
+		final.state = "error"
+		final.decisions = append(final.decisions, i.decisions...)
+		final.data = i.data
+	default:
+		panic("funky")
+
+	}
+}
+
 //if the outcome is good good if its an error, we capture the error state above
 
-func (f *FSM) panicSafeDecide(state *FSMState, context *FSMContext, event HistoryEvent, data interface{}) (anOutcome *Outcome, anErr error) {
+func (f *FSM) panicSafeDecide(state *FSMState, context *FSMContext, event HistoryEvent, data interface{}) (anOutcome Outcome, anErr error) {
 	defer func() {
 		if !f.allowPanics {
 			if r := recover(); r != nil {
@@ -478,12 +567,12 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryE
 	return lastEvents, errorEvents
 }
 
-func (f *FSM) appendState(outcome *Outcome) ([]*Decision, error) {
+func (f *FSM) appendState(outcome *TransitionOutcome) ([]*Decision, error) {
 
-	serializedData, err := f.Serializer.Serialize(outcome.Data)
+	serializedData, err := f.Serializer.Serialize(outcome.data)
 
 	state := SerializedState{
-		StateName: outcome.NextState,
+		StateName: outcome.state,
 		StateData: serializedData,
 	}
 
@@ -493,7 +582,7 @@ func (f *FSM) appendState(outcome *Outcome) ([]*Decision, error) {
 	}
 	decisions := f.EmptyDecisions()
 	decisions = append(decisions, d)
-	decisions = append(decisions, outcome.Decisions...)
+	decisions = append(decisions, outcome.decisions...)
 	return decisions, nil
 }
 
@@ -643,9 +732,9 @@ func TypedDecider(decider interface{}) Decider {
 		))
 	}
 
-	if "*swf.Outcome" != t.Out(0).String() {
+	if "swf.Outcome" != t.Out(0).String() {
 		panic(fmt.Sprintf(
-			"type of return value was %v, not *swf.Outcome",
+			"type of return value was %v, not swf.Outcome",
 			t.Out(0),
 		))
 	}
@@ -654,13 +743,13 @@ func TypedDecider(decider interface{}) Decider {
 }
 
 // Decide uses reflection to call the user specified, typed decider.
-func (m MarshalledDecider) Decide(f *FSMContext, h HistoryEvent, data interface{}) *Outcome {
+func (m MarshalledDecider) Decide(f *FSMContext, h HistoryEvent, data interface{}) Outcome {
 
 	// reflection will asplode if we try to use nil
 	if data == nil {
 		data = reflect.New(reflect.TypeOf(f.fsm.DataType)).Interface()
 	}
-	return m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0].Interface().(*Outcome)
+	return m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0].Interface().(Outcome)
 }
 
 type FSMContext struct {
