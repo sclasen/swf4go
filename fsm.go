@@ -23,7 +23,7 @@ const (
 // the interface{} parameter that is passed to the decider is safe to
 // be asserted to be the type of the DataType field in the FSM
 // Alternatively you can use the TypedDecider to avoid having to do the assertion.
-type Decider func(*FSMContext, HistoryEvent, interface{}) *Outcome
+type Decider func(*FSMContext, HistoryEvent, interface{}) Outcome
 
 // EventDataType should return an empty struct of the correct type based on the event
 // the FSM will unmarshal data from the event into this struct
@@ -144,7 +144,7 @@ func (f *FSM) AddErrorState(state *FSMState) {
 func (f *FSM) DefaultErrorState() *FSMState {
 	return &FSMState{
 		Name: "error",
-		Decider: func(fsm *FSMContext, h HistoryEvent, data interface{}) *Outcome {
+		Decider: func(fsm *FSMContext, h HistoryEvent, data interface{}) Outcome {
 			switch h.EventType {
 			case EventTypeWorkflowExecutionSignaled:
 				{
@@ -167,7 +167,7 @@ func (f *FSM) DefaultErrorState() *FSMState {
 			default:
 				f.log("action=default-handle-error at=process-event event=%+v", h)
 			}
-			return f.Error(data, []*Decision{})
+			return fsm.Error(data, []*Decision{})
 		},
 	}
 }
@@ -279,14 +279,14 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
 	outcome := new(TransitionOutcome)
-
+	context := &FSMContext{f, decisionTask.WorkflowType, decisionTask.WorkflowExecution}
 	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
 	if len(errorEvents) > 0 {
 		outcome.data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
 		outcome.state = f.errorState.Name
 		for i := len(errorEvents) - 1; i >= 0; i-- {
 			e := errorEvents[i]
-			anOutcome, err := f.panicSafeDecide(f.errorState, e, outcome.data)
+			anOutcome, err := f.panicSafeDecide(f.errorState, context, e, outcome.data)
 			if err != nil {
 				f.log("at=error error=error-handling-decision-execution-error state=%s next-state=%", f.errorState.Name, outcome.state)
 				//we wont get here if panics are allowed
@@ -333,7 +333,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 		f.log("action=tick at=history id=%d type=%s", e.EventId, e.EventType)
 		fsmState, ok := f.states[outcome.state]
 		if ok {
-			anOutcome, err := f.panicSafeDecide(fsmState, e, outcome.data)
+			anOutcome, err := f.panicSafeDecide(fsmState, context, e, outcome.data)
 			if err != nil {
 				f.log("at=error error=decision-execution-error state=%s next-state=%", fsmState.Name, outcome.state)
 				if f.allowPanics {
@@ -369,14 +369,14 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	return final
 }
 
-func (f *FSM) Stay(data interface{}, decisions []*Decision) Outcome {
+func (f *FSMContext) Stay(data interface{}, decisions []*Decision) Outcome {
 	return StayOutcome{
 		data:      data,
 		decisions: decisions,
 	}
 }
 
-func (f *FSM) Goto(state string, data interface{}, decisions []*Decision) Outcome {
+func (f *FSMContext) Goto(state string, data interface{}, decisions []*Decision) Outcome {
 	return TransitionOutcome{
 		state:     state,
 		data:      data,
@@ -384,14 +384,14 @@ func (f *FSM) Goto(state string, data interface{}, decisions []*Decision) Outcom
 	}
 }
 
-func (f *FSM) Terminate(data interface{}, decisions []*Decision) Outcome {
+func (f *FSMContext) Terminate(data interface{}, decisions []*Decision) Outcome {
 	return TerminationOutcome{
 		data:      data,
 		decisions: decisions,
 	}
 }
 
-func (f *FSM) Error(data interface{}, decisions []*Decision) Outcome {
+func (f *FSMContext) Error(data interface{}, decisions []*Decision) Outcome {
 	return ErrorOutcome{
 		state:     "error",
 		data:      data,
@@ -424,7 +424,7 @@ func (f *FSM) mergeOutcomes(final *TransitionOutcome, intermediate Outcome) {
 
 //if the outcome is good good if its an error, we capture the error state above
 
-func (f *FSM) panicSafeDecide(state *FSMState, event HistoryEvent, data interface{}) (anOutcome *Outcome, anErr error) {
+func (f *FSM) panicSafeDecide(state *FSMState, context *FSMContext, event HistoryEvent, data interface{}) (anOutcome Outcome, anErr error) {
 	defer func() {
 		if !f.allowPanics {
 			if r := recover(); r != nil {
@@ -743,13 +743,13 @@ func TypedDecider(decider interface{}) Decider {
 }
 
 // Decide uses reflection to call the user specified, typed decider.
-func (m MarshalledDecider) Decide(f *FSMContext, h HistoryEvent, data interface{}) *Outcome {
+func (m MarshalledDecider) Decide(f *FSMContext, h HistoryEvent, data interface{}) Outcome {
 
 	// reflection will asplode if we try to use nil
 	if data == nil {
 		data = reflect.New(reflect.TypeOf(f.fsm.DataType)).Interface()
 	}
-	return m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0].Interface().(*Outcome)
+	return m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0].Interface().(Outcome)
 }
 
 type FSMContext struct {
