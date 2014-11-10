@@ -31,6 +31,9 @@ The PollerShutdownManager, once created by calling swf.RegisterPollerShutdownMan
 once any in-flight polls have completed. Once this process is complete, the PollerShutdownManager will call os.Exit(0), causing the process to terminate. The shutdown process can take up to 60 seconds
 due to the length of SWF long polls before an empty response is returned.
 
+Care should be taken to only use a single PollerShutdownManager per process, since it calls os.Exit. If you have more than one, the shutdowns will race and one
+wont complete successfully.
+
 FSM
 
 The FSM in swf4go layers an erlang/akka style finite state machine abstraction on top of SWF, and facilitates modelling your workflows as FSMs. The FSM will be responsible for handling the decsison
