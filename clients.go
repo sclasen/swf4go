@@ -87,6 +87,7 @@ var (
 // Client is the implementation of the WorkflowClient, DecisionWorkerClient, ActivityWorkerClient, WorkflowAdminClient, and WorkflowInfoClient interfaces.
 type Client struct {
 	keys   *aws4.Keys
+	httpClient *http.Client
 	Region *Region
 	Debug  bool
 }
@@ -95,6 +96,16 @@ type Client struct {
 func NewClient(key string, secret string, region *Region) *Client {
 	return &Client{
 		keys:   &aws4.Keys{AccessKey: key, SecretKey: secret},
+		httpClient: http.DefaultClient,
+		Region: region,
+	}
+}
+
+// NewClient creates a new Client which uses the given credentials to talk to the given region.
+func NewClientWithHttpClient(key string, secret string, region *Region, client *http.Client) *Client {
+	return &Client{
+		keys:   &aws4.Keys{AccessKey: key, SecretKey: secret},
+		httpClient: client,
 		Region: region,
 	}
 }
@@ -401,7 +412,7 @@ func (c *Client) prepareAndExecuteRequest(service string, url string, target str
 		multiln(string(out))
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

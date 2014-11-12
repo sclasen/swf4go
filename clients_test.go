@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 	"time"
+	"net/http"
 )
 
 func TestListWorkflowTypes(t *testing.T) {
@@ -14,7 +15,7 @@ func TestListWorkflowTypes(t *testing.T) {
 		return
 	}
 
-	client := NewClient(MustGetenv("AWS_ACCESS_KEY_ID"), MustGetenv("AWS_SECRET_ACCESS_KEY"), USEast1)
+	client := NewClientWithHttpClient(MustGetenv("AWS_ACCESS_KEY_ID"), MustGetenv("AWS_SECRET_ACCESS_KEY"), USEast1, customHttpClient())
 	client.Debug = true
 	resp, err := client.ListWorkflowTypes(ListWorkflowTypesRequest{
 		Domain:             "swf4go",
@@ -52,7 +53,7 @@ func TestPutRecord(t *testing.T) {
 		return
 	}
 
-	client := NewClient(MustGetenv("AWS_ACCESS_KEY_ID"), MustGetenv("AWS_SECRET_ACCESS_KEY"), USEast1)
+	client := NewClientWithHttpClient(MustGetenv("AWS_ACCESS_KEY_ID"), MustGetenv("AWS_SECRET_ACCESS_KEY"), USEast1, customHttpClient())
 	client.Debug = true
 	req := PutRecordRequest{
 		Data:                      []byte("foo"),
@@ -71,3 +72,27 @@ func TestPutRecord(t *testing.T) {
 	log.Printf("%+v", resp)
 
 }
+
+
+func customHttpClient() *http.Client{
+	return &http.Client{
+		Transport: &LoggingRoundTripper{http.DefaultTransport},
+	}
+}
+
+type LoggingRoundTripper struct {
+	Transport http.RoundTripper
+}
+
+func (l *LoggingRoundTripper)RoundTrip(req *http.Request) (*http.Response, error){
+	log.Printf("request: target=%s", req.Header.Get("X-Amz-Target"))
+	resp, err := l.Transport.RoundTrip(req)
+	if err == nil {
+		log.Printf("response: status=%s", resp)
+	} else {
+		log.Printf("error %s", err)
+	}
+	return resp,err
+}
+
+
