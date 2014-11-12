@@ -1,12 +1,13 @@
 package swf
 
 import (
-	"code.google.com/p/go-uuid/uuid"
-	"github.com/sclasen/swf4go/Godeps/_workspace/src/code.google.com/p/goprotobuf/proto"
 	"log"
 	"strconv"
 	"testing"
 	"time"
+
+	"code.google.com/p/go-uuid/uuid"
+	"github.com/sclasen/swf4go/Godeps/_workspace/src/code.google.com/p/goprotobuf/proto"
 )
 
 //Todo add tests of error handling mechanism
@@ -361,7 +362,7 @@ func ExampleFSM() {
 		return nil
 	}
 	//the FSM we will create will oscillate between 2 states,
-    //waitForSignal -> will wait till the workflow is started or signalled, and update the StateData based on the Hello message received, set a timer, and transition to waitForTimer
+	//waitForSignal -> will wait till the workflow is started or signalled, and update the StateData based on the Hello message received, set a timer, and transition to waitForTimer
 	//waitForTimer -> will wait till the timer set by waitForSignal fires, and will signal the workflow with a Hello message, and transition to waitFotSignal
 	waitForSignal := func(f *FSMContext, h HistoryEvent, d *StateData) Outcome {
 		decisions := f.EmptyDecisions()
@@ -412,7 +413,6 @@ func ExampleFSM() {
 		return f.Stay(d, decisions)
 	}
 
-
 	//create the FSMState by passing the decider function through TypedDecider(),
 	//which lets you use d *StateData rather than d interface{} in your decider.
 	waitForSignalState := &FSMState{Name: "waitForSignal", Decider: TypedDecider(waitForSignal)}
@@ -427,7 +427,7 @@ func ExampleFSM() {
 		TaskList:      "example-decision-task-list-to-poll",
 		Serializer:    &JsonStateSerializer{},
 	}
-    //add states to FSM
+	//add states to FSM
 	fsm.AddInitialState(waitForSignalState)
 	fsm.AddState(waitForTimerState)
 

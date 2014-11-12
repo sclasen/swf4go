@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/juju/errors"
 )
 
 // ErrorResponse models the swf json protocol.
@@ -1248,7 +1250,7 @@ type Date struct{ time.Time }
 func (s *Date) UnmarshalJSON(b []byte) error {
 	timestamp, err := strconv.ParseFloat(string(b), 64)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	s.Time = time.Unix(int64(timestamp), 0)
 	return nil

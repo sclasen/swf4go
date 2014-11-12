@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/juju/errors"
 )
 
 // DecisionTaskPoller returns a DecisionTaskPoller whick can be used to poll the given task list.
@@ -35,7 +37,7 @@ func (p *DecisionTaskPoller) Poll() (*PollForDecisionTaskResponse, bool) {
 		TaskList:     TaskList{Name: p.TaskList},
 	})
 	if err != nil {
-		log.Printf("component=DecisionTaskPoller at=error error=%s", err.Error())
+		log.Printf("component=DecisionTaskPoller at=error error=%s", errors.Trace(err))
 		return nil, false
 	} else {
 		if resp.TaskToken != "" {
@@ -107,7 +109,7 @@ func (p *ActivityTaskPoller) Poll() (*PollForActivityTaskResponse, bool) {
 		TaskList: TaskList{Name: p.TaskList},
 	})
 	if err != nil {
-		log.Printf("component=ActivityTaskPoller at=error error=%s", err.Error())
+		log.Printf("component=ActivityTaskPoller at=error error=%s", errors.Trace(err))
 		return nil, false
 	} else {
 		if resp.TaskToken != "" {

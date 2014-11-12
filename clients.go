@@ -3,7 +3,6 @@ package swf
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/bmizerany/aws4"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -11,6 +10,9 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/bmizerany/aws4"
+	"github.com/juju/errors"
 )
 
 // WorkflowClient specifies ActivityWorkerClientoperations related to starting and stopping workflows.
@@ -316,13 +318,13 @@ func (c *Client) PutRecord(request PutRecordRequest) (*PutRecordResponse, error)
 func (c *Client) swfReqWithResponse(operation string, request interface{}, response interface{}) error {
 	resp, err := c.prepareAndExecuteRequest("swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		errResp := new(ErrorResponse)
 		if err := json.NewDecoder(resp.Body).Decode(errResp); err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		return errResp
 	}
@@ -332,19 +334,24 @@ func (c *Client) swfReqWithResponse(operation string, request interface{}, respo
 		pretty, _ := json.MarshalIndent(response, "", "    ")
 		log.Println(string(pretty))
 	}
-	return err
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
 }
 
 func (c *Client) kinesisReqWithResponse(operation string, request interface{}, response interface{}) error {
 	resp, err := c.prepareAndExecuteRequest("kinesis", c.Region.KinesisEndpoint, "Kinesis_20131202."+operation, "application/x-amz-json-1.1", request)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		errResp := new(ErrorResponse)
 		if err := json.NewDecoder(resp.Body).Decode(errResp); err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		return errResp
 	}
@@ -354,33 +361,43 @@ func (c *Client) kinesisReqWithResponse(operation string, request interface{}, r
 		pretty, _ := json.MarshalIndent(response, "", "    ")
 		log.Println(string(pretty))
 	}
-	return err
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
 }
 
 func (c *Client) swfReqNoResponse(operation string, request interface{}) error {
 	resp, err := c.prepareAndExecuteRequest("swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		response := new(ErrorResponse)
 		if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		return response
 	}
-	return err
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
 }
 
 func (c *Client) prepareAndExecuteRequest(service string, url string, target string, contentType string, request interface{}) (*http.Response, error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(request); err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	req, err := http.NewRequest("POST", url, &b)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
@@ -390,7 +407,7 @@ func (c *Client) prepareAndExecuteRequest(service string, url string, target str
 
 	err = c.sign(service, req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	if c.Debug {
@@ -403,14 +420,14 @@ func (c *Client) prepareAndExecuteRequest(service string, url string, target str
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	if c.Debug {
 		defer resp.Body.Close()
 		out, err := httputil.DumpResponse(resp, true)
 		if err != nil {
-			return nil, err
+			return nil, errors.Trace(err)
 		}
 		multiln(string(out))
 	}

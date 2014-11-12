@@ -2,14 +2,15 @@ package swf
 
 import (
 	"bytes"
-	"code.google.com/p/goprotobuf/proto"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"reflect"
 	"strings"
+
+	"code.google.com/p/goprotobuf/proto"
+	"github.com/juju/errors"
 )
 
 // constants used as marker names or signal names
@@ -216,7 +217,7 @@ func (f *FSM) Start() {
 			})
 
 		if err != nil {
-			f.log("action=tick at=decide-request-failed error=%s", err.Error())
+			f.log("action=tick at=decide-request-failed error=%s", errors.Trace(err))
 		}
 
 		if f.KinesisStream != "" {
@@ -231,7 +232,7 @@ func (f *FSM) Start() {
 					Data: []byte(stateToReplicate),
 				})
 				if err != nil {
-					f.log("action=tick at=replicate-state-failed error=%s", err.Error())
+					f.log("action=tick at=replicate-state-failed error=%s", errors.Trace(err))
 				} else {
 					f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardId, resp.SequenceNumber)
 				}
@@ -257,7 +258,7 @@ func (f *FSM) stateFromDecisions(decisions []*Decision) string {
 func (f *FSM) Serialize(data interface{}) string {
 	serialized, err := f.Serializer.Serialize(data)
 	if err != nil {
-		panic(err)
+		panic(errors.Trace(err))
 	}
 	return serialized
 }
@@ -268,7 +269,7 @@ func (f *FSM) Serialize(data interface{}) string {
 func (f *FSM) Deserialize(serialized string, data interface{}) {
 	err := f.Serializer.Deserialize(serialized, data)
 	if err != nil {
-		panic(err)
+		panic(errors.Trace(err))
 	}
 	return
 }
@@ -290,7 +291,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 			if err != nil {
 				f.log("at=error error=error-handling-decision-execution-error state=%s next-state=%", f.errorState.Name, outcome.state)
 				//we wont get here if panics are allowed
-				return append(outcome.decisions, f.captureDecisionError(execution, i, errorEvents, outcome.state, outcome.data, err)...)
+				return append(outcome.decisions, f.captureDecisionError(execution, i, errorEvents, outcome.state, outcome.data, errors.Trace(err))...)
 			}
 			f.mergeOutcomes(outcome, anOutcome)
 		}
@@ -304,9 +305,9 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 		if err != nil {
 			f.log("action=tick at=error=find-serialized-state-failed")
 			if f.allowPanics {
-				panic(err)
+				panic(errors.Trace(err))
 			}
-			return append(outcome.decisions, f.captureSystemError(execution, "FindSerializedStateError", decisionTask.Events, err)...)
+			return append(outcome.decisions, f.captureSystemError(execution, "FindSerializedStateError", decisionTask.Events, errors.Trace(err))...)
 		}
 
 		f.log("action=tick at=find-current-state state=%s", serializedState.StateName)
@@ -315,9 +316,9 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 		if err != nil {
 			f.log("action=tick at=error=deserialize-state-failed")
 			if f.allowPanics {
-				panic(err)
+				panic(errors.Trace(err))
 			}
-			return append(outcome.decisions, f.captureSystemError(execution, "DeserializeStateError", decisionTask.Events, err)...)
+			return append(outcome.decisions, f.captureSystemError(execution, "DeserializeStateError", decisionTask.Events, errors.Trace(err))...)
 		}
 
 		f.log("action=tick at=find-current-data data=%v", data)
@@ -337,9 +338,9 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 			if err != nil {
 				f.log("at=error error=decision-execution-error state=%s next-state=%", fsmState.Name, outcome.state)
 				if f.allowPanics {
-					panic(err)
+					panic(errors.Trace(err))
 				}
-				return append(outcome.decisions, f.captureDecisionError(execution, i, lastEvents, outcome.state, outcome.data, err)...)
+				return append(outcome.decisions, f.captureDecisionError(execution, i, lastEvents, outcome.state, outcome.data, errors.Trace(err))...)
 			}
 
 			curr := outcome.state
@@ -362,9 +363,9 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	if err != nil {
 		f.log("action=tick at=error error=state-serialization-error error-type=system")
 		if f.allowPanics {
-			panic(err)
+			panic(errors.Trace(err))
 		}
-		return append(outcome.decisions, f.captureSystemError(execution, "StateSerializationError", []HistoryEvent{}, err)...)
+		return append(outcome.decisions, f.captureSystemError(execution, "StateSerializationError", []HistoryEvent{}, errors.Trace(err))...)
 	}
 	return final
 }
@@ -417,8 +418,7 @@ func (f *FSM) mergeOutcomes(final *TransitionOutcome, intermediate Outcome) {
 		final.decisions = append(final.decisions, i.decisions...)
 		final.data = i.data
 	default:
-		panic("funky")
-
+		f.log("action=tick at=error error=unknown-outcome-type  type=%s", i)
 	}
 }
 
@@ -469,7 +469,7 @@ func (f *FSM) captureError(signal string, execution WorkflowExecution, error int
 	r, err := f.recordMarker(signal, error)
 	if err != nil {
 		//really bail
-		panic("giving up, cant even create a RecordMarker decsion")
+		panic(errors.Trace(err))
 	}
 	d := &Decision{
 		DecisionType: DecisionTypeSignalExternalWorkflowExecution,
@@ -528,6 +528,9 @@ func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, erro
 		if f.isStateMarker(event) {
 			state := &SerializedState{}
 			err := f.Serializer.Deserialize(event.MarkerRecordedEventAttributes.Details, state)
+			if err != nil {
+				err = errors.Trace(err)
+			}
 			return state, err
 		} else if event.EventType == EventTypeWorkflowExecutionStarted {
 			return &SerializedState{StateName: f.initialState.Name, StateData: event.WorkflowExecutionStartedEventAttributes.Input}, nil
@@ -578,7 +581,7 @@ func (f *FSM) appendState(outcome *TransitionOutcome) ([]*Decision, error) {
 
 	d, err := f.recordMarker(STATE_MARKER, state)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	decisions := f.EmptyDecisions()
 	decisions = append(decisions, d)
@@ -589,7 +592,7 @@ func (f *FSM) appendState(outcome *TransitionOutcome) ([]*Decision, error) {
 func (f *FSM) recordMarker(markerName string, details interface{}) (*Decision, error) {
 	serialized, err := f.Serializer.Serialize(details)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	return f.recordStringMarker(markerName, serialized), nil
@@ -669,14 +672,17 @@ type JsonStateSerializer struct{}
 func (j JsonStateSerializer) Serialize(state interface{}) (string, error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(state); err != nil {
-		return "", err
+		return "", errors.Trace(err)
 	}
 	return b.String(), nil
 }
 
 func (j JsonStateSerializer) Deserialize(serialized string, state interface{}) error {
 	err := json.NewDecoder(strings.NewReader(serialized)).Decode(state)
-	return err
+	if err != nil {
+		return errors.Trace(err)
+	}
+	return nil
 }
 
 type ProtobufStateSerializer struct{}
@@ -684,7 +690,7 @@ type ProtobufStateSerializer struct{}
 func (p ProtobufStateSerializer) Serialize(state interface{}) (string, error) {
 	bin, err := proto.Marshal(state.(proto.Message))
 	if err != nil {
-		return "", err
+		return "", errors.Trace(err)
 	}
 	return base64.StdEncoding.EncodeToString(bin), nil
 }
@@ -692,11 +698,14 @@ func (p ProtobufStateSerializer) Serialize(state interface{}) (string, error) {
 func (p ProtobufStateSerializer) Deserialize(serialized string, state interface{}) error {
 	bin, err := base64.StdEncoding.DecodeString(serialized)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	err = proto.Unmarshal(bin, state.(proto.Message))
 
-	return err
+	if err != nil {
+		return errors.Trace(err)
+	}
+	return nil
 }
 
 /*tigertonic-like marhsalling of data from interface{} to specific type*/
