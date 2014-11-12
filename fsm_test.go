@@ -219,7 +219,7 @@ func TestErrorHandling(t *testing.T) {
 		Name:        "test-fsm",
 		DataType:    TestData{},
 		Serializer:  JsonStateSerializer{},
-		allowPanics: true,
+		allowPanics: false,
 	}
 
 	fsm.AddInitialState(&FSMState{
@@ -287,6 +287,7 @@ func TestErrorHandling(t *testing.T) {
 	if len(decisions2) != 1 && decisions2[0].DecisionType != DecisionTypeRecordMarker {
 		t.Fatalf("no state marker for typed decider!")
 	}
+
 }
 
 func TestProtobufSerialization(t *testing.T) {

@@ -11,6 +11,7 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 	"github.com/juju/errors"
+	"runtime"
 )
 
 // constants used as marker names or signal names
@@ -232,7 +233,7 @@ func (f *FSM) Start() {
 					Data: []byte(stateToReplicate),
 				})
 				if err != nil {
-					f.log("action=tick at=replicate-state-failed error=%s", errors.Trace(err))
+					f.logTrace("action=tick at=replicate-state-failed error=%s", errors.Trace(err))
 				} else {
 					f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardId, resp.SequenceNumber)
 				}
@@ -418,7 +419,7 @@ func (f *FSM) mergeOutcomes(final *TransitionOutcome, intermediate Outcome) {
 		final.decisions = append(final.decisions, i.decisions...)
 		final.data = i.data
 	default:
-		f.log("action=tick at=error error=unknown-outcome-type  type=%s", i)
+		f.logTrace("action=tick at=error error=unknown-outcome-type type=%s", i)
 	}
 }
 
@@ -428,11 +429,11 @@ func (f *FSM) panicSafeDecide(state *FSMState, context *FSMContext, event Histor
 	defer func() {
 		if !f.allowPanics {
 			if r := recover(); r != nil {
-				f.log("at=error error=decide-panic-recovery %v", r)
+				f.logTrace("at=error error=decide-panic-recovery %v", r)
 				anErr = errors.New("panic in decider, capture error state")
 			}
 		} else {
-			log.Printf("at=panic-safe-decide-allowing-panic fsm-allow-panics=%t", f.allowPanics)
+			f.logTrace("at=panic-safe-decide-allowing-panic fsm-allow-panics=%t", f.allowPanics)
 		}
 	}()
 	anOutcome = state.Decider(context, event, data)
@@ -521,6 +522,23 @@ func (f *FSM) EventData(event HistoryEvent) interface{} {
 func (f *FSM) log(format string, data ...interface{}) {
 	actualFormat := fmt.Sprintf("component=FSM name=%s %s", f.Name, format)
 	log.Printf(actualFormat, data...)
+}
+
+func (f *FSM) logTrace(format string, data ...interface{}) {
+	actualFormat := fmt.Sprintf("component=FSM name=%s %s \n%%%%s\n%%%%s", f.Name, format)
+	trace := stackTraceString()
+	lines := strings.Split(trace, "\n")
+	goroutine := lines[0]
+	/*chop out the first 5 lines which are like
+	goroutine 21 [running]:
+		github.com/sclasen/swf4go.stackTraceString(0x0, 0x0)
+				/Users/sclasen/code/src/github.com/sclasen/swf4go/fsm.go:805 +0x80
+		github.com/sclasen/swf4go.(*FSM).logTrace(0xc2080500c0, 0x425d30, 0x27, 0x1261f78, 0x1, 0x1)
+				/Users/sclasen/code/src/github.com/sclasen/swf4go/fsm.go:530 +0x1dc
+	*/
+	trace = strings.Join(lines[5:], "\n")
+	traceFormat := fmt.Sprintf(actualFormat, data...)
+	log.Printf(traceFormat, goroutine, trace)
 }
 
 func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, error) {
@@ -785,4 +803,11 @@ func (f *FSMContext) Deserialize(serialized string, data interface{}) {
 
 func (f *FSMContext) EmptyDecisions() []*Decision {
 	return f.fsm.EmptyDecisions()
+}
+
+func stackTraceString() string {
+	const size = 1 << 12
+	buf := make([]byte, size)
+	n := runtime.Stack(buf, false)
+	return string(buf[:n])
 }
