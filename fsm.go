@@ -104,7 +104,7 @@ type FSM struct {
 	// Kinesis stream in the same region to replicate state to.
 	KinesisStream string
 	//PollerShtudownManager is used when the FSM is managing the polling
-	PollerShtudownManager *PollerShtudownManager
+	PollerShutdownManager *PollerShtudownManager
 	states                map[string]*FSMState
 	initialState          *FSMState
 	errorState            *FSMState
@@ -196,8 +196,8 @@ func (f *FSM) Init() {
 		f.Serializer = &JsonStateSerializer{}
 	}
 
-	if f.PollerShtudownManager == nil {
-		f.PollerShtudownManager = RegisterPollerShutdownManager()
+	if f.PollerShutdownManager == nil {
+		f.PollerShutdownManager = RegisterPollerShutdownManager()
 	}
 }
 
@@ -205,9 +205,9 @@ func (f *FSM) Init() {
 // If you wish to manage polling and calling Tick() yourself, you dont need to start the FSM, just call Init().
 func (f *FSM) Start() {
 	f.Init()
-	f.PollerShtudownManager.Register(f.Name, f.stop, f.stopAck)
+	f.PollerShutdownManager.Register(f.Name, f.stop, f.stopAck)
 	poller := f.Client.DecisionTaskPoller(f.Domain, f.Identity, f.TaskList)
-	go poller.PollUntilShutdownBy(f.PollerShtudownManager, f.Name, func(decisionTask *PollForDecisionTaskResponse) {
+	go poller.PollUntilShutdownBy(f.PollerShutdownManager, f.Name, func(decisionTask *PollForDecisionTaskResponse) {
 		decisions := f.Tick(decisionTask)
 		err := f.Client.RespondDecisionTaskCompleted(
 			RespondDecisionTaskCompletedRequest{
@@ -226,8 +226,6 @@ func (f *FSM) Start() {
 					StreamName: f.KinesisStream,
 					//partition by workflow
 					PartitionKey: decisionTask.WorkflowExecution.WorkflowId,
-					//sequence by StartedEventId, this way even if we end up sending these out of order to kinesis, they should come out in order.
-					SequenceNumberForOrdering: fmt.Sprintf("%d", decisionTask.StartedEventId),
 					Data: []byte(stateToReplicate),
 				})
 				if err != nil {
