@@ -354,7 +354,7 @@ func ExampleFSM() {
 		Message string `json:"message,omitempty"`
 	}
 	//EventData func to give us the type(s) of data expected in the payload of event(s)
-	eventData := func(h HistoryEvent) interface{} {
+	eventData := func(h HistoryEvent, stateData interface{}) interface{} {
 		if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == "hello" {
 			return new(Hello)
 		}

@@ -26,8 +26,9 @@ const (
 type Decider func(*FSMContext, HistoryEvent, interface{}) Outcome
 
 // EventDataType should return an empty struct of the correct type based on the event
+// and the current state data for the fsm.
 // the FSM will unmarshal data from the event into this struct
-type EventDataType func(HistoryEvent) interface{}
+type EventDataType func(HistoryEvent, interface{}) interface{}
 
 type Outcome interface {
 	Data() interface{}
@@ -277,12 +278,13 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
 	outcome := new(TransitionOutcome)
-	context := &FSMContext{f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, ""}
+	context := &FSMContext{f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, "", nil}
 	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
 	if len(errorEvents) > 0 {
 		outcome.data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
 		outcome.state = f.errorState.Name
 		context.State = f.errorState.Name
+		context.stateData = outcome.data
 		for i := len(errorEvents) - 1; i >= 0; i-- {
 			e := errorEvents[i]
 			anOutcome, err := f.panicSafeDecide(f.errorState, context, e, outcome.data)
@@ -333,6 +335,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 		fsmState, ok := f.states[outcome.state]
 		if ok {
 			context.State = outcome.state
+			context.stateData = outcome.data
 			anOutcome, err := f.panicSafeDecide(fsmState, context, e, outcome.data)
 			if err != nil {
 				f.log("at=error error=decision-execution-error state=%s next-state=%", fsmState.Name, outcome.state)
@@ -490,8 +493,8 @@ func (f *FSM) captureError(signal string, execution WorkflowExecution, error int
 //   if event.EventType == swf.EventTypeWorkflowExecutionSignaled {
 //       f.EventData(event).(*Foo)
 //   }
-func (f *FSM) EventData(event HistoryEvent) interface{} {
-	eventData := f.EventDataType(event)
+func (f *FSM) EventData(ctx *FSMContext, event HistoryEvent) interface{} {
+	eventData := f.EventDataType(event, ctx.stateData)
 
 	if eventData != nil {
 		var serialized string
@@ -757,10 +760,11 @@ type FSMContext struct {
 	WorkflowType
 	WorkflowExecution
 	State string
+	stateData interface{}
 }
 
 func (f *FSMContext) EventData(h HistoryEvent) interface{} {
-	return f.fsm.EventData(h)
+	return f.fsm.EventData(f, h)
 }
 
 func (f *FSMContext) Serialize(data interface{}) string {
