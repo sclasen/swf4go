@@ -353,13 +353,6 @@ func ExampleFSM() {
 	type Hello struct {
 		Message string `json:"message,omitempty"`
 	}
-	//EventData func to give us the type(s) of data expected in the payload of event(s)
-	eventData := func(h HistoryEvent, stateData interface{}) interface{} {
-		if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == "hello" {
-			return new(Hello)
-		}
-		return nil
-	}
 	//the FSM we will create will oscillate between 2 states,
     //waitForSignal -> will wait till the workflow is started or signalled, and update the StateData based on the Hello message received, set a timer, and transition to waitForTimer
 	//waitForTimer -> will wait till the timer set by waitForSignal fires, and will signal the workflow with a Hello message, and transition to waitFotSignal
@@ -368,7 +361,8 @@ func ExampleFSM() {
 		switch h.EventType {
 		case EventTypeWorkflowExecutionStarted, EventTypeWorkflowExecutionSignaled:
 			if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == "hello" {
-				hello := f.EventData(h).(*Hello)
+				hello := &Hello{}
+				f.EventData(h, &Hello{})
 				d.Count += 1
 				d.Message = hello.Message
 			}
@@ -422,7 +416,6 @@ func ExampleFSM() {
 		Name:          "example-fsm",
 		Client:        client,
 		DataType:      StateData{},
-		EventDataType: eventData,
 		Domain:        "exaple-swf-domain",
 		TaskList:      "example-decision-task-list-to-poll",
 		Serializer:    &JsonStateSerializer{},

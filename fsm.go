@@ -25,11 +25,6 @@ const (
 // Alternatively you can use the TypedDecider to avoid having to do the assertion.
 type Decider func(*FSMContext, HistoryEvent, interface{}) Outcome
 
-// EventDataType should return an empty struct of the correct type based on the event
-// and the current state data for the fsm.
-// the FSM will unmarshal data from the event into this struct
-type EventDataType func(HistoryEvent, interface{}) interface{}
-
 type Outcome interface {
 	Data() interface{}
 	Decisions() []*Decision
@@ -98,8 +93,6 @@ type FSM struct {
 	// DataType of the data struct associated with this FSM.
 	// The data is automatically peristed to and loaded from workflow history by the FSM.
 	DataType interface{}
-	// EventDataType returns a zero value struct to deserialize the payload of a HistoryEvent.
-	EventDataType EventDataType
 	// Serializer used to serialize/deserialise state from workflow history.
 	Serializer StateSerializer
 	// Kinesis stream in the same region to replicate state to.
@@ -493,14 +486,15 @@ func (f *FSM) captureError(signal string, execution WorkflowExecution, error int
 //   if event.EventType == swf.EventTypeWorkflowExecutionSignaled {
 //       f.EventData(event).(*Foo)
 //   }
-func (f *FSM) EventData(ctx *FSMContext, event HistoryEvent) interface{} {
-	eventData := f.EventDataType(event, ctx.stateData)
+func (f *FSM) EventData(ctx *FSMContext, event HistoryEvent, eventData interface{})  {
 
 	if eventData != nil {
 		var serialized string
 		switch event.EventType {
 		case EventTypeActivityTaskCompleted:
-			serialized = event.ActivityTaskCompletedEventAttributes.Result
+			completeWrapper := &CompletedActivity{}
+			f.Deserialize(event.ActivityTaskCompletedEventAttributes.Result, completeWrapper)
+			serialized = completeWrapper.Result
 		case EventTypeWorkflowExecutionCompleted:
 			serialized = event.WorkflowExecutionCompletedEventAttributes.Result
 		case EventTypeChildWorkflowExecutionCompleted:
@@ -516,8 +510,6 @@ func (f *FSM) EventData(ctx *FSMContext, event HistoryEvent) interface{} {
 			f.Deserialize(serialized, eventData)
 		}
 	}
-
-	return eventData
 
 }
 
@@ -666,6 +658,13 @@ type StateSerializer interface {
 	Deserialize(serialized string, state interface{}) error
 }
 
+//CompletedActivity should be returned by all activities, this adds correlation which is missing from the swf api.
+type CompletedActivity struct{
+	ActivityId string
+	ActivityType ActivityType
+	Result string ///actual serialized result
+}
+
 // JsonStateSerializer is a StateSerializer that uses go json serialization.
 type JsonStateSerializer struct{}
 
@@ -763,8 +762,20 @@ type FSMContext struct {
 	stateData interface{}
 }
 
-func (f *FSMContext) EventData(h HistoryEvent) interface{} {
-	return f.fsm.EventData(f, h)
+func (f *FSMContext) EventData(h HistoryEvent, data interface{}) {
+	f.fsm.EventData(f, h, data)
+}
+
+func (f *FSMContext) ActivityId(c ActivityTaskCompletedEventAttributes) string {
+	completeWrapper := &CompletedActivity{}
+	f.Deserialize(c.Result, completeWrapper)
+	return completeWrapper.ActivityId
+}
+
+func (f *FSMContext) ActivityType(c ActivityTaskCompletedEventAttributes) ActivityType {
+	completeWrapper := &CompletedActivity{}
+	f.Deserialize(c.Result, completeWrapper)
+	return completeWrapper.ActivityType
 }
 
 func (f *FSMContext) Serialize(data interface{}) string {
