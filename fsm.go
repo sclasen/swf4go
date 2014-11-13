@@ -766,13 +766,13 @@ func (f *FSMContext) EventData(h HistoryEvent, data interface{}) {
 	f.fsm.EventData(f, h, data)
 }
 
-func (f *FSMContext) ActivityId(c ActivityTaskCompletedEventAttributes) string {
+func (f *FSMContext) ActivityId(c *ActivityTaskCompletedEventAttributes) string {
 	completeWrapper := &CompletedActivity{}
 	f.Deserialize(c.Result, completeWrapper)
 	return completeWrapper.ActivityId
 }
 
-func (f *FSMContext) ActivityType(c ActivityTaskCompletedEventAttributes) ActivityType {
+func (f *FSMContext) ActivityType(c *ActivityTaskCompletedEventAttributes) ActivityType {
 	completeWrapper := &CompletedActivity{}
 	f.Deserialize(c.Result, completeWrapper)
 	return completeWrapper.ActivityType
