@@ -495,6 +495,10 @@ func (f *FSM) EventData(ctx *FSMContext, event HistoryEvent, eventData interface
 			completeWrapper := &CompletedActivity{}
 			f.Deserialize(event.ActivityTaskCompletedEventAttributes.Result, completeWrapper)
 			serialized = completeWrapper.Result
+		case EventTypeChildWorkflowExecutionFailed:
+			wrapper := &FailedActivity{}
+			f.Deserialize(event.ActivityTaskFailedEventAttributes.Details, wrapper)
+			serialized = wrapper.Details
 		case EventTypeWorkflowExecutionCompleted:
 			serialized = event.WorkflowExecutionCompletedEventAttributes.Result
 		case EventTypeChildWorkflowExecutionCompleted:
@@ -665,6 +669,15 @@ type CompletedActivity struct{
 	Result string ///actual serialized result
 }
 
+//FailedActivity should be returned by all failed activities in the Details field,
+//this adds correlation which is missing from the swf api.
+type FailedActivity struct{
+	ActivityId string
+	ActivityType ActivityType
+	Reason string
+	Details string //serialied error result
+}
+
 // JsonStateSerializer is a StateSerializer that uses go json serialization.
 type JsonStateSerializer struct{}
 
@@ -766,16 +779,32 @@ func (f *FSMContext) EventData(h HistoryEvent, data interface{}) {
 	f.fsm.EventData(f, h, data)
 }
 
-func (f *FSMContext) ActivityId(c *ActivityTaskCompletedEventAttributes) string {
-	completeWrapper := &CompletedActivity{}
-	f.Deserialize(c.Result, completeWrapper)
-	return completeWrapper.ActivityId
+func (f *FSMContext) ActivityId(c *interface{}) string {
+	switch c.(type){
+	case ActivityTaskCompletedEventAttributes:
+		completeWrapper := &CompletedActivity{}
+		f.Deserialize(c.Result, completeWrapper)
+		return completeWrapper.ActivityId
+	case ActivityTaskFailedEventAttributes:
+		failedWrapper := &FailedActivity{}
+		f.Deserialize(c.Result, failedWrapper)
+		return failedWrapper.ActivityId
+	}
+    return ""
 }
 
-func (f *FSMContext) ActivityType(c *ActivityTaskCompletedEventAttributes) ActivityType {
-	completeWrapper := &CompletedActivity{}
-	f.Deserialize(c.Result, completeWrapper)
-	return completeWrapper.ActivityType
+func (f *FSMContext) ActivityType(c *interface{}) ActivityType {
+	switch c.(type){
+	case ActivityTaskCompletedEventAttributes:
+		completeWrapper := &CompletedActivity{}
+		f.Deserialize(c.Result, completeWrapper)
+		return completeWrapper.ActivityType
+	case ActivityTaskFailedEventAttributes:
+		failedWrapper := &FailedActivity{}
+		f.Deserialize(c.Result, failedWrapper)
+		return failedWrapper.ActivityType
+	}
+	return ActivityType{}
 }
 
 func (f *FSMContext) Serialize(data interface{}) string {
