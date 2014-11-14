@@ -779,29 +779,29 @@ func (f *FSMContext) EventData(h HistoryEvent, data interface{}) {
 	f.fsm.EventData(f, h, data)
 }
 
-func (f *FSMContext) ActivityId(c *interface{}) string {
-	switch c.(type){
+func (f *FSMContext) ActivityId(c interface{}) string {
+	switch t := c.(type){
 	case ActivityTaskCompletedEventAttributes:
 		completeWrapper := &CompletedActivity{}
-		f.Deserialize(c.Result, completeWrapper)
+		f.Deserialize(t.Result, completeWrapper)
 		return completeWrapper.ActivityId
 	case ActivityTaskFailedEventAttributes:
 		failedWrapper := &FailedActivity{}
-		f.Deserialize(c.Result, failedWrapper)
+		f.Deserialize(t.Details, failedWrapper)
 		return failedWrapper.ActivityId
 	}
     return ""
 }
 
-func (f *FSMContext) ActivityType(c *interface{}) ActivityType {
-	switch c.(type){
+func (f *FSMContext) ActivityType(c interface{}) ActivityType {
+	switch t := c.(type){
 	case ActivityTaskCompletedEventAttributes:
 		completeWrapper := &CompletedActivity{}
-		f.Deserialize(c.Result, completeWrapper)
+		f.Deserialize(t.Result, completeWrapper)
 		return completeWrapper.ActivityType
 	case ActivityTaskFailedEventAttributes:
 		failedWrapper := &FailedActivity{}
-		f.Deserialize(c.Result, failedWrapper)
+		f.Deserialize(t.Details, failedWrapper)
 		return failedWrapper.ActivityType
 	}
 	return ActivityType{}
