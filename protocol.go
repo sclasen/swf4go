@@ -276,7 +276,7 @@ func (h HistoryEvent) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("HistoryEvent{ ")
 	buffer.WriteString(fmt.Sprintf("EventId: %d,", h.EventId))
-	buffer.WriteString(fmt.Sprintf("EventTimestamp: %f, ", h.EventTimestamp))
+	buffer.WriteString(fmt.Sprintf("EventTimestamp: %s, ", h.EventTimestamp))
 	buffer.WriteString(fmt.Sprintf("EventType:, %s", h.EventType))
 	buffer.WriteString(fmt.Sprintf("%+v", eventTypes[h.EventType](h)))
 	buffer.WriteString(" }")
