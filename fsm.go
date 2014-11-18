@@ -25,10 +25,6 @@ const (
 // Alternatively you can use the TypedDecider to avoid having to do the assertion.
 type Decider func(*FSMContext, HistoryEvent, interface{}) Outcome
 
-// EventDataType should return an empty struct of the correct type based on the event
-// the FSM will unmarshal data from the event into this struct
-type EventDataType func(HistoryEvent) interface{}
-
 type Outcome interface {
 	Data() interface{}
 	Decisions() []*Decision
@@ -97,8 +93,6 @@ type FSM struct {
 	// DataType of the data struct associated with this FSM.
 	// The data is automatically peristed to and loaded from workflow history by the FSM.
 	DataType interface{}
-	// EventDataType returns a zero value struct to deserialize the payload of a HistoryEvent.
-	EventDataType EventDataType
 	// Serializer used to serialize/deserialise state from workflow history.
 	Serializer StateSerializer
 	// Kinesis stream in the same region to replicate state to.
@@ -205,9 +199,8 @@ func (f *FSM) Init() {
 // If you wish to manage polling and calling Tick() yourself, you dont need to start the FSM, just call Init().
 func (f *FSM) Start() {
 	f.Init()
-	f.PollerShutdownManager.Register(f.Name, f.stop, f.stopAck)
 	poller := f.Client.DecisionTaskPoller(f.Domain, f.Identity, f.TaskList)
-	go poller.PollUntilShutdownBy(f.PollerShutdownManager, f.Name, func(decisionTask *PollForDecisionTaskResponse) {
+	go poller.PollUntilShutdownBy(f.PollerShutdownManager, fmt.Sprintf("%s-poller",f.Name), func(decisionTask *PollForDecisionTaskResponse) {
 		decisions := f.Tick(decisionTask)
 		err := f.Client.RespondDecisionTaskCompleted(
 			RespondDecisionTaskCompletedRequest{
@@ -277,12 +270,13 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
 	outcome := new(TransitionOutcome)
-	context := &FSMContext{f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, ""}
+	context := &FSMContext{f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, "", nil}
 	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
 	if len(errorEvents) > 0 {
 		outcome.data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
 		outcome.state = f.errorState.Name
 		context.State = f.errorState.Name
+		context.stateData = outcome.data
 		for i := len(errorEvents) - 1; i >= 0; i-- {
 			e := errorEvents[i]
 			anOutcome, err := f.panicSafeDecide(f.errorState, context, e, outcome.data)
@@ -333,6 +327,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 		fsmState, ok := f.states[outcome.state]
 		if ok {
 			context.State = outcome.state
+			context.stateData = outcome.data
 			anOutcome, err := f.panicSafeDecide(fsmState, context, e, outcome.data)
 			if err != nil {
 				f.log("at=error error=decision-execution-error state=%s next-state=%", fsmState.Name, outcome.state)
@@ -490,14 +485,19 @@ func (f *FSM) captureError(signal string, execution WorkflowExecution, error int
 //   if event.EventType == swf.EventTypeWorkflowExecutionSignaled {
 //       f.EventData(event).(*Foo)
 //   }
-func (f *FSM) EventData(event HistoryEvent) interface{} {
-	eventData := f.EventDataType(event)
+func (f *FSM) EventData(ctx *FSMContext, event HistoryEvent, eventData interface{})  {
 
 	if eventData != nil {
 		var serialized string
 		switch event.EventType {
 		case EventTypeActivityTaskCompleted:
-			serialized = event.ActivityTaskCompletedEventAttributes.Result
+			completeWrapper := &CompletedActivity{}
+			f.Deserialize(event.ActivityTaskCompletedEventAttributes.Result, completeWrapper)
+			serialized = completeWrapper.Result
+		case EventTypeChildWorkflowExecutionFailed:
+			wrapper := &FailedActivity{}
+			f.Deserialize(event.ActivityTaskFailedEventAttributes.Details, wrapper)
+			serialized = wrapper.Details
 		case EventTypeWorkflowExecutionCompleted:
 			serialized = event.WorkflowExecutionCompletedEventAttributes.Result
 		case EventTypeChildWorkflowExecutionCompleted:
@@ -513,8 +513,6 @@ func (f *FSM) EventData(event HistoryEvent) interface{} {
 			f.Deserialize(serialized, eventData)
 		}
 	}
-
-	return eventData
 
 }
 
@@ -663,6 +661,22 @@ type StateSerializer interface {
 	Deserialize(serialized string, state interface{}) error
 }
 
+//CompletedActivity should be returned by all activities, this adds correlation which is missing from the swf api.
+type CompletedActivity struct{
+	ActivityId string
+	ActivityType ActivityType
+	Result string ///actual serialized result
+}
+
+//FailedActivity should be returned by all failed activities in the Details field,
+//this adds correlation which is missing from the swf api.
+type FailedActivity struct{
+	ActivityId string
+	ActivityType ActivityType
+	Reason string
+	Details string //serialied error result
+}
+
 // JsonStateSerializer is a StateSerializer that uses go json serialization.
 type JsonStateSerializer struct{}
 
@@ -757,10 +771,39 @@ type FSMContext struct {
 	WorkflowType
 	WorkflowExecution
 	State string
+	stateData interface{}
 }
 
-func (f *FSMContext) EventData(h HistoryEvent) interface{} {
-	return f.fsm.EventData(h)
+func (f *FSMContext) EventData(h HistoryEvent, data interface{}) {
+	f.fsm.EventData(f, h, data)
+}
+
+func (f *FSMContext) ActivityId(c interface{}) string {
+	switch t := c.(type){
+	case ActivityTaskCompletedEventAttributes:
+		completeWrapper := &CompletedActivity{}
+		f.Deserialize(t.Result, completeWrapper)
+		return completeWrapper.ActivityId
+	case ActivityTaskFailedEventAttributes:
+		failedWrapper := &FailedActivity{}
+		f.Deserialize(t.Details, failedWrapper)
+		return failedWrapper.ActivityId
+	}
+    return ""
+}
+
+func (f *FSMContext) ActivityType(c interface{}) ActivityType {
+	switch t := c.(type){
+	case ActivityTaskCompletedEventAttributes:
+		completeWrapper := &CompletedActivity{}
+		f.Deserialize(t.Result, completeWrapper)
+		return completeWrapper.ActivityType
+	case ActivityTaskFailedEventAttributes:
+		failedWrapper := &FailedActivity{}
+		f.Deserialize(t.Details, failedWrapper)
+		return failedWrapper.ActivityType
+	}
+	return ActivityType{}
 }
 
 func (f *FSMContext) Serialize(data interface{}) string {
