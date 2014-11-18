@@ -10,6 +10,7 @@ import (
 	"log"
 	"reflect"
 	"strings"
+	"strconv"
 )
 
 // constants used as marker names or signal names
@@ -491,13 +492,9 @@ func (f *FSM) EventData(ctx *FSMContext, event HistoryEvent, eventData interface
 		var serialized string
 		switch event.EventType {
 		case EventTypeActivityTaskCompleted:
-			completeWrapper := &CompletedActivity{}
-			f.Deserialize(event.ActivityTaskCompletedEventAttributes.Result, completeWrapper)
-			serialized = completeWrapper.Result
+			serialized = event.ActivityTaskCompletedEventAttributes.Result
 		case EventTypeChildWorkflowExecutionFailed:
-			wrapper := &FailedActivity{}
-			f.Deserialize(event.ActivityTaskFailedEventAttributes.Details, wrapper)
-			serialized = wrapper.Details
+			serialized = event.ActivityTaskFailedEventAttributes.Details
 		case EventTypeWorkflowExecutionCompleted:
 			serialized = event.WorkflowExecutionCompletedEventAttributes.Result
 		case EventTypeChildWorkflowExecutionCompleted:
@@ -661,22 +658,6 @@ type StateSerializer interface {
 	Deserialize(serialized string, state interface{}) error
 }
 
-//CompletedActivity should be returned by all activities, this adds correlation which is missing from the swf api.
-type CompletedActivity struct{
-	ActivityId string
-	ActivityType ActivityType
-	Result string ///actual serialized result
-}
-
-//FailedActivity should be returned by all failed activities in the Details field,
-//this adds correlation which is missing from the swf api.
-type FailedActivity struct{
-	ActivityId string
-	ActivityType ActivityType
-	Reason string
-	Details string //serialied error result
-}
-
 // JsonStateSerializer is a StateSerializer that uses go json serialization.
 type JsonStateSerializer struct{}
 
@@ -778,34 +759,6 @@ func (f *FSMContext) EventData(h HistoryEvent, data interface{}) {
 	f.fsm.EventData(f, h, data)
 }
 
-func (f *FSMContext) ActivityId(c interface{}) string {
-	switch t := c.(type){
-	case ActivityTaskCompletedEventAttributes:
-		completeWrapper := &CompletedActivity{}
-		f.Deserialize(t.Result, completeWrapper)
-		return completeWrapper.ActivityId
-	case ActivityTaskFailedEventAttributes:
-		failedWrapper := &FailedActivity{}
-		f.Deserialize(t.Details, failedWrapper)
-		return failedWrapper.ActivityId
-	}
-    return ""
-}
-
-func (f *FSMContext) ActivityType(c interface{}) ActivityType {
-	switch t := c.(type){
-	case ActivityTaskCompletedEventAttributes:
-		completeWrapper := &CompletedActivity{}
-		f.Deserialize(t.Result, completeWrapper)
-		return completeWrapper.ActivityType
-	case ActivityTaskFailedEventAttributes:
-		failedWrapper := &FailedActivity{}
-		f.Deserialize(t.Details, failedWrapper)
-		return failedWrapper.ActivityType
-	}
-	return ActivityType{}
-}
-
 func (f *FSMContext) Serialize(data interface{}) string {
 	return f.fsm.Serialize(data)
 }
@@ -820,4 +773,46 @@ func (f *FSMContext) Deserialize(serialized string, data interface{}) {
 
 func (f *FSMContext) EmptyDecisions() []*Decision {
 	return f.fsm.EmptyDecisions()
+}
+
+type ActivityCorrelator struct {
+	Activities map[string]*ActivityType
+}
+
+func (a *ActivityCorrelator)Correlate(h HistoryEvent){
+	if a.Activities == nil {
+		a.Activities = make(map[string]*ActivityType)
+	}
+	if h.EventType == EventTypeActivityTaskScheduled {
+		a.Activities[strconv.Itoa(h.EventId)] = &h.ActivityTaskScheduledEventAttributes.ActivityType
+	}
+}
+
+func (a *ActivityCorrelator)RemoveCorrelation(h HistoryEvent){
+	if a.Activities == nil {
+		a.Activities = make(map[string]*ActivityType)
+	}
+	switch h.EventType{
+	case EventTypeActivityTaskCompleted:
+		delete(a.Activities, strconv.Itoa(h.ActivityTaskCompletedEventAttributes.ScheduledEventId))
+	case EventTypeActivityTaskFailed:
+		delete(a.Activities, strconv.Itoa(h.ActivityTaskFailedEventAttributes.ScheduledEventId))
+	case EventTypeActivityTaskTimedOut:
+		delete(a.Activities, strconv.Itoa(h.ActivityTaskTimedOutEventAttributes.ScheduledEventId))
+	}
+}
+
+func (a *ActivityCorrelator)ActivityType(h HistoryEvent) *ActivityType {
+	if a.Activities == nil {
+		a.Activities = make(map[string]*ActivityType)
+	}
+	switch h.EventType{
+	case EventTypeActivityTaskCompleted:
+		return a.Activities[strconv.Itoa(h.ActivityTaskCompletedEventAttributes.ScheduledEventId)]
+	case EventTypeActivityTaskFailed:
+		return a.Activities[strconv.Itoa(h.ActivityTaskFailedEventAttributes.ScheduledEventId)]
+	case EventTypeActivityTaskTimedOut:
+		return a.Activities[strconv.Itoa(h.ActivityTaskTimedOutEventAttributes.ScheduledEventId)]
+	}
+	return nil
 }
