@@ -9,6 +9,7 @@ type TypesMigrator struct {
 	DomainMigrator       *DomainMigrator
 	WorkflowTypeMigrator *WorkflowTypeMigrator
 	ActivityTypeMigrator *ActivityTypeMigrator
+	StreamMigrator       *StreamMigrator
 }
 
 // NewTypesMigrator will create a TypesMigrator that will migrate the given domains, workflows, and activities. Pass nil if you dont need a given domain, workflow or activity registered or deprecated.
@@ -37,9 +38,13 @@ func (t *TypesMigrator) Migrate() {
 	if t.WorkflowTypeMigrator == nil {
 		t.WorkflowTypeMigrator = new(WorkflowTypeMigrator)
 	}
+	if t.StreamMigrator == nil {
+		t.StreamMigrator = new(StreamMigrator)
+	}
 	t.DomainMigrator.Migrate()
 	t.WorkflowTypeMigrator.Migrate()
 	t.ActivityTypeMigrator.Migrate()
+	t.StreamMigrator.Migrate()
 }
 
 // DomainMigrator will register or deprecate the configured domains as required.
@@ -255,6 +260,54 @@ func (a *ActivityTypeMigrator) deprecate(dd DeprecateActivityType) {
 
 func (a *ActivityTypeMigrator) describe(domain string, name string, version string) (*DescribeActivityTypeResponse, *ErrorResponse) {
 	resp, err := a.Client.DescribeActivityType(DescribeActivityTypeRequest{Domain: domain, ActivityType: ActivityType{Name: name, Version: version}})
+	if err != nil {
+		return nil, err.(*ErrorResponse)
+	}
+	return resp, nil
+}
+
+type StreamMigrator struct {
+	Streams []CreateStream
+	Client  *Client
+}
+
+func (s *StreamMigrator) Migrate() {
+	for _, st := range s.Streams {
+		if s.isCreated(st) {
+			log.Printf("action=migrate at=create-stream stream=%s status=previously-created", st.StreamName)
+		} else {
+			s.create(st)
+			log.Printf("action=migrate at=create-stream stream=%s status=created", st.StreamName)
+		}
+	}
+}
+
+func (s *StreamMigrator) isCreated(st CreateStream) bool {
+	_, err := s.describe(st)
+	if err != nil {
+		if err.Type == ErrorTypeStreamNotFound {
+			return false
+		}
+
+		panic(err)
+
+	}
+
+	return true
+}
+
+func (s *StreamMigrator) create(st CreateStream) {
+	err := s.Client.CreateStream(st)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (s *StreamMigrator) describe(st CreateStream) (*DescribeStreamResponse, *ErrorResponse) {
+	req := DescribeStreamRequest{
+		StreamName: st.StreamName,
+	}
+	resp, err := s.Client.DescribeStream(req)
 	if err != nil {
 		return nil, err.(*ErrorResponse)
 	}

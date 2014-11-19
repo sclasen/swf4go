@@ -133,3 +133,26 @@ func TestMigrateActivityTypes(t *testing.T) {
 	ad.Migrate()
 
 }
+
+func TestMigrateStreams(t *testing.T) {
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		log.Printf("WARNING: NO AWS CREDS SPECIFIED, SKIPPING MIGRATIONS TEST")
+		return
+	}
+
+	client := NewClient(MustGetenv("AWS_ACCESS_KEY_ID"), MustGetenv("AWS_SECRET_ACCESS_KEY"), USEast1)
+
+	sm := StreamMigrator{
+		Streams: []CreateStream{
+			CreateStream{
+				StreamName: "test",
+				ShardCount: 1,
+			},
+		},
+		Client: client,
+	}
+
+	sm.Migrate()
+	sm.Migrate()
+
+}

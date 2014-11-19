@@ -18,6 +18,7 @@ const (
 	StatusRegistered              = "REGISTERED"
 	StatusDeprecated              = "DEPRECATED"
 	ErrorTypeUnknownResourceFault = "com.amazonaws.swf.base.model#UnknownResourceFault"
+	ErrorTypeStreamNotFound       = "ResourceNotFoundException"
 )
 
 func (err *ErrorResponse) Error() string {
@@ -1241,6 +1242,39 @@ type PutRecordRequest struct {
 type PutRecordResponse struct {
 	SequenceNumber string
 	ShardId        string
+}
+
+type CreateStream struct {
+	ShardCount int
+	StreamName string
+}
+
+type DescribeStreamRequest struct {
+	ExclusiveStartShardId *string
+	Limit                 *int
+	StreamName            string
+}
+
+type DescribeStreamResponse struct {
+	StreamDescription struct {
+		HasMoreShards bool
+		Shards        []struct {
+			AdjacentParentShardId string
+			HashKeyRange          struct {
+				EndingHashKey   string
+				StartingHashKey string
+			}
+			ParentShardId       string
+			SequenceNumberRange struct {
+				EndingSequenceNumber   string
+				StartingSequenceNumber string
+			}
+			ShardId string
+		}
+		StreamARN    string
+		StreamName   string
+		StreamStatus string
+	}
 }
 
 type Date struct{ time.Time }

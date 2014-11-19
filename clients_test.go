@@ -3,10 +3,10 @@ package swf
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"testing"
 	"time"
-	"net/http"
 )
 
 func TestListWorkflowTypes(t *testing.T) {
@@ -73,8 +73,7 @@ func TestPutRecord(t *testing.T) {
 
 }
 
-
-func customHttpClient() *http.Client{
+func customHttpClient() *http.Client {
 	return &http.Client{
 		Transport: &LoggingRoundTripper{http.DefaultTransport},
 	}
@@ -84,7 +83,7 @@ type LoggingRoundTripper struct {
 	Transport http.RoundTripper
 }
 
-func (l *LoggingRoundTripper)RoundTrip(req *http.Request) (*http.Response, error){
+func (l *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	log.Printf("request: target=%s", req.Header.Get("X-Amz-Target"))
 	resp, err := l.Transport.RoundTrip(req)
 	if err == nil {
@@ -92,7 +91,5 @@ func (l *LoggingRoundTripper)RoundTrip(req *http.Request) (*http.Response, error
 	} else {
 		log.Printf("error %s", err)
 	}
-	return resp,err
+	return resp, err
 }
-
-
