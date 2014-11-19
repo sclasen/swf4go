@@ -28,48 +28,48 @@ type Decider func(*FSMContext, HistoryEvent, interface{}) Outcome
 
 type Outcome interface {
 	Data() interface{}
-	Decisions() []*Decision
+	Decisions() []Decision
 }
 
 type TransitionOutcome struct {
 	data      interface{}
 	state     string
-	decisions []*Decision
+	decisions []Decision
 }
 
 func (t TransitionOutcome) Data() interface{} { return t.data }
 
-func (t TransitionOutcome) Decisions() []*Decision { return t.decisions }
+func (t TransitionOutcome) Decisions() []Decision { return t.decisions }
 
 type StayOutcome struct {
 	data      interface{}
-	decisions []*Decision
+	decisions []Decision
 }
 
 func (s StayOutcome) Data() interface{} { return s.data }
 
-func (s StayOutcome) Decisions() []*Decision { return s.decisions }
+func (s StayOutcome) Decisions() []Decision { return s.decisions }
 
 //this can do things like check that the last decision is a termination?
 type TerminationOutcome struct {
 	data      interface{}
-	decisions []*Decision
+	decisions []Decision
 }
 
 func (t TerminationOutcome) Data() interface{} { return t.data }
 
-func (t TerminationOutcome) Decisions() []*Decision { return t.decisions }
+func (t TerminationOutcome) Decisions() []Decision { return t.decisions }
 
 //This could be used to purposefully put the workflow into an error state.
 type ErrorOutcome struct {
 	state     string
 	data      interface{}
-	decisions []*Decision
+	decisions []Decision
 }
 
 func (e ErrorOutcome) Data() interface{} { return e.data }
 
-func (e ErrorOutcome) Decisions() []*Decision { return e.decisions }
+func (e ErrorOutcome) Decisions()[]Decision { return e.decisions }
 
 // FSMState defines the behavior of one state of an FSM
 type FSMState struct {
@@ -162,7 +162,7 @@ func (f *FSM) DefaultErrorState() *FSMState {
 			default:
 				f.log("action=default-handle-error at=process-event event=%+v", h)
 			}
-			return fsm.Error(data, []*Decision{})
+			return fsm.Error(data, []Decision{})
 		},
 	}
 }
@@ -234,7 +234,7 @@ func (f *FSM) Start() {
 	})
 }
 
-func (f *FSM) stateFromDecisions(decisions []*Decision) string {
+func (f *FSM) stateFromDecisions(decisions []Decision) string {
 	for _, d := range decisions {
 		if d.DecisionType == DecisionTypeRecordMarker && d.RecordMarkerDecisionAttributes.MarkerName == STATE_MARKER {
 			return d.RecordMarkerDecisionAttributes.Details
@@ -267,7 +267,7 @@ func (f *FSM) Deserialize(serialized string, data interface{}) {
 
 // Tick is called when the DecisionTaskPoller receives a PollForDecisionTaskResponse in its polling loop.
 // It is exported to facilitate testing.
-func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
+func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []Decision {
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
 	outcome := new(TransitionOutcome)
@@ -365,14 +365,14 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []*Decision {
 	return final
 }
 
-func (f *FSMContext) Stay(data interface{}, decisions []*Decision) Outcome {
+func (f *FSMContext) Stay(data interface{}, decisions []Decision) Outcome {
 	return StayOutcome{
 		data:      data,
 		decisions: decisions,
 	}
 }
 
-func (f *FSMContext) Goto(state string, data interface{}, decisions []*Decision) Outcome {
+func (f *FSMContext) Goto(state string, data interface{}, decisions []Decision) Outcome {
 	return TransitionOutcome{
 		state:     state,
 		data:      data,
@@ -380,14 +380,14 @@ func (f *FSMContext) Goto(state string, data interface{}, decisions []*Decision)
 	}
 }
 
-func (f *FSMContext) Terminate(data interface{}, decisions []*Decision) Outcome {
+func (f *FSMContext) Terminate(data interface{}, decisions []Decision) Outcome {
 	return TerminationOutcome{
 		data:      data,
 		decisions: decisions,
 	}
 }
 
-func (f *FSMContext) Error(data interface{}, decisions []*Decision) Outcome {
+func (f *FSMContext) Error(data interface{}, decisions []Decision) Outcome {
 	return ErrorOutcome{
 		state:     "error",
 		data:      data,
@@ -435,7 +435,7 @@ func (f *FSM) panicSafeDecide(state *FSMState, context *FSMContext, event Histor
 	return
 }
 
-func (f *FSM) captureDecisionError(execution WorkflowExecution, event int, lastEvents []HistoryEvent, stateName string, stateData interface{}, err error) []*Decision {
+func (f *FSM) captureDecisionError(execution WorkflowExecution, event int, lastEvents []HistoryEvent, stateName string, stateData interface{}, err error) []Decision {
 	return f.captureError(ERROR_SIGNAL, execution, &SerializedDecisionError{
 		ErrorEventId:        lastEvents[event].EventId,
 		UnprocessedEventIds: f.eventIds(lastEvents[event+1:]),
@@ -444,7 +444,7 @@ func (f *FSM) captureDecisionError(execution WorkflowExecution, event int, lastE
 	})
 }
 
-func (f *FSM) captureSystemError(execution WorkflowExecution, errorType string, lastEvents []HistoryEvent, err error) []*Decision {
+func (f *FSM) captureSystemError(execution WorkflowExecution, errorType string, lastEvents []HistoryEvent, err error) []Decision {
 	return f.captureError(SYSTEM_ERROR_SIGNAL, execution, &SerializedSystemError{
 		ErrorType:           errorType,
 		UnprocessedEventIds: f.eventIds(lastEvents),
@@ -460,14 +460,14 @@ func (f *FSM) eventIds(events []HistoryEvent) []int {
 	return ids
 }
 
-func (f *FSM) captureError(signal string, execution WorkflowExecution, error interface{}) []*Decision {
+func (f *FSM) captureError(signal string, execution WorkflowExecution, error interface{}) []Decision {
 	decisions := f.EmptyDecisions()
 	r, err := f.recordMarker(signal, error)
 	if err != nil {
 		//really bail
 		panic(fmt.Sprintf("giving up, cant even create a RecordMarker decsion: %s", err))
 	}
-	d := &Decision{
+	d := Decision{
 		DecisionType: DecisionTypeSignalExternalWorkflowExecution,
 		SignalExternalWorkflowExecutionDecisionAttributes: &SignalExternalWorkflowExecutionDecisionAttributes{
 			WorkflowId: execution.WorkflowId,
@@ -562,7 +562,7 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryE
 	return lastEvents, errorEvents
 }
 
-func (f *FSM) appendState(outcome *TransitionOutcome) ([]*Decision, error) {
+func (f *FSM) appendState(outcome *TransitionOutcome) ([]Decision, error) {
 
 	serializedData, err := f.Serializer.Serialize(outcome.data)
 
@@ -581,17 +581,17 @@ func (f *FSM) appendState(outcome *TransitionOutcome) ([]*Decision, error) {
 	return decisions, nil
 }
 
-func (f *FSM) recordMarker(markerName string, details interface{}) (*Decision, error) {
+func (f *FSM) recordMarker(markerName string, details interface{}) (Decision, error) {
 	serialized, err := f.Serializer.Serialize(details)
 	if err != nil {
-		return nil, err
+		return Decision{}, err
 	}
 
 	return f.recordStringMarker(markerName, serialized), nil
 }
 
-func (f *FSM) recordStringMarker(markerName string, details string) *Decision {
-	return &Decision{
+func (f *FSM) recordStringMarker(markerName string, details string) Decision {
+	return Decision{
 		DecisionType: DecisionTypeRecordMarker,
 		RecordMarkerDecisionAttributes: &RecordMarkerDecisionAttributes{
 			MarkerName: markerName,
@@ -623,8 +623,8 @@ func (f *FSM) isErrorSignal(e HistoryEvent) bool {
 }
 
 // EmptyDecisions is a helper method to give you an empty decisions array for use in your Deciders.
-func (f *FSM) EmptyDecisions() []*Decision {
-	return make([]*Decision, 0)
+func (f *FSM) EmptyDecisions() []Decision {
+	return make([]Decision, 0)
 }
 
 // SerializedState is a wrapper struct that allows serializing the current state and current data for the FSM in
@@ -771,7 +771,7 @@ func (f *FSMContext) Deserialize(serialized string, data interface{}) {
 	f.fsm.Deserialize(serialized, data)
 }
 
-func (f *FSMContext) EmptyDecisions() []*Decision {
+func (f *FSMContext) EmptyDecisions() []Decision {
 	return f.fsm.EmptyDecisions()
 }
 
