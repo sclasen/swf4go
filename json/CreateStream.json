@@ -1,0 +1,4 @@
+{
+    "ShardCount": "number",
+    "StreamName": "string"
+}

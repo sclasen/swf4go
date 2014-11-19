@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"log"
 	"reflect"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 // constants used as marker names or signal names
@@ -201,7 +201,7 @@ func (f *FSM) Init() {
 func (f *FSM) Start() {
 	f.Init()
 	poller := f.Client.DecisionTaskPoller(f.Domain, f.Identity, f.TaskList)
-	go poller.PollUntilShutdownBy(f.PollerShutdownManager, fmt.Sprintf("%s-poller",f.Name), func(decisionTask *PollForDecisionTaskResponse) {
+	go poller.PollUntilShutdownBy(f.PollerShutdownManager, fmt.Sprintf("%s-poller", f.Name), func(decisionTask *PollForDecisionTaskResponse) {
 		decisions := f.Tick(decisionTask)
 		err := f.Client.RespondDecisionTaskCompleted(
 			RespondDecisionTaskCompletedRequest{
@@ -220,7 +220,7 @@ func (f *FSM) Start() {
 					StreamName: f.KinesisStream,
 					//partition by workflow
 					PartitionKey: decisionTask.WorkflowExecution.WorkflowId,
-					Data: []byte(stateToReplicate),
+					Data:         []byte(stateToReplicate),
 				})
 				if err != nil {
 					f.log("action=tick at=replicate-state-failed error=%s", err.Error())
@@ -486,7 +486,7 @@ func (f *FSM) captureError(signal string, execution WorkflowExecution, error int
 //   if event.EventType == swf.EventTypeWorkflowExecutionSignaled {
 //       f.EventData(event).(*Foo)
 //   }
-func (f *FSM) EventData(ctx *FSMContext, event HistoryEvent, eventData interface{})  {
+func (f *FSM) EventData(ctx *FSMContext, event HistoryEvent, eventData interface{}) {
 
 	if eventData != nil {
 		var serialized string
@@ -751,7 +751,7 @@ type FSMContext struct {
 	fsm *FSM
 	WorkflowType
 	WorkflowExecution
-	State string
+	State     string
 	stateData interface{}
 }
 
@@ -779,7 +779,7 @@ type ActivityCorrelator struct {
 	Activities map[string]*ActivityType
 }
 
-func (a *ActivityCorrelator)Correlate(h HistoryEvent){
+func (a *ActivityCorrelator) Correlate(h HistoryEvent) {
 	if a.Activities == nil {
 		a.Activities = make(map[string]*ActivityType)
 	}
@@ -788,11 +788,11 @@ func (a *ActivityCorrelator)Correlate(h HistoryEvent){
 	}
 }
 
-func (a *ActivityCorrelator)RemoveCorrelation(h HistoryEvent){
+func (a *ActivityCorrelator) RemoveCorrelation(h HistoryEvent) {
 	if a.Activities == nil {
 		a.Activities = make(map[string]*ActivityType)
 	}
-	switch h.EventType{
+	switch h.EventType {
 	case EventTypeActivityTaskCompleted:
 		delete(a.Activities, strconv.Itoa(h.ActivityTaskCompletedEventAttributes.ScheduledEventId))
 	case EventTypeActivityTaskFailed:
@@ -802,11 +802,11 @@ func (a *ActivityCorrelator)RemoveCorrelation(h HistoryEvent){
 	}
 }
 
-func (a *ActivityCorrelator)ActivityType(h HistoryEvent) *ActivityType {
+func (a *ActivityCorrelator) ActivityType(h HistoryEvent) *ActivityType {
 	if a.Activities == nil {
 		a.Activities = make(map[string]*ActivityType)
 	}
-	switch h.EventType{
+	switch h.EventType {
 	case EventTypeActivityTaskCompleted:
 		return a.Activities[strconv.Itoa(h.ActivityTaskCompletedEventAttributes.ScheduledEventId)]
 	case EventTypeActivityTaskFailed:

@@ -1,0 +1,5 @@
+{
+    "ExclusiveStartShardId": "string",
+    "Limit": "number",
+    "StreamName": "string"
+}

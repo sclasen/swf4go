@@ -66,6 +66,7 @@ type WorkflowInfoClient interface {
 
 type KinesisClient interface {
 	PutRecord(request PutRecordRequest) (*PutRecordResponse, error)
+	CreateStream(request CreateStream) error
 }
 
 // Region specifies the AWS region that a client should connect to.
@@ -86,27 +87,27 @@ var (
 
 // Client is the implementation of the WorkflowClient, DecisionWorkerClient, ActivityWorkerClient, WorkflowAdminClient, and WorkflowInfoClient interfaces.
 type Client struct {
-	keys   *aws4.Keys
+	keys       *aws4.Keys
 	httpClient *http.Client
-	Region *Region
-	Debug  bool
+	Region     *Region
+	Debug      bool
 }
 
 // NewClient creates a new Client which uses the given credentials to talk to the given region.
 func NewClient(key string, secret string, region *Region) *Client {
 	return &Client{
-		keys:   &aws4.Keys{AccessKey: key, SecretKey: secret},
+		keys:       &aws4.Keys{AccessKey: key, SecretKey: secret},
 		httpClient: http.DefaultClient,
-		Region: region,
+		Region:     region,
 	}
 }
 
 // NewClient creates a new Client which uses the given credentials to talk to the given region.
 func NewClientWithHttpClient(key string, secret string, region *Region, client *http.Client) *Client {
 	return &Client{
-		keys:   &aws4.Keys{AccessKey: key, SecretKey: secret},
+		keys:       &aws4.Keys{AccessKey: key, SecretKey: secret},
 		httpClient: client,
-		Region: region,
+		Region:     region,
 	}
 }
 
@@ -324,6 +325,33 @@ func (c *Client) PutRecord(request PutRecordRequest) (*PutRecordResponse, error)
 	return resp, err
 }
 
+func (c *Client) CreateStream(request CreateStream) error {
+	err := c.kinesisReqNoResponse("CreateStream", request)
+	return err
+}
+
+func (c *Client) DescribeStream(request DescribeStreamRequest) (*DescribeStreamResponse, error) {
+	resp := &DescribeStreamResponse{}
+	err := c.kinesisReqWithResponse("DescribeStream", request, resp)
+	return resp, err
+}
+
+func (c *Client) swfReqNoResponse(operation string, request interface{}) error {
+	resp, err := c.prepareAndExecuteRequest("swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		response := new(ErrorResponse)
+		if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
+			return err
+		}
+		return response
+	}
+	return err
+}
+
 func (c *Client) swfReqWithResponse(operation string, request interface{}, response interface{}) error {
 	resp, err := c.prepareAndExecuteRequest("swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
 	if err != nil {
@@ -346,6 +374,22 @@ func (c *Client) swfReqWithResponse(operation string, request interface{}, respo
 	return err
 }
 
+func (c *Client) kinesisReqNoResponse(operation string, request interface{}) error {
+	resp, err := c.prepareAndExecuteRequest("kinesis", c.Region.KinesisEndpoint, "Kinesis_20131202."+operation, "application/x-amz-json-1.1", request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		errResp := new(ErrorResponse)
+		if err := json.NewDecoder(resp.Body).Decode(errResp); err != nil {
+			return err
+		}
+		return errResp
+	}
+	return err
+}
+
 func (c *Client) kinesisReqWithResponse(operation string, request interface{}, response interface{}) error {
 	resp, err := c.prepareAndExecuteRequest("kinesis", c.Region.KinesisEndpoint, "Kinesis_20131202."+operation, "application/x-amz-json-1.1", request)
 	if err != nil {
@@ -364,22 +408,6 @@ func (c *Client) kinesisReqWithResponse(operation string, request interface{}, r
 	if c.Debug {
 		pretty, _ := json.MarshalIndent(response, "", "    ")
 		log.Println(string(pretty))
-	}
-	return err
-}
-
-func (c *Client) swfReqNoResponse(operation string, request interface{}) error {
-	resp, err := c.prepareAndExecuteRequest("swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		response := new(ErrorResponse)
-		if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
-			return err
-		}
-		return response
 	}
 	return err
 }
