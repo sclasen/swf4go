@@ -683,19 +683,19 @@ const (
 	DecisionTypeStartChildWorkflowExecution            = "StartChildWorkflowExecution"
 )
 
-var decisionTypes = map[string]func(*Decision) interface{}{
-	DecisionTypeScheduleActivityTask:                   func(d *Decision) interface{} { return d.ScheduleActivityTaskDecisionAttributes },
-	DecisionTypeRequestCancelActivityTask:              func(d *Decision) interface{} { return d.RequestCancelActivityTaskDecisionAttributes },
-	DecisionTypeCompleteWorkflowExecution:              func(d *Decision) interface{} { return d.CompleteWorkflowExecutionDecisionAttributes },
-	DecisionTypeFailWorkflowExecution:                  func(d *Decision) interface{} { return d.FailWorkflowExecutionDecisionAttributes },
-	DecisionTypeCancelWorkflowExecution:                func(d *Decision) interface{} { return d.CancelWorkflowExecutionDecisionAttributes },
-	DecisionTypeContinueAsNewWorkflowExecution:         func(d *Decision) interface{} { return d.ContinueAsNewWorkflowExecutionDecisionAttributes },
-	DecisionTypeRecordMarker:                           func(d *Decision) interface{} { return d.RecordMarkerDecisionAttributes },
-	DecisionTypeStartTimer:                             func(d *Decision) interface{} { return d.StartTimerDecisionAttributes },
-	DecisionTypeCancelTimer:                            func(d *Decision) interface{} { return d.CancelTimerDecisionAttributes },
-	DecisionTypeSignalExternalWorkflowExecution:        func(d *Decision) interface{} { return d.SignalExternalWorkflowExecutionDecisionAttributes },
-	DecisionTypeRequestCancelExternalWorkflowExecution: func(d *Decision) interface{} { return d.RequestCancelExternalWorkflowExecutionDecisionAttributes },
-	DecisionTypeStartChildWorkflowExecution:            func(d *Decision) interface{} { return d.StartChildWorkflowExecutionDecisionAttributes },
+var decisionTypes = map[string]func(Decision) interface{}{
+	DecisionTypeScheduleActivityTask:                   func(d Decision) interface{} { return d.ScheduleActivityTaskDecisionAttributes },
+	DecisionTypeRequestCancelActivityTask:              func(d Decision) interface{} { return d.RequestCancelActivityTaskDecisionAttributes },
+	DecisionTypeCompleteWorkflowExecution:              func(d Decision) interface{} { return d.CompleteWorkflowExecutionDecisionAttributes },
+	DecisionTypeFailWorkflowExecution:                  func(d Decision) interface{} { return d.FailWorkflowExecutionDecisionAttributes },
+	DecisionTypeCancelWorkflowExecution:                func(d Decision) interface{} { return d.CancelWorkflowExecutionDecisionAttributes },
+	DecisionTypeContinueAsNewWorkflowExecution:         func(d Decision) interface{} { return d.ContinueAsNewWorkflowExecutionDecisionAttributes },
+	DecisionTypeRecordMarker:                           func(d Decision) interface{} { return d.RecordMarkerDecisionAttributes },
+	DecisionTypeStartTimer:                             func(d Decision) interface{} { return d.StartTimerDecisionAttributes },
+	DecisionTypeCancelTimer:                            func(d Decision) interface{} { return d.CancelTimerDecisionAttributes },
+	DecisionTypeSignalExternalWorkflowExecution:        func(d Decision) interface{} { return d.SignalExternalWorkflowExecutionDecisionAttributes },
+	DecisionTypeRequestCancelExternalWorkflowExecution: func(d Decision) interface{} { return d.RequestCancelExternalWorkflowExecutionDecisionAttributes },
+	DecisionTypeStartChildWorkflowExecution:            func(d Decision) interface{} { return d.StartChildWorkflowExecutionDecisionAttributes },
 }
 
 // Decision models the swf json protocol.
@@ -715,7 +715,7 @@ type Decision struct {
 	StartTimerDecisionAttributes                             *StartTimerDecisionAttributes                             `json:"startTimerDecisionAttributes,omitempty"`
 }
 
-func (d *Decision) String() string {
+func (d Decision) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("Decisiomn{ ")
 	buffer.WriteString(fmt.Sprintf("DecisionType: %s,", d.DecisionType))
@@ -827,7 +827,7 @@ type StartTimerDecisionAttributes struct {
 
 // RespondDecisionTaskCompletedRequest models the swf json protocol.
 type RespondDecisionTaskCompletedRequest struct {
-	Decisions        []*Decision `json:"decisions"`
+	Decisions        []Decision `json:"decisions"`
 	ExecutionContext string      `json:"executionContext"`
 	TaskToken        string      `json:"taskToken"`
 }

@@ -26,7 +26,7 @@ func TestFSM(t *testing.T) {
 			testData := data.(*TestData)
 			testData.States = append(testData.States, "start")
 			serialized := f.Serialize(testData)
-			decision := &Decision{
+			decision := Decision{
 				DecisionType: DecisionTypeScheduleActivityTask,
 				ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
 					ActivityId:   uuid.New(),
@@ -36,7 +36,7 @@ func TestFSM(t *testing.T) {
 				},
 			}
 
-			return f.Goto("working", testData, []*Decision{decision})
+			return f.Goto("working", testData, []Decision{decision})
 
 		},
 	})
@@ -48,7 +48,7 @@ func TestFSM(t *testing.T) {
 			serialized := f.Serialize(testData)
 			var decisions = f.EmptyDecisions()
 			if lastEvent.EventType == EventTypeActivityTaskCompleted {
-				decision := &Decision{
+				decision := Decision{
 					DecisionType: DecisionTypeCompleteWorkflowExecution,
 					CompleteWorkflowExecutionDecisionAttributes: &CompleteWorkflowExecutionDecisionAttributes{
 						Result: serialized,
@@ -56,7 +56,7 @@ func TestFSM(t *testing.T) {
 				}
 				decisions = append(decisions, decision)
 			} else if lastEvent.EventType == EventTypeActivityTaskFailed {
-				decision := &Decision{
+				decision := Decision{
 					DecisionType: DecisionTypeScheduleActivityTask,
 					ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
 						ActivityId:   uuid.New(),
@@ -123,7 +123,7 @@ func TestFSM(t *testing.T) {
 
 }
 
-func Find(decisions []*Decision, predicate func(*Decision) bool) bool {
+func Find(decisions []Decision, predicate func(Decision) bool) bool {
 	for _, d := range decisions {
 		if predicate(d) {
 			return true
@@ -132,19 +132,19 @@ func Find(decisions []*Decision, predicate func(*Decision) bool) bool {
 	return false
 }
 
-func stateMarkerPredicate(d *Decision) bool {
+func stateMarkerPredicate(d Decision) bool {
 	return d.DecisionType == "RecordMarker" && d.RecordMarkerDecisionAttributes.MarkerName == STATE_MARKER
 }
 
-func scheduleActivityPredicate(d *Decision) bool {
+func scheduleActivityPredicate(d Decision) bool {
 	return d.DecisionType == "ScheduleActivityTask"
 }
 
-func completeWorkflowPredicate(d *Decision) bool {
+func completeWorkflowPredicate(d Decision) bool {
 	return d.DecisionType == "CompleteWorkflowExecution"
 }
 
-func DecisionsToEvents(decisions []*Decision) []HistoryEvent {
+func DecisionsToEvents(decisions []Decision) []HistoryEvent {
 	var events []HistoryEvent
 	for _, d := range decisions {
 		if scheduleActivityPredicate(d) {
@@ -367,7 +367,7 @@ func ExampleFSM() {
 				d.Message = hello.Message
 			}
 			timeoutSeconds := "5" //swf uses stringy numbers in many places
-			timerDecision := &Decision{
+			timerDecision := Decision{
 				DecisionType: DecisionTypeStartTimer,
 				StartTimerDecisionAttributes: &StartTimerDecisionAttributes{
 					StartToFireTimeout: timeoutSeconds,
@@ -389,7 +389,7 @@ func ExampleFSM() {
 			//every time the timer fires, signal the workflow with a Hello
 			message := strconv.FormatInt(time.Now().Unix(), 10)
 			signalInput := &Hello{message}
-			signalDecision := &Decision{
+			signalDecision := Decision{
 				DecisionType: DecisionTypeSignalExternalWorkflowExecution,
 				SignalExternalWorkflowExecutionDecisionAttributes: &SignalExternalWorkflowExecutionDecisionAttributes{
 					SignalName: "hello",
