@@ -832,10 +832,10 @@ func (c *ChildRelator) checkInit() {
 	}
 }
 
-func (c *ChildRelator) Relate(relation string, r StartWorkflowRequest) {
+func (c *ChildRelator) Relate(relation string, id string, workflow WorkflowType) {
 	c.checkInit()
-	c.ChildIds[relation] = r.WorkflowId
-	c.ChildTypes[relation] = &r.WorkflowType
+	c.ChildIds[relation] = id
+	c.ChildTypes[relation] = &workflow
 }
 
 func (c *ChildRelator) RemoveRelation(relation string) {

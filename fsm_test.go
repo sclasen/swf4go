@@ -438,7 +438,7 @@ func TestChildRelator(t *testing.T) {
 
 	relator := new(ChildRelator)
 
-	relator.Relate("child.1", start)
+	relator.Relate("child.1", start.WorkflowId, start.WorkflowType)
 
 	serialized, err := JsonStateSerializer{}.Serialize(relator)
 
