@@ -817,3 +817,39 @@ func (a *ActivityCorrelator) ActivityType(h HistoryEvent) *ActivityType {
 	}
 	return nil
 }
+
+type ChildRelator struct {
+	ChildIds   map[string]string
+	ChildTypes map[string]*WorkflowType
+}
+
+func (c *ChildRelator) checkInit() {
+	if c.ChildTypes == nil {
+		c.ChildTypes = make(map[string]*WorkflowType)
+	}
+	if c.ChildIds == nil {
+		c.ChildIds = make(map[string]string)
+	}
+}
+
+func (c *ChildRelator) Relate(relation string, r StartWorkflowRequest) {
+	c.checkInit()
+	c.ChildIds[relation] = r.WorkflowId
+	c.ChildTypes[relation] = &r.WorkflowType
+}
+
+func (c *ChildRelator) RemoveRelation(relation string) {
+	c.checkInit()
+	delete(c.ChildIds, relation)
+	delete(c.ChildTypes, relation)
+}
+
+func (c *ChildRelator) WorkflowType(relation string) *WorkflowType {
+	c.checkInit()
+	return c.ChildTypes[relation]
+}
+
+func (c *ChildRelator) WorkflowId(relation string) string {
+	c.checkInit()
+	return c.ChildIds[relation]
+}
