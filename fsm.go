@@ -2,7 +2,6 @@ package swf
 
 import (
 	"bytes"
-	"code.google.com/p/goprotobuf/proto"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -11,6 +10,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"code.google.com/p/goprotobuf/proto"
 )
 
 // constants used as marker names or signal names
@@ -69,7 +70,7 @@ type ErrorOutcome struct {
 
 func (e ErrorOutcome) Data() interface{} { return e.data }
 
-func (e ErrorOutcome) Decisions()[]Decision { return e.decisions }
+func (e ErrorOutcome) Decisions() []Decision { return e.decisions }
 
 // FSMState defines the behavior of one state of an FSM
 type FSMState struct {
@@ -98,8 +99,8 @@ type FSM struct {
 	Serializer StateSerializer
 	// Kinesis stream in the same region to replicate state to.
 	KinesisStream string
-	//PollerShtudownManager is used when the FSM is managing the polling
-	PollerShutdownManager *PollerShtudownManager
+	//PollerShutdownManager is used when the FSM is managing the polling
+	PollerShutdownManager *PollerShutdownManager
 	states                map[string]*FSMState
 	initialState          *FSMState
 	errorState            *FSMState
@@ -167,7 +168,7 @@ func (f *FSM) DefaultErrorState() *FSMState {
 	}
 }
 
-// Init initializaed any optional, unspecified values such as the error state, stop channel, serializer, PollerShtudownManager.
+// Init initializaed any optional, unspecified values such as the error state, stop channel, serializer, PollerShutdownManager.
 // it gets called by Start(), so you should only call this if you are manually managing polling for tasks, and calling Tick yourself.
 func (f *FSM) Init() {
 	if f.initialState == nil {
