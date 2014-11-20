@@ -1,12 +1,13 @@
 package swf
 
 import (
-	"code.google.com/p/go-uuid/uuid"
-	"github.com/sclasen/swf4go/Godeps/_workspace/src/code.google.com/p/goprotobuf/proto"
 	"log"
 	"strconv"
 	"testing"
 	"time"
+
+	"code.google.com/p/go-uuid/uuid"
+	"code.google.com/p/goprotobuf/proto"
 )
 
 //Todo add tests of error handling mechanism
