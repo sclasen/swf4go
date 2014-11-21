@@ -14,8 +14,8 @@ import (
 	"github.com/bmizerany/aws4"
 )
 
-// WorkflowClient specifies ActivityWorkerClientoperations related to starting and stopping workflows.
-type WorkflowClient interface {
+// WorkflowWorkerClient specifies ActivityWorkerClient operations related to starting and stopping workflows.
+type WorkflowWorkerClient interface {
 	StartWorkflow(request StartWorkflowRequest) (*StartWorkflowResponse, error)
 	SignalWorkflow(request SignalWorkflowRequest) error
 	RequestCancelWorkflowExecution(request RequestCancelWorkflowExecution) error
