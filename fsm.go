@@ -28,7 +28,9 @@ const (
 type Decider func(*FSMContext, HistoryEvent, interface{}) Outcome
 
 type Outcome interface {
+	// Data returns the data for this Outcome.
 	Data() interface{}
+	// Decisions returns the list of Decisions for this Outcome.
 	Decisions() []Decision
 }
 
@@ -38,8 +40,10 @@ type TransitionOutcome struct {
 	decisions []Decision
 }
 
+// Data returns the data for this Outcome.
 func (t TransitionOutcome) Data() interface{} { return t.data }
 
+// Decisions returns the list of Decisions for this Outcome.
 func (t TransitionOutcome) Decisions() []Decision { return t.decisions }
 
 type StayOutcome struct {
@@ -47,29 +51,35 @@ type StayOutcome struct {
 	decisions []Decision
 }
 
+// Data returns the data for this Outcome.
 func (s StayOutcome) Data() interface{} { return s.data }
 
+// Decisions returns the list of Decisions for this Outcome.
 func (s StayOutcome) Decisions() []Decision { return s.decisions }
 
-//this can do things like check that the last decision is a termination?
+// TerminationOutcome can do things like check that the last decision is a termination.
 type TerminationOutcome struct {
 	data      interface{}
 	decisions []Decision
 }
 
+// Data returns the data for this Outcome.
 func (t TerminationOutcome) Data() interface{} { return t.data }
 
+// Decisions returns the list of Decisions for this Outcome.
 func (t TerminationOutcome) Decisions() []Decision { return t.decisions }
 
-//This could be used to purposefully put the workflow into an error state.
+// ErrorOutcome can be used to purposefully put the workflow into an error state.
 type ErrorOutcome struct {
 	state     string
 	data      interface{}
 	decisions []Decision
 }
 
+// Data returns the data for this Outcome.
 func (e ErrorOutcome) Data() interface{} { return e.data }
 
+// Decisions returns the list of Decisions for this Outcome.
 func (e ErrorOutcome) Decisions() []Decision { return e.decisions }
 
 // FSMState defines the behavior of one state of an FSM

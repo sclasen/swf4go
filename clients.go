@@ -97,11 +97,17 @@ type Region struct {
 }
 
 var (
-	USEast1      = &Region{"us-east-1", "https://swf.us-east-1.amazonaws.com", "https://kinesis.us-east-1.amazonaws.com"}
-	USWest1      = &Region{"us-west-1", "https://swf.us-west-1.amazonaws.com", "https://kinesis.us-west-1.amazonaws.com"}
-	USWest2      = &Region{"us-west-2", "https://swf.us-west-2.amazonaws.com", "https://kinesis.us-west-2.amazonaws.com"}
-	EUWest1      = &Region{"eu-west-1", "https://swf.eu-west-1.amazonaws.com", "https://kinesis.eu-west-1.amazonaws.com"}
+	// USEast1 is the AWS us-east-1 Region
+	USEast1 = &Region{"us-east-1", "https://swf.us-east-1.amazonaws.com", "https://kinesis.us-east-1.amazonaws.com"}
+	// USWest1 is the AWS us-west-1 Region
+	USWest1 = &Region{"us-west-1", "https://swf.us-west-1.amazonaws.com", "https://kinesis.us-west-1.amazonaws.com"}
+	// USWest2 is the AWS us-west-2 Region
+	USWest2 = &Region{"us-west-2", "https://swf.us-west-2.amazonaws.com", "https://kinesis.us-west-2.amazonaws.com"}
+	// EUWest1 is the AWS eu-west-1 Region
+	EUWest1 = &Region{"eu-west-1", "https://swf.eu-west-1.amazonaws.com", "https://kinesis.eu-west-1.amazonaws.com"}
+	// APNorthEast1 is the AWS ap-northeast-1 Region
 	APNorthEast1 = &Region{"ap-northeast-1", "https://swf.ap-northeast-1.amazonaws.com", "https://kinesis.ap-northeast-1.amazonaws.com"}
+	// APSouthEast1 is the AWS ap-southeast-1 Region
 	APSouthEast1 = &Region{"ap-southeast-1", "https://swf.ap-southeast-1.amazonaws.com", "https://kinesis.ap-southeast-1.amazonaws.com"}
 )
 
@@ -113,7 +119,7 @@ type Client struct {
 	Debug      bool
 }
 
-// NewClient creates a new Client which uses the given credentials to talk to the given region.
+// NewClient creates a new Client which uses the given credentials to talk to the given region with http.DefaultClient.
 func NewClient(key string, secret string, region *Region) *Client {
 	return &Client{
 		keys:       &aws4.Keys{AccessKey: key, SecretKey: secret},
@@ -122,7 +128,7 @@ func NewClient(key string, secret string, region *Region) *Client {
 	}
 }
 
-// NewClient creates a new Client which uses the given credentials to talk to the given region.
+// NewClientWithHTTPClient creates a new Client which uses the given credentials to talk to the given region with the specified http.Client.
 func NewClientWithHTTPClient(key string, secret string, region *Region, client *http.Client) *Client {
 	return &Client{
 		keys:       &aws4.Keys{AccessKey: key, SecretKey: secret},

@@ -221,7 +221,7 @@ func (p *PollerShutdownManager) Register(name string, stopChan chan bool, ackCha
 	p.registerChannelsInput <- &registeredPoller{name, stopChan, ackChan}
 }
 
-// Removes a registered pair of channels from the shutdown manager.
+// Deregister removes a registered pair of channels from the shutdown manager.
 func (p *PollerShutdownManager) Deregister(name string) {
 	p.deregisterChannelsInput <- name
 }
