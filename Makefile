@@ -20,9 +20,6 @@ tidy:
 	test -z "$$(goimports -l -d . | tee /dev/stderr)"
 	test -z "$$(golint . | tee /dev/stderr)"
 
-test-aws:
-	godep go test  ./... -aws
-
 imports:
 	goimports -w .
 
