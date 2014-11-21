@@ -74,7 +74,7 @@ func (p *DecisionTaskPoller) PollUntilShutdownBy(mgr *PollerShutdownManager, pol
 
 func (p *DecisionTaskPoller) logTaskLatency(resp *PollForDecisionTaskResponse) {
 	for _, e := range resp.Events {
-		if e.EventId == resp.StartedEventId {
+		if e.EventID == resp.StartedEventID {
 			elapsed := time.Since(e.EventTimestamp.Time)
 			log.Printf("component=DecisionTaskPoller at=decision-task-latency latency=%s workflow=%s", elapsed, resp.WorkflowType.Name)
 		}

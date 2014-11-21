@@ -123,7 +123,7 @@ func NewClient(key string, secret string, region *Region) *Client {
 }
 
 // NewClient creates a new Client which uses the given credentials to talk to the given region.
-func NewClientWithHttpClient(key string, secret string, region *Region, client *http.Client) *Client {
+func NewClientWithHTTPClient(key string, secret string, region *Region, client *http.Client) *Client {
 	return &Client{
 		keys:       &aws4.Keys{AccessKey: key, SecretKey: secret},
 		httpClient: client,

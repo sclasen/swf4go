@@ -18,7 +18,7 @@ func TestFSM(t *testing.T) {
 	fsm := FSM{
 		Name:       "test-fsm",
 		DataType:   TestData{},
-		Serializer: JsonStateSerializer{},
+		Serializer: JSONStateSerializer{},
 	}
 
 	fsm.AddInitialState(&FSMState{
@@ -30,7 +30,7 @@ func TestFSM(t *testing.T) {
 			decision := Decision{
 				DecisionType: DecisionTypeScheduleActivityTask,
 				ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   uuid.New(),
+					ActivityID:   uuid.New(),
 					ActivityType: ActivityType{Name: "activity", Version: "activityVersion"},
 					TaskList:     &TaskList{Name: "taskList"},
 					Input:        serialized,
@@ -60,7 +60,7 @@ func TestFSM(t *testing.T) {
 				decision := Decision{
 					DecisionType: DecisionTypeScheduleActivityTask,
 					ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
-						ActivityId:   uuid.New(),
+						ActivityID:   uuid.New(),
 						ActivityType: ActivityType{Name: "activity", Version: "activityVersion"},
 						TaskList:     &TaskList{Name: "taskList"},
 						Input:        serialized,
@@ -74,10 +74,10 @@ func TestFSM(t *testing.T) {
 	})
 
 	events := []HistoryEvent{
-		HistoryEvent{EventType: "DecisionTaskStarted", EventId: 3},
-		HistoryEvent{EventType: "DecisionTaskScheduled", EventId: 2},
+		HistoryEvent{EventType: "DecisionTaskStarted", EventID: 3},
+		HistoryEvent{EventType: "DecisionTaskScheduled", EventID: 2},
 		HistoryEvent{
-			EventId:   1,
+			EventID:   1,
 			EventType: "WorkflowExecutionStarted",
 			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
 				Input: "{\"States\":[]}",
@@ -87,7 +87,7 @@ func TestFSM(t *testing.T) {
 
 	first := &PollForDecisionTaskResponse{
 		Events:                 events,
-		PreviousStartedEventId: 0,
+		PreviousStartedEventID: 0,
 	}
 
 	decisions := fsm.Tick(first)
@@ -105,7 +105,7 @@ func TestFSM(t *testing.T) {
 
 	second := &PollForDecisionTaskResponse{
 		Events:                 secondEvents,
-		PreviousStartedEventId: 3,
+		PreviousStartedEventID: 3,
 	}
 
 	if state, _ := fsm.findSerializedState(secondEvents); state.StateName != "working" {
@@ -151,19 +151,19 @@ func DecisionsToEvents(decisions []Decision) []HistoryEvent {
 		if scheduleActivityPredicate(d) {
 			event := HistoryEvent{
 				EventType: "ActivityTaskCompleted",
-				EventId:   7,
+				EventID:   7,
 			}
 			events = append(events, event)
 			event = HistoryEvent{
 				EventType: "ActivityTaskScheduled",
-				EventId:   6,
+				EventID:   6,
 			}
 			events = append(events, event)
 		}
 		if stateMarkerPredicate(d) {
 			event := HistoryEvent{
 				EventType: "MarkerRecorded",
-				EventId:   5,
+				EventID:   5,
 				MarkerRecordedEventAttributes: &MarkerRecordedEventAttributes{
 					MarkerName: StateMarker,
 					Details:    d.RecordMarkerDecisionAttributes.Details,
@@ -218,7 +218,7 @@ func TestErrorHandling(t *testing.T) {
 	fsm := FSM{
 		Name:        "test-fsm",
 		DataType:    TestData{},
-		Serializer:  JsonStateSerializer{},
+		Serializer:  JSONStateSerializer{},
 		allowPanics: true,
 	}
 
@@ -250,7 +250,7 @@ func TestErrorHandling(t *testing.T) {
 
 	events := []HistoryEvent{
 		HistoryEvent{
-			EventId:   2,
+			EventID:   2,
 			EventType: EventTypeWorkflowExecutionSignaled,
 			WorkflowExecutionSignaledEventAttributes: &WorkflowExecutionSignaledEventAttributes{
 				SignalName: "NOT AN ERROR",
@@ -258,7 +258,7 @@ func TestErrorHandling(t *testing.T) {
 			},
 		},
 		HistoryEvent{
-			EventId:   1,
+			EventID:   1,
 			EventType: EventTypeWorkflowExecutionSignaled,
 			WorkflowExecutionSignaledEventAttributes: &WorkflowExecutionSignaledEventAttributes{
 				SignalName: ErrorSignal,
@@ -269,8 +269,8 @@ func TestErrorHandling(t *testing.T) {
 
 	resp := &PollForDecisionTaskResponse{
 		Events:                 events,
-		StartedEventId:         1,
-		PreviousStartedEventId: 0,
+		StartedEventID:         1,
+		PreviousStartedEventID: 0,
 	}
 
 	decisions := fsm.Tick(resp)
@@ -372,7 +372,7 @@ func ExampleFSM() {
 				DecisionType: DecisionTypeStartTimer,
 				StartTimerDecisionAttributes: &StartTimerDecisionAttributes{
 					StartToFireTimeout: timeoutSeconds,
-					TimerId:            "timeToSignal",
+					TimerID:            "timeToSignal",
 				},
 			}
 			decisions = append(decisions, timerDecision)
@@ -395,8 +395,8 @@ func ExampleFSM() {
 				SignalExternalWorkflowExecutionDecisionAttributes: &SignalExternalWorkflowExecutionDecisionAttributes{
 					SignalName: "hello",
 					Input:      f.Serialize(signalInput),
-					RunId:      f.RunId,
-					WorkflowId: f.WorkflowId,
+					RunID:      f.RunID,
+					WorkflowID: f.WorkflowID,
 				},
 			}
 			decisions = append(decisions, signalDecision)
@@ -418,7 +418,7 @@ func ExampleFSM() {
 		DataType:   StateData{},
 		Domain:     "exaple-swf-domain",
 		TaskList:   "example-decision-task-list-to-poll",
-		Serializer: &JsonStateSerializer{},
+		Serializer: &JSONStateSerializer{},
 	}
 	//add states to FSM
 	fsm.AddInitialState(waitForSignalState)
@@ -430,7 +430,7 @@ func ExampleFSM() {
 
 func TestChildRelator(t *testing.T) {
 	start := StartWorkflowRequest{
-		WorkflowId: "123",
+		WorkflowID: "123",
 		WorkflowType: WorkflowType{
 			Name:    "test",
 			Version: "123",
@@ -439,9 +439,9 @@ func TestChildRelator(t *testing.T) {
 
 	relator := new(ChildRelator)
 
-	relator.Relate("child.1", start.WorkflowId, start.WorkflowType)
+	relator.Relate("child.1", start.WorkflowID, start.WorkflowType)
 
-	serialized, err := JsonStateSerializer{}.Serialize(relator)
+	serialized, err := JSONStateSerializer{}.Serialize(relator)
 
 	if err != nil {
 		t.Fatal(err)
@@ -449,9 +449,9 @@ func TestChildRelator(t *testing.T) {
 
 	freshRelator := new(ChildRelator)
 
-	JsonStateSerializer{}.Deserialize(serialized, freshRelator)
+	JSONStateSerializer{}.Deserialize(serialized, freshRelator)
 
-	if freshRelator.WorkflowId("child.1") != "123" {
+	if freshRelator.WorkflowID("child.1") != "123" {
 		t.Fatal("id not 123")
 	}
 
