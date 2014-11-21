@@ -26,8 +26,9 @@ type DecisionTaskPoller struct {
 	TaskList string
 }
 
-// Poll polls the task list for a task. If there is a task it returns the task and true. If there is no task or an error polling, it returns nil and false.
-func (p *DecisionTaskPoller) Poll() (*PollForDecisionTaskResponse, bool) {
+// Poll polls the task list for a task. If there is no task available, nil is
+// returned. If an error is encountered, no task is returned.
+func (p *DecisionTaskPoller) Poll() (*PollForDecisionTaskResponse, error) {
 	resp, err := p.client.PollForDecisionTask(PollForDecisionTaskRequest{
 		Domain:       p.Domain,
 		Identity:     p.Identity,
@@ -36,15 +37,15 @@ func (p *DecisionTaskPoller) Poll() (*PollForDecisionTaskResponse, bool) {
 	})
 	if err != nil {
 		log.Printf("component=DecisionTaskPoller at=error error=%s", err.Error())
-		return nil, false
+		return nil, err
 	} else {
 		if resp.TaskToken != "" {
 			log.Printf("component=DecisionTaskPoller at=decision-task-recieved workflow=%s", resp.WorkflowType.Name)
 			p.logTaskLatency(resp)
-			return resp, true
+			return resp, nil
 		} else {
 			log.Println("component=DecisionTaskPoller at=decision-task-empty-response")
-			return nil, false
+			return nil, nil
 		}
 	}
 }
@@ -62,12 +63,16 @@ func (p *DecisionTaskPoller) PollUntilShutdownBy(mgr *PollerShutdownManager, pol
 			stopAck <- true
 			return
 		default:
-			task, ok := p.Poll()
-			if ok {
-				onTask(task)
-			} else {
-				log.Printf("component=DecisionTaskPoller fn=PollUntilShutdownBy at=poll-nok  poller=%s", pollerName)
+			task, err := p.Poll()
+			if err != nil {
+				log.Printf("component=DecisionTaskPoller fn=PollUntilShutdownBy at=poll-err  poller=%s error=%q", pollerName, err)
+				continue
 			}
+			if task == nil {
+				log.Printf("component=DecisionTaskPoller fn=PollUntilShutdownBy at=poll-no-task  poller=%s", pollerName)
+				continue
+			}
+			onTask(task)
 		}
 	}
 }
@@ -99,8 +104,9 @@ type ActivityTaskPoller struct {
 	TaskList string
 }
 
-// Poll polls the task list for a task. If there is a task it returns the task and true. If there is no task or an error polling, it returns nil and false.
-func (p *ActivityTaskPoller) Poll() (*PollForActivityTaskResponse, bool) {
+// Poll polls the task list for a task. If there is no task, nil is returned.
+// If an error is encountered, no task is returned.
+func (p *ActivityTaskPoller) Poll() (*PollForActivityTaskResponse, error) {
 	resp, err := p.client.PollForActivityTask(PollForActivityTaskRequest{
 		Domain:   p.Domain,
 		Identity: p.Identity,
@@ -108,14 +114,14 @@ func (p *ActivityTaskPoller) Poll() (*PollForActivityTaskResponse, bool) {
 	})
 	if err != nil {
 		log.Printf("component=ActivityTaskPoller at=error error=%s", err.Error())
-		return nil, false
+		return nil, err
 	} else {
 		if resp.TaskToken != "" {
 			log.Printf("component=ActivityTaskPoller at=activity-task-recieved activity=%s", resp.ActivityType.Name)
-			return resp, true
+			return resp, nil
 		} else {
 			log.Println("component=ActivityTaskPoller at=activity-task-empty-response")
-			return nil, false
+			return nil, nil
 		}
 	}
 }
@@ -133,12 +139,16 @@ func (p *ActivityTaskPoller) PollUntilShutdownBy(mgr *PollerShutdownManager, pol
 			stopAck <- true
 			return
 		default:
-			task, ok := p.Poll()
-			if ok {
-				onTask(task)
-			} else {
-				log.Printf("component=ActivityTaskPoller fn=PollUntilShutdownBy at=poll-nok  poller=%s", pollerName)
+			task, err := p.Poll()
+			if err != nil {
+				log.Printf("component=ActivityTaskPoller fn=PollUntilShutdownBy at=poll-err  poller=%s error=%q", pollerName, err)
+				continue
 			}
+			if task == nil {
+				log.Printf("component=ActivityTaskPoller fn=PollUntilShutdownBy at=poll-no-task  poller=%s", pollerName)
+				continue
+			}
+			onTask(task)
 		}
 	}
 }
