@@ -14,6 +14,18 @@ import (
 	"github.com/bmizerany/aws4"
 )
 
+// WorkflowClient is the combined client of the ActivityWorkerClient,
+// DecisionWorkerClient, KinesisClient, WorkflowAdminClient,
+// WorkflowInfoClient, and WorkflowWorkerClient interfaces.
+type WorkflowClient interface {
+	ActivityWorkerClient
+	DecisionWorkerClient
+	KinesisClient
+	WorkflowAdminClient
+	WorkflowInfoClient
+	WorkflowWorkerClient
+}
+
 // WorkflowWorkerClient specifies ActivityWorkerClient operations related to starting and stopping workflows.
 type WorkflowWorkerClient interface {
 	StartWorkflow(request StartWorkflowRequest) (*StartWorkflowResponse, error)
