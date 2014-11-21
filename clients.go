@@ -77,6 +77,12 @@ type WorkflowInfoClient interface {
 	ListDomains(request ListDomainsRequest) (*ListDomainsResponse, error)
 }
 
+// WorkflowAdminInfoClient is the combined interface of WorkflowAdminClient and WorkflowInfoClient.
+type WorkflowAdminInfoClient interface {
+	WorkflowAdminClient
+	WorkflowInfoClient
+}
+
 type KinesisClient interface {
 	PutRecord(request PutRecordRequest) (*PutRecordResponse, error)
 	CreateStream(request CreateStream) error

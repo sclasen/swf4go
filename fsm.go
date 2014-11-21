@@ -91,7 +91,7 @@ type FSM struct {
 	// Identity used in PollForDecisionTaskRequests, can be empty.
 	Identity string
 	// Client used to make SWF api requests.
-	Client *Client
+	Client WorkflowClient
 	// DataType of the data struct associated with this FSM.
 	// The data is automatically peristed to and loaded from workflow history by the FSM.
 	DataType interface{}
@@ -855,7 +855,7 @@ func (c *ChildRelator) WorkflowId(relation string) string {
 }
 
 // RunId is a utility to get the current RunId for a given workflowId, which is needed to do SignalExternalWorkflows
-func (c *ChildRelator) RunId(client *Client, domain string, workflowId string) (string, error) {
+func (c *ChildRelator) RunId(client WorkflowInfoClient, domain string, workflowId string) (string, error) {
 	info, err := c.WorkflowExecutionInfo(client, domain, workflowId)
 	if info != nil {
 		return info.Execution.RunId, err
@@ -864,7 +864,7 @@ func (c *ChildRelator) RunId(client *Client, domain string, workflowId string) (
 	return "", err
 }
 
-func (c *ChildRelator) WorkflowExecutionInfo(client *Client, domain string, workflowId string) (*WorkflowExecutionInfo, error) {
+func (c *ChildRelator) WorkflowExecutionInfo(client WorkflowInfoClient, domain string, workflowId string) (*WorkflowExecutionInfo, error) {
 	resp, err := client.ListOpenWorkflowExecutions(ListOpenWorkflowExecutionsRequest{
 		Domain: domain,
 		ExecutionFilter: &ExecutionFilter{
