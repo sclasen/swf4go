@@ -165,6 +165,7 @@ type registeredPoller struct {
 	stopAckChannel chan bool
 }
 
+// RegisterPollerShutdownManager creates a PollerShutdownManager and registers a os.Signal handler. This should be called once per process.
 func RegisterPollerShutdownManager() *PollerShutdownManager {
 
 	mgr := &PollerShutdownManager{

@@ -77,6 +77,7 @@ type WorkflowInfoClient interface {
 	ListDomains(request ListDomainsRequest) (*ListDomainsResponse, error)
 }
 
+// KinesisClient specifies operations used by this library on the aws kinesis api.
 type KinesisClient interface {
 	PutRecord(request PutRecordRequest) (*PutRecordResponse, error)
 	CreateStream(request CreateStream) error
@@ -339,17 +340,20 @@ func (c *Client) ListDomains(request ListDomainsRequest) (*ListDomainsResponse, 
 	return resp, err
 }
 
+// PutRecord executes http://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecord.html
 func (c *Client) PutRecord(request PutRecordRequest) (*PutRecordResponse, error) {
 	resp := &PutRecordResponse{}
 	err := c.kinesisReqWithResponse("PutRecord", request, resp)
 	return resp, err
 }
 
+//CreateStream executes http://docs.aws.amazon.com/kinesis/latest/APIReference/API_CreateStream.html
 func (c *Client) CreateStream(request CreateStream) error {
 	err := c.kinesisReqNoResponse("CreateStream", request)
 	return err
 }
 
+// DescribeStream executes http://docs.aws.amazon.com/kinesis/latest/APIReference/API_DescribeStream.html
 func (c *Client) DescribeStream(request DescribeStreamRequest) (*DescribeStreamResponse, error) {
 	resp := &DescribeStreamResponse{}
 	err := c.kinesisReqWithResponse("DescribeStream", request, resp)
@@ -489,6 +493,7 @@ func multiln(s string) {
 	}
 }
 
+// MustGetenv reads an environment variable, and panics if its not defined.
 func MustGetenv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {

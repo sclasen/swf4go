@@ -14,6 +14,7 @@ type ErrorResponse struct {
 	Message    string `json:"message"`
 }
 
+// constants for various SWF and Kinesis status and error codes.
 const (
 	StatusRegistered              = "REGISTERED"
 	StatusDeprecated              = "DEPRECATED"
@@ -1229,8 +1230,7 @@ type ActivityTypeInfo struct {
 	ActivityType    ActivityType `json:"activityType"`
 }
 
-// yes the json for kinesis has initial caps.
-
+// PutRecordRequest models the kinesis json protocol.
 type PutRecordRequest struct {
 	Data                      []byte
 	ExplicitHashKey           string `json:"ExplicitHashKey,omitempty"`
@@ -1239,22 +1239,26 @@ type PutRecordRequest struct {
 	StreamName                string
 }
 
+// PutRecordResponse models the kinesis json protocol.
 type PutRecordResponse struct {
 	SequenceNumber string
 	ShardID        string
 }
 
+// CreateStream models the kinesis json protocol.
 type CreateStream struct {
 	ShardCount int
 	StreamName string
 }
 
+// DescribeStreamRequest models the kinesis json protocol.
 type DescribeStreamRequest struct {
 	ExclusiveStartShardID *string
 	Limit                 *int
 	StreamName            string
 }
 
+// DescribeStreamResponse models the kinesis json protocol.
 type DescribeStreamResponse struct {
 	StreamDescription struct {
 		HasMoreShards bool
@@ -1277,8 +1281,10 @@ type DescribeStreamResponse struct {
 	}
 }
 
+//Date is a wrapper struct around time.Time that provides json de/serialization in swf's expected format.
 type Date struct{ time.Time }
 
+//UnmarshalJSON parses the swf representation of time.
 func (s *Date) UnmarshalJSON(b []byte) error {
 	timestamp, err := strconv.ParseFloat(string(b), 64)
 	if err != nil {
@@ -1288,6 +1294,7 @@ func (s *Date) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+//MarshalJSON formats a time.Time into swf's expected format.
 func (s *Date) MarshalJSON() ([]byte, error) {
 	timestamp := s.Time.Unix()
 	return []byte(strconv.FormatFloat(float64(timestamp), 'g', -1, 64)), nil

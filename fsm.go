@@ -27,6 +27,7 @@ const (
 // TypedDecider to avoid having to do the assertion.
 type Decider func(*FSMContext, HistoryEvent, interface{}) Outcome
 
+// Outcome represents the minimum data needed to be returned by a Decider.
 type Outcome interface {
 	// Data returns the data for this Outcome.
 	Data() interface{}
@@ -34,6 +35,7 @@ type Outcome interface {
 	Decisions() []Decision
 }
 
+// TransitionOutcome is an Outcome in which the FSM will transtion to a new state.
 type TransitionOutcome struct {
 	data      interface{}
 	state     string
@@ -46,6 +48,7 @@ func (t TransitionOutcome) Data() interface{} { return t.data }
 // Decisions returns the list of Decisions for this Outcome.
 func (t TransitionOutcome) Decisions() []Decision { return t.decisions }
 
+// StayOutcome is an Outcome in which the FSM will remain in the same state.
 type StayOutcome struct {
 	data      interface{}
 	decisions []Decision
@@ -376,6 +379,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []Decision {
 	return final
 }
 
+// Stay is a helper func to easily create a StayOutcome.
 func (f *FSMContext) Stay(data interface{}, decisions []Decision) Outcome {
 	return StayOutcome{
 		data:      data,
@@ -383,6 +387,7 @@ func (f *FSMContext) Stay(data interface{}, decisions []Decision) Outcome {
 	}
 }
 
+// Goto is a helper func to easily create a TransitionOutcome.
 func (f *FSMContext) Goto(state string, data interface{}, decisions []Decision) Outcome {
 	return TransitionOutcome{
 		state:     state,
@@ -391,6 +396,7 @@ func (f *FSMContext) Goto(state string, data interface{}, decisions []Decision) 
 	}
 }
 
+// Terminate is a helper func to easily create a TerminationOutcome.
 func (f *FSMContext) Terminate(data interface{}, decisions []Decision) Outcome {
 	return TerminationOutcome{
 		data:      data,
@@ -398,6 +404,7 @@ func (f *FSMContext) Terminate(data interface{}, decisions []Decision) Outcome {
 	}
 }
 
+// Goto is a helper func to easily create an ErrorOutcome.
 func (f *FSMContext) Error(data interface{}, decisions []Decision) Outcome {
 	return ErrorOutcome{
 		state:     "error",
@@ -672,6 +679,7 @@ type StateSerializer interface {
 // JSONStateSerializer is a StateSerializer that uses go json serialization.
 type JSONStateSerializer struct{}
 
+// Serialize serializes the given struct to a json string.
 func (j JSONStateSerializer) Serialize(state interface{}) (string, error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(state); err != nil {
@@ -680,13 +688,16 @@ func (j JSONStateSerializer) Serialize(state interface{}) (string, error) {
 	return b.String(), nil
 }
 
+// Deserialize unmarshalls the given (json) string into the given struct
 func (j JSONStateSerializer) Deserialize(serialized string, state interface{}) error {
 	err := json.NewDecoder(strings.NewReader(serialized)).Decode(state)
 	return err
 }
 
+// ProtobufStateSerializer is a StateSerializer that uses base64 encoded protobufs.
 type ProtobufStateSerializer struct{}
 
+// Serialize serializes the given struct into bytes with protobuf, then base64 encodes it.  The struct passed to Serialize must satisfy proto.Message.
 func (p ProtobufStateSerializer) Serialize(state interface{}) (string, error) {
 	bin, err := proto.Marshal(state.(proto.Message))
 	if err != nil {
@@ -695,6 +706,7 @@ func (p ProtobufStateSerializer) Serialize(state interface{}) (string, error) {
 	return base64.StdEncoding.EncodeToString(bin), nil
 }
 
+// Deserialize base64 decodes the given string then unmarshalls the bytes into the struct using protobuf. The struct passed to Deserialize must satisfy proto.Message.
 func (p ProtobufStateSerializer) Deserialize(serialized string, state interface{}) error {
 	bin, err := base64.StdEncoding.DecodeString(serialized)
 	if err != nil {
@@ -758,6 +770,7 @@ func (m MarshalledDecider) Decide(f *FSMContext, h HistoryEvent, data interface{
 	return m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0].Interface().(Outcome)
 }
 
+// FSMContext is populated by the FSM machinery and passed to Deciders.
 type FSMContext struct {
 	fsm *FSM
 	WorkflowType
@@ -766,30 +779,41 @@ type FSMContext struct {
 	stateData interface{}
 }
 
+// EventData will extract a payload from the given HistoryEvent and unmarshall it into the given struct.
 func (f *FSMContext) EventData(h HistoryEvent, data interface{}) {
 	f.fsm.EventData(f, h, data)
 }
 
+// Serialize will use the current fsm's Serializer to serialize the given struct. It will panic on errors, which is ok in the context of a Decider.
+// If you want to handle errors, use Serializer().Serialize(...) instead.
 func (f *FSMContext) Serialize(data interface{}) string {
 	return f.fsm.Serialize(data)
 }
 
+// Serializer returns the current fsm's Serializer.
 func (f *FSMContext) Serializer() StateSerializer {
 	return f.fsm.Serializer
 }
 
+// Deserialize will use the current fsm' Serializer to deserialize the given string into the given struct. It will panic on errors, which is ok in the context of a Decider.
+// If you want to handle errors, use Serializer().Deserialize(...) instead.
 func (f *FSMContext) Deserialize(serialized string, data interface{}) {
 	f.fsm.Deserialize(serialized, data)
 }
 
+// EmptyDecisions is a helper to give you an empty Decision slice.
 func (f *FSMContext) EmptyDecisions() []Decision {
 	return f.fsm.EmptyDecisions()
 }
 
+// ActivityCorrelator is a serialization-friendly struct that can be used as a field in your main StateData struct in an FSM.
+// You can use it to track the type of a given activity, so you know how to react when an event that signals the
+// end or an activity hits your Decider.  This is missing from the SWF api.
 type ActivityCorrelator struct {
 	Activities map[string]*ActivityType
 }
 
+// Correlate establishes a mapping of eventId to ActivityType. The HistoryEvent is expected to be of type EventTypeActivityTaskScheduled.
 func (a *ActivityCorrelator) Correlate(h HistoryEvent) {
 	if a.Activities == nil {
 		a.Activities = make(map[string]*ActivityType)
@@ -799,6 +823,7 @@ func (a *ActivityCorrelator) Correlate(h HistoryEvent) {
 	}
 }
 
+// RemoveCorrelation gcs a mapping of eventId to ActivityType. The HistoryEvent is expected to be of type EventTypeActivityTaskCompleted,EventTypeActivityTaskFailed,EventTypeActivityTaskTimedOut.
 func (a *ActivityCorrelator) RemoveCorrelation(h HistoryEvent) {
 	if a.Activities == nil {
 		a.Activities = make(map[string]*ActivityType)
@@ -813,6 +838,7 @@ func (a *ActivityCorrelator) RemoveCorrelation(h HistoryEvent) {
 	}
 }
 
+// ActivityType returns the ActivityType that is correlates with a given event. The HistoryEvent is expected to be of type EventTypeActivityTaskCompleted,EventTypeActivityTaskFailed,EventTypeActivityTaskTimedOut.
 func (a *ActivityCorrelator) ActivityType(h HistoryEvent) *ActivityType {
 	if a.Activities == nil {
 		a.Activities = make(map[string]*ActivityType)
@@ -828,6 +854,9 @@ func (a *ActivityCorrelator) ActivityType(h HistoryEvent) *ActivityType {
 	return nil
 }
 
+// ChildRelator is a serialization-friendly struct that can be used as a field in your main StateData struct in an FSM.
+// You can use it to track the child workflows of the current FSM. Prefer this to using SWF-inbuilt child workflows if you have long-running workflows which
+// may ContinueAsNewWorkflow, since doing so does not re-establish any parent-child relationships.
 type ChildRelator struct {
 	ChildIDs   map[string]string
 	ChildTypes map[string]*WorkflowType
@@ -842,23 +871,27 @@ func (c *ChildRelator) checkInit() {
 	}
 }
 
+// Relate adds a named relationship between the current FSM and a child workflow of the given id and type.
 func (c *ChildRelator) Relate(relation string, id string, workflow WorkflowType) {
 	c.checkInit()
 	c.ChildIDs[relation] = id
 	c.ChildTypes[relation] = &workflow
 }
 
+// RemoveRelation removes a named relationship between the current FSM and a child workflow.
 func (c *ChildRelator) RemoveRelation(relation string) {
 	c.checkInit()
 	delete(c.ChildIDs, relation)
 	delete(c.ChildTypes, relation)
 }
 
+// WorkflowType returns the WorkflowType for the named relationship.
 func (c *ChildRelator) WorkflowType(relation string) *WorkflowType {
 	c.checkInit()
 	return c.ChildTypes[relation]
 }
 
+// WorkflowID returns the workflowId for the named relationship.
 func (c *ChildRelator) WorkflowID(relation string) string {
 	c.checkInit()
 	return c.ChildIDs[relation]
@@ -874,6 +907,7 @@ func (c *ChildRelator) RunID(client WorkflowInfoClient, domain string, workflowI
 	return "", err
 }
 
+// WorkflowExecutionInfo is a helper function to get the current execution info for a given workflowID.
 func (c *ChildRelator) WorkflowExecutionInfo(client WorkflowInfoClient, domain string, workflowID string) (*WorkflowExecutionInfo, error) {
 	resp, err := client.ListOpenWorkflowExecutions(ListOpenWorkflowExecutionsRequest{
 		Domain: domain,

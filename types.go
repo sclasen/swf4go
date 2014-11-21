@@ -266,11 +266,13 @@ func (a *ActivityTypeMigrator) describe(domain string, name string, version stri
 	return resp, nil
 }
 
+// StreamMigrator will create any Kinesis Streams required.
 type StreamMigrator struct {
 	Streams []CreateStream
 	Client  KinesisClient
 }
 
+// Migrate checks that the desired streams have been created and if they have not, creates them.s
 func (s *StreamMigrator) Migrate() {
 	for _, st := range s.Streams {
 		if s.isCreated(st) {
