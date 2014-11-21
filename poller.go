@@ -37,16 +37,14 @@ func (p *DecisionTaskPoller) Poll() (*PollForDecisionTaskResponse, bool) {
 	if err != nil {
 		log.Printf("component=DecisionTaskPoller at=error error=%s", err.Error())
 		return nil, false
-	} else {
-		if resp.TaskToken != "" {
-			log.Printf("component=DecisionTaskPoller at=decision-task-recieved workflow=%s", resp.WorkflowType.Name)
-			p.logTaskLatency(resp)
-			return resp, true
-		} else {
-			log.Println("component=DecisionTaskPoller at=decision-task-empty-response")
-			return nil, false
-		}
 	}
+	if resp.TaskToken != "" {
+		log.Printf("component=DecisionTaskPoller at=decision-task-recieved workflow=%s", resp.WorkflowType.Name)
+		p.logTaskLatency(resp)
+		return resp, true
+	}
+	log.Println("component=DecisionTaskPoller at=decision-task-empty-response")
+	return nil, false
 }
 
 // PollUntilShutdownBy will poll until signaled to shutdown by the PollerShutdownManager. this func blocks, so run it in a goroutine if necessary.
@@ -109,15 +107,13 @@ func (p *ActivityTaskPoller) Poll() (*PollForActivityTaskResponse, bool) {
 	if err != nil {
 		log.Printf("component=ActivityTaskPoller at=error error=%s", err.Error())
 		return nil, false
-	} else {
-		if resp.TaskToken != "" {
-			log.Printf("component=ActivityTaskPoller at=activity-task-recieved activity=%s", resp.ActivityType.Name)
-			return resp, true
-		} else {
-			log.Println("component=ActivityTaskPoller at=activity-task-empty-response")
-			return nil, false
-		}
 	}
+	if resp.TaskToken != "" {
+		log.Printf("component=ActivityTaskPoller at=activity-task-recieved activity=%s", resp.ActivityType.Name)
+		return resp, true
+	}
+	log.Println("component=ActivityTaskPoller at=activity-task-empty-response")
+	return nil, false
 }
 
 // PollUntilShutdownBy will poll until signaled to shutdown by the PollerShutdownManager. this func blocks, so run it in a goroutine if necessary.

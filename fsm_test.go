@@ -319,9 +319,9 @@ func TestProtobufSerialization(t *testing.T) {
 //This is c&p from som generated code
 
 type ConfigVar struct {
-	Key              *string `protobuf:"bytes,1,req,name=key" json:"key,omitempty"`
-	Str              *string `protobuf:"bytes,2,opt,name=str" json:"str,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
+	Key             *string `protobuf:"bytes,1,req,name=key" json:"key,omitempty"`
+	Str             *string `protobuf:"bytes,2,opt,name=str" json:"str,omitempty"`
+	XXXunrecognized []byte  `json:"-"`
 }
 
 func (m *ConfigVar) Reset()         { *m = ConfigVar{} }
@@ -364,7 +364,7 @@ func ExampleFSM() {
 			if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == "hello" {
 				hello := &Hello{}
 				f.EventData(h, &Hello{})
-				d.Count += 1
+				d.Count++
 				d.Message = hello.Message
 			}
 			timeoutSeconds := "5" //swf uses stringy numbers in many places
