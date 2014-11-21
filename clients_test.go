@@ -86,10 +86,10 @@ type LoggingRoundTripper struct {
 func (l *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	log.Printf("request: target=%s", req.Header.Get("X-Amz-Target"))
 	resp, err := l.Transport.RoundTrip(req)
-	if err == nil {
-		log.Printf("response: status=%s", resp)
-	} else {
+	if err != nil {
 		log.Printf("error %s", err)
+	} else {
+		log.Printf("response: status=%s", resp.Status)
 	}
 	return resp, err
 }
