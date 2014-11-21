@@ -1,6 +1,6 @@
 all: build
 
-travis: tidy test
+travis: dependencies tidy test
 
 install:
 	 go install
@@ -28,3 +28,6 @@ fmt:
 
 ready: fmt imports tidy
 
+dependencies:
+	go get code.google.com/p/goprotobuf/proto
+	go get github.com/bmizerany/aws4
