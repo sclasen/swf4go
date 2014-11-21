@@ -21,10 +21,10 @@ const (
 	SYSTEM_ERROR_SIGNAL = "FSM.SystemError"
 )
 
-// Decider decides an Outcome based on an event and the current data for an FSM
-// the interface{} parameter that is passed to the decider is safe to
-// be asserted to be the type of the DataType field in the FSM
-// Alternatively you can use the TypedDecider to avoid having to do the assertion.
+// Decider decides an Outcome based on an event and the current data for an
+// FSM. You can assert the interface{} parameter that is passed to the Decider
+// as the type of the DataType field in the FSM. Alternatively, you can use the
+// TypedDecider to avoid having to do the assertion.
 type Decider func(*FSMContext, HistoryEvent, interface{}) Outcome
 
 type Outcome interface {
