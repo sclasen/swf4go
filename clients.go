@@ -34,7 +34,7 @@ type ActivityWorkerClient interface {
 	RecordActivityTaskHeartbeat(request RecordActivityTaskHeartbeatRequest) (*RecordActivityTaskHeartbeatResponse, error)
 	RespondActivityTaskCompleted(request RespondActivityTaskCompletedRequest) error
 	RespondActivityTaskFailed(request RespondActivityTaskFailedRequest) error
-	RespondActivityTaskCanceled(request RespondActivityTaskFailedRequest) error
+	RespondActivityTaskCanceled(request RespondActivityTaskCanceledRequest) error
 }
 
 // WorkflowAdminClient specifies swf client operations related to registering and deprecating domains, workflows and activities.
