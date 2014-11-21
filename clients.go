@@ -68,6 +68,7 @@ type WorkflowInfoClient interface {
 type KinesisClient interface {
 	PutRecord(request PutRecordRequest) (*PutRecordResponse, error)
 	CreateStream(request CreateStream) error
+	DescribeStream(request DescribeStreamRequest) (*DescribeStreamResponse, error)
 }
 
 // Region specifies the AWS region that a client should connect to.
