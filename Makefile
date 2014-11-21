@@ -31,3 +31,4 @@ ready: fmt imports tidy
 dependencies:
 	go get code.google.com/p/goprotobuf/proto
 	go get github.com/bmizerany/aws4
+	go get code.google.com/p/go-uuid/uuid
