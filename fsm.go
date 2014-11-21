@@ -853,3 +853,32 @@ func (c *ChildRelator) WorkflowId(relation string) string {
 	c.checkInit()
 	return c.ChildIds[relation]
 }
+
+// RunId is a utility to get the current RunId for a given workflowId, which is needed to do SignalExternalWorkflows
+func (c *ChildRelator) RunId(client *Client, domain string, workflowId string) (string, error) {
+	info, err := c.WorkflowExecutionInfo(client, domain, workflowId)
+	if info != nil {
+		return info.Execution.RunId, err
+	}
+
+	return "", err
+}
+
+func (c *ChildRelator) WorkflowExecutionInfo(client *Client, domain string, workflowId string) (*WorkflowExecutionInfo, error) {
+	resp, err := client.ListOpenWorkflowExecutions(ListOpenWorkflowExecutionsRequest{
+		Domain: domain,
+		ExecutionFilter: &ExecutionFilter{
+			WorkflowId: workflowId,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.ExecutionInfos) == 1 {
+		return &resp.ExecutionInfos[0], nil
+	}
+
+	return nil, errors.New("more than one execution")
+
+}
