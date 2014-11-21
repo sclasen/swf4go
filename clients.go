@@ -13,7 +13,7 @@ import (
 	"unicode"
 )
 
-// WorkflowClient specifies ActivityWorkerClientoperations related to starting and stopping workflows.
+// WorkflowClient specifies ActivityWorkerClient operations related to starting and stopping workflows.
 type WorkflowClient interface {
 	StartWorkflow(request StartWorkflowRequest) (*StartWorkflowResponse, error)
 	SignalWorkflow(request SignalWorkflowRequest) error
