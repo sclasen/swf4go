@@ -134,7 +134,7 @@ func Find(decisions []Decision, predicate func(Decision) bool) bool {
 }
 
 func stateMarkerPredicate(d Decision) bool {
-	return d.DecisionType == "RecordMarker" && d.RecordMarkerDecisionAttributes.MarkerName == STATE_MARKER
+	return d.DecisionType == "RecordMarker" && d.RecordMarkerDecisionAttributes.MarkerName == StateMarker
 }
 
 func scheduleActivityPredicate(d Decision) bool {
@@ -165,7 +165,7 @@ func DecisionsToEvents(decisions []Decision) []HistoryEvent {
 				EventType: "MarkerRecorded",
 				EventId:   5,
 				MarkerRecordedEventAttributes: &MarkerRecordedEventAttributes{
-					MarkerName: STATE_MARKER,
+					MarkerName: StateMarker,
 					Details:    d.RecordMarkerDecisionAttributes.Details,
 				},
 			}
@@ -238,7 +238,7 @@ func TestErrorHandling(t *testing.T) {
 	fsm.AddErrorState(&FSMState{
 		Name: "error",
 		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) Outcome {
-			if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == ERROR_SIGNAL {
+			if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == ErrorSignal {
 				log.Println("in error recovery")
 				return f.Goto("ok", &TestData{States: []string{"recovered"}}, nil)
 			}
@@ -261,7 +261,7 @@ func TestErrorHandling(t *testing.T) {
 			EventId:   1,
 			EventType: EventTypeWorkflowExecutionSignaled,
 			WorkflowExecutionSignaledEventAttributes: &WorkflowExecutionSignaledEventAttributes{
-				SignalName: ERROR_SIGNAL,
+				SignalName: ErrorSignal,
 				Input:      "{}",
 			},
 		},

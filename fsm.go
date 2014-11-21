@@ -16,9 +16,9 @@ import (
 
 // constants used as marker names or signal names
 const (
-	STATE_MARKER        = "FSM.State"
-	ERROR_SIGNAL        = "FSM.Error"
-	SYSTEM_ERROR_SIGNAL = "FSM.SystemError"
+	StateMarker       = "FSM.State"
+	ErrorSignal       = "FSM.Error"
+	SystemErrorSignal = "FSM.SystemError"
 )
 
 // Decider decides an Outcome based on an event and the current data for an FSM
@@ -145,12 +145,12 @@ func (f *FSM) DefaultErrorState() *FSMState {
 			case EventTypeWorkflowExecutionSignaled:
 				{
 					switch h.WorkflowExecutionSignaledEventAttributes.SignalName {
-					case ERROR_SIGNAL:
+					case ErrorSignal:
 						err := &SerializedDecisionError{}
 						f.Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
 						f.log("action=default-handle-error at=handle-decision-error error=%+v", err)
 						f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowId)
-					case SYSTEM_ERROR_SIGNAL:
+					case SystemErrorSignal:
 						err := &SerializedSystemError{}
 						f.Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
 						f.log("action=default-handle-error at=handle-system-error error=%+v", err)
@@ -237,7 +237,7 @@ func (f *FSM) Start() {
 
 func (f *FSM) stateFromDecisions(decisions []Decision) string {
 	for _, d := range decisions {
-		if d.DecisionType == DecisionTypeRecordMarker && d.RecordMarkerDecisionAttributes.MarkerName == STATE_MARKER {
+		if d.DecisionType == DecisionTypeRecordMarker && d.RecordMarkerDecisionAttributes.MarkerName == StateMarker {
 			return d.RecordMarkerDecisionAttributes.Details
 		}
 	}
@@ -437,7 +437,7 @@ func (f *FSM) panicSafeDecide(state *FSMState, context *FSMContext, event Histor
 }
 
 func (f *FSM) captureDecisionError(execution WorkflowExecution, event int, lastEvents []HistoryEvent, stateName string, stateData interface{}, err error) []Decision {
-	return f.captureError(ERROR_SIGNAL, execution, &SerializedDecisionError{
+	return f.captureError(ErrorSignal, execution, &SerializedDecisionError{
 		ErrorEventId:        lastEvents[event].EventId,
 		UnprocessedEventIds: f.eventIds(lastEvents[event+1:]),
 		StateName:           stateName,
@@ -446,7 +446,7 @@ func (f *FSM) captureDecisionError(execution WorkflowExecution, event int, lastE
 }
 
 func (f *FSM) captureSystemError(execution WorkflowExecution, errorType string, lastEvents []HistoryEvent, err error) []Decision {
-	return f.captureError(SYSTEM_ERROR_SIGNAL, execution, &SerializedSystemError{
+	return f.captureError(SystemErrorSignal, execution, &SerializedSystemError{
 		ErrorType:           errorType,
 		UnprocessedEventIds: f.eventIds(lastEvents),
 		Error:               err,
@@ -572,7 +572,7 @@ func (f *FSM) appendState(outcome *TransitionOutcome) ([]Decision, error) {
 		StateData: serializedData,
 	}
 
-	d, err := f.recordMarker(STATE_MARKER, state)
+	d, err := f.recordMarker(StateMarker, state)
 	if err != nil {
 		return nil, err
 	}
@@ -607,13 +607,13 @@ func (f *FSM) Stop() {
 }
 
 func (f *FSM) isStateMarker(e HistoryEvent) bool {
-	return e.EventType == EventTypeMarkerRecorded && e.MarkerRecordedEventAttributes.MarkerName == STATE_MARKER
+	return e.EventType == EventTypeMarkerRecorded && e.MarkerRecordedEventAttributes.MarkerName == StateMarker
 }
 
 func (f *FSM) isErrorSignal(e HistoryEvent) bool {
 	if e.EventType == EventTypeWorkflowExecutionSignaled {
 		switch e.WorkflowExecutionSignaledEventAttributes.SignalName {
-		case SYSTEM_ERROR_SIGNAL, ERROR_SIGNAL:
+		case SystemErrorSignal, ErrorSignal:
 			return true
 		default:
 			return false
