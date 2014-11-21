@@ -8,10 +8,10 @@ import (
 	"time"
 )
 
-// DecisionTaskPoller returns a DecisionTaskPoller whick can be used to poll the given task list.
-func (c *Client) DecisionTaskPoller(domain string, identity string, taskList string) *DecisionTaskPoller {
+// NewDecisionTaskPoller returns a DecisionTaskPoller whick can be used to poll the given task list.
+func NewDecisionTaskPoller(dwc DecisionWorkerClient, domain string, identity string, taskList string) *DecisionTaskPoller {
 	return &DecisionTaskPoller{
-		client:   c,
+		client:   dwc,
 		Domain:   domain,
 		Identity: identity,
 		TaskList: taskList,
@@ -81,10 +81,10 @@ func (p *DecisionTaskPoller) logTaskLatency(resp *PollForDecisionTaskResponse) {
 	}
 }
 
-// ActivityTaskPoller returns an ActivityTaskPoller.
-func (c *Client) ActivityTaskPoller(domain string, identity string, taskList string) *ActivityTaskPoller {
+// NewActivityTaskPoller returns an ActivityTaskPoller.
+func NewActivityTaskPoller(awc ActivityWorkerClient, domain string, identity string, taskList string) *ActivityTaskPoller {
 	return &ActivityTaskPoller{
-		client:   c,
+		client:   awc,
 		Domain:   domain,
 		Identity: identity,
 		TaskList: taskList,
@@ -93,7 +93,7 @@ func (c *Client) ActivityTaskPoller(domain string, identity string, taskList str
 
 // ActivityTaskPoller polls a given task list in a domain for activity tasks, and sends tasks on its Tasks channel.
 type ActivityTaskPoller struct {
-	client   *Client
+	client   ActivityWorkerClient
 	Identity string
 	Domain   string
 	TaskList string

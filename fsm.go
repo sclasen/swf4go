@@ -201,7 +201,7 @@ func (f *FSM) Init() {
 // If you wish to manage polling and calling Tick() yourself, you dont need to start the FSM, just call Init().
 func (f *FSM) Start() {
 	f.Init()
-	poller := f.Client.DecisionTaskPoller(f.Domain, f.Identity, f.TaskList)
+	poller := NewDecisionTaskPoller(f.Client, f.Domain, f.Identity, f.TaskList)
 	go poller.PollUntilShutdownBy(f.PollerShutdownManager, fmt.Sprintf("%s-poller", f.Name), func(decisionTask *PollForDecisionTaskResponse) {
 		decisions := f.Tick(decisionTask)
 		err := f.Client.RespondDecisionTaskCompleted(
