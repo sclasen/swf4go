@@ -8,10 +8,10 @@ import (
 	"time"
 )
 
-// DecisionTaskPoller returns a DecisionTaskPoller whick can be used to poll the given task list.
-func (c *Client) DecisionTaskPoller(domain string, identity string, taskList string) *DecisionTaskPoller {
+// NewDecisionTaskPoller returns a DecisionTaskPoller whick can be used to poll the given task list.
+func NewDecisionTaskPoller(dwc DecisionWorkerClient, domain string, identity string, taskList string) *DecisionTaskPoller {
 	return &DecisionTaskPoller{
-		client:   c,
+		client:   dwc,
 		Domain:   domain,
 		Identity: identity,
 		TaskList: taskList,
@@ -79,17 +79,17 @@ func (p *DecisionTaskPoller) PollUntilShutdownBy(mgr *PollerShutdownManager, pol
 
 func (p *DecisionTaskPoller) logTaskLatency(resp *PollForDecisionTaskResponse) {
 	for _, e := range resp.Events {
-		if e.EventId == resp.StartedEventId {
+		if e.EventID == resp.StartedEventID {
 			elapsed := time.Since(e.EventTimestamp.Time)
 			log.Printf("component=DecisionTaskPoller at=decision-task-latency latency=%s workflow=%s", elapsed, resp.WorkflowType.Name)
 		}
 	}
 }
 
-// ActivityTaskPoller returns an ActivityTaskPoller.
-func (c *Client) ActivityTaskPoller(domain string, identity string, taskList string) *ActivityTaskPoller {
+// NewActivityTaskPoller returns an ActivityTaskPoller.
+func NewActivityTaskPoller(awc ActivityWorkerClient, domain string, identity string, taskList string) *ActivityTaskPoller {
 	return &ActivityTaskPoller{
-		client:   c,
+		client:   awc,
 		Domain:   domain,
 		Identity: identity,
 		TaskList: taskList,
@@ -98,7 +98,7 @@ func (c *Client) ActivityTaskPoller(domain string, identity string, taskList str
 
 // ActivityTaskPoller polls a given task list in a domain for activity tasks, and sends tasks on its Tasks channel.
 type ActivityTaskPoller struct {
-	client   *Client
+	client   ActivityWorkerClient
 	Identity string
 	Domain   string
 	TaskList string
@@ -235,7 +235,7 @@ func (p *PollerShutdownManager) Register(name string, stopChan chan bool, ackCha
 	p.registerChannelsInput <- &registeredPoller{name, stopChan, ackChan}
 }
 
-// Removes a registered pair of channels from the shutdown manager.
+// Deregister removes a registered pair of channels from the shutdown manager.
 func (p *PollerShutdownManager) Deregister(name string) {
 	p.deregisterChannelsInput <- name
 }

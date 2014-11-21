@@ -13,7 +13,7 @@ type TypesMigrator struct {
 }
 
 // NewTypesMigrator will create a TypesMigrator that will migrate the given domains, workflows, and activities. Pass nil if you dont need a given domain, workflow or activity registered or deprecated.
-func NewTypesMigrator(client *Client, registerDomains []RegisterDomain, deprecateDomains []DeprecateDomain, registerWorkflows []RegisterWorkflowType, deprecateWorkflows []DeprecateWorkflowType, registerActivities []RegisterActivityType, deprecateActivities []DeprecateActivityType) *TypesMigrator {
+func NewTypesMigrator(client WorkflowClient, registerDomains []RegisterDomain, deprecateDomains []DeprecateDomain, registerWorkflows []RegisterWorkflowType, deprecateWorkflows []DeprecateWorkflowType, registerActivities []RegisterActivityType, deprecateActivities []DeprecateActivityType) *TypesMigrator {
 	return &TypesMigrator{
 		DomainMigrator: &DomainMigrator{
 			RegisteredDomains: registerDomains, DeprecatedDomains: deprecateDomains, Client: client,
@@ -51,7 +51,7 @@ func (t *TypesMigrator) Migrate() {
 type DomainMigrator struct {
 	RegisteredDomains []RegisterDomain
 	DeprecatedDomains []DeprecateDomain
-	Client            *Client
+	Client            WorkflowClient
 }
 
 // Migrate asserts that DeprecatedDomains are deprecated or deprecates them, then asserts that RegisteredDomains are registered or registers them.
@@ -124,7 +124,7 @@ func (d *DomainMigrator) describe(domain string) (*DescribeDomainResponse, *Erro
 type WorkflowTypeMigrator struct {
 	RegisteredWorkflowTypes []RegisterWorkflowType
 	DeprecatedWorkflowTypes []DeprecateWorkflowType
-	Client                  *Client
+	Client                  WorkflowClient
 }
 
 // Migrate asserts that DeprecatedWorkflowTypes are deprecated or deprecates them, then asserts that RegisteredWorkflowTypes are registered or registers them.
@@ -197,7 +197,7 @@ func (w *WorkflowTypeMigrator) describe(domain string, name string, version stri
 type ActivityTypeMigrator struct {
 	RegisteredActivityTypes []RegisterActivityType
 	DeprecatedActivityTypes []DeprecateActivityType
-	Client                  *Client
+	Client                  WorkflowClient
 }
 
 // Migrate asserts that DeprecatedActivityTypes are deprecated or deprecates them, then asserts that RegisteredActivityTypes are registered or registers them.
@@ -268,7 +268,7 @@ func (a *ActivityTypeMigrator) describe(domain string, name string, version stri
 
 type StreamMigrator struct {
 	Streams []CreateStream
-	Client  *Client
+	Client  KinesisClient
 }
 
 func (s *StreamMigrator) Migrate() {

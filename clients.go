@@ -3,7 +3,6 @@ package swf
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/bmizerany/aws4"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -11,10 +10,24 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/bmizerany/aws4"
 )
 
-// WorkflowClient specifies ActivityWorkerClient operations related to starting and stopping workflows.
+// WorkflowClient is the combined client of the ActivityWorkerClient,
+// DecisionWorkerClient, KinesisClient, WorkflowAdminClient,
+// WorkflowInfoClient, and WorkflowWorkerClient interfaces.
 type WorkflowClient interface {
+	ActivityWorkerClient
+	DecisionWorkerClient
+	KinesisClient
+	WorkflowAdminClient
+	WorkflowInfoClient
+	WorkflowWorkerClient
+}
+
+// WorkflowWorkerClient specifies ActivityWorkerClient operations related to starting and stopping workflows.
+type WorkflowWorkerClient interface {
 	StartWorkflow(request StartWorkflowRequest) (*StartWorkflowResponse, error)
 	SignalWorkflow(request SignalWorkflowRequest) error
 	RequestCancelWorkflowExecution(request RequestCancelWorkflowExecution) error
@@ -33,7 +46,7 @@ type ActivityWorkerClient interface {
 	RecordActivityTaskHeartbeat(request RecordActivityTaskHeartbeatRequest) (*RecordActivityTaskHeartbeatResponse, error)
 	RespondActivityTaskCompleted(request RespondActivityTaskCompletedRequest) error
 	RespondActivityTaskFailed(request RespondActivityTaskFailedRequest) error
-	RespondActivityTaskCanceled(request RespondActivityTaskFailedRequest) error
+	RespondActivityTaskCanceled(request RespondActivityTaskCanceledRequest) error
 }
 
 // WorkflowAdminClient specifies swf client operations related to registering and deprecating domains, workflows and activities.
@@ -67,6 +80,7 @@ type WorkflowInfoClient interface {
 type KinesisClient interface {
 	PutRecord(request PutRecordRequest) (*PutRecordResponse, error)
 	CreateStream(request CreateStream) error
+	DescribeStream(request DescribeStreamRequest) (*DescribeStreamResponse, error)
 }
 
 // Region specifies the AWS region that a client should connect to.
@@ -77,11 +91,17 @@ type Region struct {
 }
 
 var (
-	USEast1      = &Region{"us-east-1", "https://swf.us-east-1.amazonaws.com", "https://kinesis.us-east-1.amazonaws.com"}
-	USWest1      = &Region{"us-west-1", "https://swf.us-west-1.amazonaws.com", "https://kinesis.us-west-1.amazonaws.com"}
-	USWest2      = &Region{"us-west-2", "https://swf.us-west-2.amazonaws.com", "https://kinesis.us-west-2.amazonaws.com"}
-	EUWest1      = &Region{"eu-west-1", "https://swf.eu-west-1.amazonaws.com", "https://kinesis.eu-west-1.amazonaws.com"}
+	// USEast1 is the AWS us-east-1 Region
+	USEast1 = &Region{"us-east-1", "https://swf.us-east-1.amazonaws.com", "https://kinesis.us-east-1.amazonaws.com"}
+	// USWest1 is the AWS us-west-1 Region
+	USWest1 = &Region{"us-west-1", "https://swf.us-west-1.amazonaws.com", "https://kinesis.us-west-1.amazonaws.com"}
+	// USWest2 is the AWS us-west-2 Region
+	USWest2 = &Region{"us-west-2", "https://swf.us-west-2.amazonaws.com", "https://kinesis.us-west-2.amazonaws.com"}
+	// EUWest1 is the AWS eu-west-1 Region
+	EUWest1 = &Region{"eu-west-1", "https://swf.eu-west-1.amazonaws.com", "https://kinesis.eu-west-1.amazonaws.com"}
+	// APNorthEast1 is the AWS ap-northeast-1 Region
 	APNorthEast1 = &Region{"ap-northeast-1", "https://swf.ap-northeast-1.amazonaws.com", "https://kinesis.ap-northeast-1.amazonaws.com"}
+	// APSouthEast1 is the AWS ap-southeast-1 Region
 	APSouthEast1 = &Region{"ap-southeast-1", "https://swf.ap-southeast-1.amazonaws.com", "https://kinesis.ap-southeast-1.amazonaws.com"}
 )
 
@@ -93,7 +113,7 @@ type Client struct {
 	Debug      bool
 }
 
-// NewClient creates a new Client which uses the given credentials to talk to the given region.
+// NewClient creates a new Client which uses the given credentials to talk to the given region with http.DefaultClient.
 func NewClient(key string, secret string, region *Region) *Client {
 	return &Client{
 		keys:       &aws4.Keys{AccessKey: key, SecretKey: secret},
@@ -102,8 +122,8 @@ func NewClient(key string, secret string, region *Region) *Client {
 	}
 }
 
-// NewClient creates a new Client which uses the given credentials to talk to the given region.
-func NewClientWithHttpClient(key string, secret string, region *Region, client *http.Client) *Client {
+// NewClientWithHTTPClient creates a new Client which uses the given credentials to talk to the given region with the specified http.Client.
+func NewClientWithHTTPClient(key string, secret string, region *Region, client *http.Client) *Client {
 	return &Client{
 		keys:       &aws4.Keys{AccessKey: key, SecretKey: secret},
 		httpClient: client,

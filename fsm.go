@@ -16,9 +16,9 @@ import (
 
 // constants used as marker names or signal names
 const (
-	STATE_MARKER        = "FSM.State"
-	ERROR_SIGNAL        = "FSM.Error"
-	SYSTEM_ERROR_SIGNAL = "FSM.SystemError"
+	StateMarker       = "FSM.State"
+	ErrorSignal       = "FSM.Error"
+	SystemErrorSignal = "FSM.SystemError"
 )
 
 // Decider decides an Outcome based on an event and the current data for an
@@ -28,7 +28,9 @@ const (
 type Decider func(*FSMContext, HistoryEvent, interface{}) Outcome
 
 type Outcome interface {
+	// Data returns the data for this Outcome.
 	Data() interface{}
+	// Decisions returns the list of Decisions for this Outcome.
 	Decisions() []Decision
 }
 
@@ -38,8 +40,10 @@ type TransitionOutcome struct {
 	decisions []Decision
 }
 
+// Data returns the data for this Outcome.
 func (t TransitionOutcome) Data() interface{} { return t.data }
 
+// Decisions returns the list of Decisions for this Outcome.
 func (t TransitionOutcome) Decisions() []Decision { return t.decisions }
 
 type StayOutcome struct {
@@ -47,29 +51,35 @@ type StayOutcome struct {
 	decisions []Decision
 }
 
+// Data returns the data for this Outcome.
 func (s StayOutcome) Data() interface{} { return s.data }
 
+// Decisions returns the list of Decisions for this Outcome.
 func (s StayOutcome) Decisions() []Decision { return s.decisions }
 
-//this can do things like check that the last decision is a termination?
+// TerminationOutcome can do things like check that the last decision is a termination.
 type TerminationOutcome struct {
 	data      interface{}
 	decisions []Decision
 }
 
+// Data returns the data for this Outcome.
 func (t TerminationOutcome) Data() interface{} { return t.data }
 
+// Decisions returns the list of Decisions for this Outcome.
 func (t TerminationOutcome) Decisions() []Decision { return t.decisions }
 
-//This could be used to purposefully put the workflow into an error state.
+// ErrorOutcome can be used to purposefully put the workflow into an error state.
 type ErrorOutcome struct {
 	state     string
 	data      interface{}
 	decisions []Decision
 }
 
+// Data returns the data for this Outcome.
 func (e ErrorOutcome) Data() interface{} { return e.data }
 
+// Decisions returns the list of Decisions for this Outcome.
 func (e ErrorOutcome) Decisions() []Decision { return e.decisions }
 
 // FSMState defines the behavior of one state of an FSM
@@ -91,7 +101,7 @@ type FSM struct {
 	// Identity used in PollForDecisionTaskRequests, can be empty.
 	Identity string
 	// Client used to make SWF api requests.
-	Client *Client
+	Client WorkflowClient
 	// DataType of the data struct associated with this FSM.
 	// The data is automatically peristed to and loaded from workflow history by the FSM.
 	DataType interface{}
@@ -145,16 +155,16 @@ func (f *FSM) DefaultErrorState() *FSMState {
 			case EventTypeWorkflowExecutionSignaled:
 				{
 					switch h.WorkflowExecutionSignaledEventAttributes.SignalName {
-					case ERROR_SIGNAL:
+					case ErrorSignal:
 						err := &SerializedDecisionError{}
 						f.Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
 						f.log("action=default-handle-error at=handle-decision-error error=%+v", err)
-						f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowId)
-					case SYSTEM_ERROR_SIGNAL:
+						f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowID)
+					case SystemErrorSignal:
 						err := &SerializedSystemError{}
 						f.Deserialize(h.WorkflowExecutionSignaledEventAttributes.Input, err)
 						f.log("action=default-handle-error at=handle-system-error error=%+v", err)
-						f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowId)
+						f.log("YOU SHOULD CREATE AN ERROR STATE FOR YOUR FSM, Workflow %s is Hung", h.WorkflowExecutionSignaledEventAttributes.ExternalWorkflowExecution.WorkflowID)
 					default:
 						f.log("action=default-handle-error at=process-signal-event event=%+v", h)
 					}
@@ -188,8 +198,8 @@ func (f *FSM) Init() {
 	}
 
 	if f.Serializer == nil {
-		f.log("action=start at=no-serializer defaulting-to=JsonSerializer")
-		f.Serializer = &JsonStateSerializer{}
+		f.log("action=start at=no-serializer defaulting-to=JSONSerializer")
+		f.Serializer = &JSONStateSerializer{}
 	}
 
 	if f.PollerShutdownManager == nil {
@@ -201,7 +211,7 @@ func (f *FSM) Init() {
 // If you wish to manage polling and calling Tick() yourself, you dont need to start the FSM, just call Init().
 func (f *FSM) Start() {
 	f.Init()
-	poller := f.Client.DecisionTaskPoller(f.Domain, f.Identity, f.TaskList)
+	poller := NewDecisionTaskPoller(f.Client, f.Domain, f.Identity, f.TaskList)
 	go poller.PollUntilShutdownBy(f.PollerShutdownManager, fmt.Sprintf("%s-poller", f.Name), func(decisionTask *PollForDecisionTaskResponse) {
 		decisions := f.Tick(decisionTask)
 		err := f.Client.RespondDecisionTaskCompleted(
@@ -220,13 +230,13 @@ func (f *FSM) Start() {
 				resp, err := f.Client.PutRecord(PutRecordRequest{
 					StreamName: f.KinesisStream,
 					//partition by workflow
-					PartitionKey: decisionTask.WorkflowExecution.WorkflowId,
+					PartitionKey: decisionTask.WorkflowExecution.WorkflowID,
 					Data:         []byte(stateToReplicate),
 				})
 				if err != nil {
 					f.log("action=tick at=replicate-state-failed error=%s", err.Error())
 				} else {
-					f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardId, resp.SequenceNumber)
+					f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardID, resp.SequenceNumber)
 				}
 				//todo error handling retries etc.
 			}
@@ -237,7 +247,7 @@ func (f *FSM) Start() {
 
 func (f *FSM) stateFromDecisions(decisions []Decision) string {
 	for _, d := range decisions {
-		if d.DecisionType == DecisionTypeRecordMarker && d.RecordMarkerDecisionAttributes.MarkerName == STATE_MARKER {
+		if d.DecisionType == DecisionTypeRecordMarker && d.RecordMarkerDecisionAttributes.MarkerName == StateMarker {
 			return d.RecordMarkerDecisionAttributes.Details
 		}
 	}
@@ -269,7 +279,7 @@ func (f *FSM) Deserialize(serialized string, data interface{}) {
 // Tick is called when the DecisionTaskPoller receives a PollForDecisionTaskResponse in its polling loop.
 // It is exported to facilitate testing.
 func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []Decision {
-	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventId, decisionTask.Events)
+	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventID, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
 	outcome := new(TransitionOutcome)
 	context := &FSMContext{f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, "", nil}
@@ -325,7 +335,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []Decision {
 	//if the outcome changes the state use the right FSMState
 	for i := len(lastEvents) - 1; i >= 0; i-- {
 		e := lastEvents[i]
-		f.log("action=tick at=history id=%d type=%s", e.EventId, e.EventType)
+		f.log("action=tick at=history id=%d type=%s", e.EventID, e.EventType)
 		fsmState, ok := f.states[outcome.state]
 		if ok {
 			context.State = outcome.state
@@ -437,26 +447,26 @@ func (f *FSM) panicSafeDecide(state *FSMState, context *FSMContext, event Histor
 }
 
 func (f *FSM) captureDecisionError(execution WorkflowExecution, event int, lastEvents []HistoryEvent, stateName string, stateData interface{}, err error) []Decision {
-	return f.captureError(ERROR_SIGNAL, execution, &SerializedDecisionError{
-		ErrorEventId:        lastEvents[event].EventId,
-		UnprocessedEventIds: f.eventIds(lastEvents[event+1:]),
+	return f.captureError(ErrorSignal, execution, &SerializedDecisionError{
+		ErrorEventID:        lastEvents[event].EventID,
+		UnprocessedEventIDs: f.eventIDs(lastEvents[event+1:]),
 		StateName:           stateName,
 		StateData:           stateData,
 	})
 }
 
 func (f *FSM) captureSystemError(execution WorkflowExecution, errorType string, lastEvents []HistoryEvent, err error) []Decision {
-	return f.captureError(SYSTEM_ERROR_SIGNAL, execution, &SerializedSystemError{
+	return f.captureError(SystemErrorSignal, execution, &SerializedSystemError{
 		ErrorType:           errorType,
-		UnprocessedEventIds: f.eventIds(lastEvents),
+		UnprocessedEventIDs: f.eventIDs(lastEvents),
 		Error:               err,
 	})
 }
 
-func (f *FSM) eventIds(events []HistoryEvent) []int {
+func (f *FSM) eventIDs(events []HistoryEvent) []int {
 	ids := make([]int, len(events))
 	for _, e := range events {
-		ids = append(ids, e.EventId)
+		ids = append(ids, e.EventID)
 	}
 	return ids
 }
@@ -471,8 +481,8 @@ func (f *FSM) captureError(signal string, execution WorkflowExecution, error int
 	d := Decision{
 		DecisionType: DecisionTypeSignalExternalWorkflowExecution,
 		SignalExternalWorkflowExecutionDecisionAttributes: &SignalExternalWorkflowExecutionDecisionAttributes{
-			WorkflowId: execution.WorkflowId,
-			RunId:      execution.RunId,
+			WorkflowID: execution.WorkflowID,
+			RunID:      execution.RunID,
 			SignalName: signal,
 			Input:      r.RecordMarkerDecisionAttributes.Details,
 		},
@@ -537,7 +547,7 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryE
 	var errorEvents []HistoryEvent
 
 	for _, event := range events {
-		if event.EventId == prevStarted {
+		if event.EventID == prevStarted {
 			return lastEvents, errorEvents
 		}
 		switch event.EventType {
@@ -572,7 +582,7 @@ func (f *FSM) appendState(outcome *TransitionOutcome) ([]Decision, error) {
 		StateData: serializedData,
 	}
 
-	d, err := f.recordMarker(STATE_MARKER, state)
+	d, err := f.recordMarker(StateMarker, state)
 	if err != nil {
 		return nil, err
 	}
@@ -607,13 +617,13 @@ func (f *FSM) Stop() {
 }
 
 func (f *FSM) isStateMarker(e HistoryEvent) bool {
-	return e.EventType == EventTypeMarkerRecorded && e.MarkerRecordedEventAttributes.MarkerName == STATE_MARKER
+	return e.EventType == EventTypeMarkerRecorded && e.MarkerRecordedEventAttributes.MarkerName == StateMarker
 }
 
 func (f *FSM) isErrorSignal(e HistoryEvent) bool {
 	if e.EventType == EventTypeWorkflowExecutionSignaled {
 		switch e.WorkflowExecutionSignaledEventAttributes.SignalName {
-		case SYSTEM_ERROR_SIGNAL, ERROR_SIGNAL:
+		case SystemErrorSignal, ErrorSignal:
 			return true
 		default:
 			return false
@@ -638,8 +648,8 @@ type SerializedState struct {
 // SerializedDecisionError is a wrapper struct that allows serializing the context in which an error in a Decider occurred
 // into a WorkflowSignaledEvent in the workflow history.
 type SerializedDecisionError struct {
-	ErrorEventId        int         `json:"errorEventIds"`
-	UnprocessedEventIds []int       `json:"unprocessedEventIds"`
+	ErrorEventID        int         `json:"errorEventIds"`
+	UnprocessedEventIDs []int       `json:"unprocessedEventIds"`
 	StateName           string      `json:"stateName"`
 	StateData           interface{} `json:"stateData"`
 }
@@ -650,7 +660,7 @@ type SerializedDecisionError struct {
 type SerializedSystemError struct {
 	ErrorType           string      `json:"errorType"`
 	Error               interface{} `json:"error"`
-	UnprocessedEventIds []int       `json:"unprocessedEventIds"`
+	UnprocessedEventIDs []int       `json:"unprocessedEventIds"`
 }
 
 // StateSerializer defines the interface for serializing state to and deserializing state from the workflow history.
@@ -659,10 +669,10 @@ type StateSerializer interface {
 	Deserialize(serialized string, state interface{}) error
 }
 
-// JsonStateSerializer is a StateSerializer that uses go json serialization.
-type JsonStateSerializer struct{}
+// JSONStateSerializer is a StateSerializer that uses go json serialization.
+type JSONStateSerializer struct{}
 
-func (j JsonStateSerializer) Serialize(state interface{}) (string, error) {
+func (j JSONStateSerializer) Serialize(state interface{}) (string, error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(state); err != nil {
 		return "", err
@@ -670,7 +680,7 @@ func (j JsonStateSerializer) Serialize(state interface{}) (string, error) {
 	return b.String(), nil
 }
 
-func (j JsonStateSerializer) Deserialize(serialized string, state interface{}) error {
+func (j JSONStateSerializer) Deserialize(serialized string, state interface{}) error {
 	err := json.NewDecoder(strings.NewReader(serialized)).Decode(state)
 	return err
 }
@@ -785,7 +795,7 @@ func (a *ActivityCorrelator) Correlate(h HistoryEvent) {
 		a.Activities = make(map[string]*ActivityType)
 	}
 	if h.EventType == EventTypeActivityTaskScheduled {
-		a.Activities[strconv.Itoa(h.EventId)] = &h.ActivityTaskScheduledEventAttributes.ActivityType
+		a.Activities[strconv.Itoa(h.EventID)] = &h.ActivityTaskScheduledEventAttributes.ActivityType
 	}
 }
 
@@ -795,11 +805,11 @@ func (a *ActivityCorrelator) RemoveCorrelation(h HistoryEvent) {
 	}
 	switch h.EventType {
 	case EventTypeActivityTaskCompleted:
-		delete(a.Activities, strconv.Itoa(h.ActivityTaskCompletedEventAttributes.ScheduledEventId))
+		delete(a.Activities, strconv.Itoa(h.ActivityTaskCompletedEventAttributes.ScheduledEventID))
 	case EventTypeActivityTaskFailed:
-		delete(a.Activities, strconv.Itoa(h.ActivityTaskFailedEventAttributes.ScheduledEventId))
+		delete(a.Activities, strconv.Itoa(h.ActivityTaskFailedEventAttributes.ScheduledEventID))
 	case EventTypeActivityTaskTimedOut:
-		delete(a.Activities, strconv.Itoa(h.ActivityTaskTimedOutEventAttributes.ScheduledEventId))
+		delete(a.Activities, strconv.Itoa(h.ActivityTaskTimedOutEventAttributes.ScheduledEventID))
 	}
 }
 
@@ -809,17 +819,17 @@ func (a *ActivityCorrelator) ActivityType(h HistoryEvent) *ActivityType {
 	}
 	switch h.EventType {
 	case EventTypeActivityTaskCompleted:
-		return a.Activities[strconv.Itoa(h.ActivityTaskCompletedEventAttributes.ScheduledEventId)]
+		return a.Activities[strconv.Itoa(h.ActivityTaskCompletedEventAttributes.ScheduledEventID)]
 	case EventTypeActivityTaskFailed:
-		return a.Activities[strconv.Itoa(h.ActivityTaskFailedEventAttributes.ScheduledEventId)]
+		return a.Activities[strconv.Itoa(h.ActivityTaskFailedEventAttributes.ScheduledEventID)]
 	case EventTypeActivityTaskTimedOut:
-		return a.Activities[strconv.Itoa(h.ActivityTaskTimedOutEventAttributes.ScheduledEventId)]
+		return a.Activities[strconv.Itoa(h.ActivityTaskTimedOutEventAttributes.ScheduledEventID)]
 	}
 	return nil
 }
 
 type ChildRelator struct {
-	ChildIds   map[string]string
+	ChildIDs   map[string]string
 	ChildTypes map[string]*WorkflowType
 }
 
@@ -827,20 +837,20 @@ func (c *ChildRelator) checkInit() {
 	if c.ChildTypes == nil {
 		c.ChildTypes = make(map[string]*WorkflowType)
 	}
-	if c.ChildIds == nil {
-		c.ChildIds = make(map[string]string)
+	if c.ChildIDs == nil {
+		c.ChildIDs = make(map[string]string)
 	}
 }
 
 func (c *ChildRelator) Relate(relation string, id string, workflow WorkflowType) {
 	c.checkInit()
-	c.ChildIds[relation] = id
+	c.ChildIDs[relation] = id
 	c.ChildTypes[relation] = &workflow
 }
 
 func (c *ChildRelator) RemoveRelation(relation string) {
 	c.checkInit()
-	delete(c.ChildIds, relation)
+	delete(c.ChildIDs, relation)
 	delete(c.ChildTypes, relation)
 }
 
@@ -849,26 +859,26 @@ func (c *ChildRelator) WorkflowType(relation string) *WorkflowType {
 	return c.ChildTypes[relation]
 }
 
-func (c *ChildRelator) WorkflowId(relation string) string {
+func (c *ChildRelator) WorkflowID(relation string) string {
 	c.checkInit()
-	return c.ChildIds[relation]
+	return c.ChildIDs[relation]
 }
 
-// RunId is a utility to get the current RunId for a given workflowId, which is needed to do SignalExternalWorkflows
-func (c *ChildRelator) RunId(client *Client, domain string, workflowId string) (string, error) {
-	info, err := c.WorkflowExecutionInfo(client, domain, workflowId)
+// RunID is a utility to get the current RunID for a given workflowID, which is needed to do SignalExternalWorkflows
+func (c *ChildRelator) RunID(client WorkflowInfoClient, domain string, workflowID string) (string, error) {
+	info, err := c.WorkflowExecutionInfo(client, domain, workflowID)
 	if info != nil {
-		return info.Execution.RunId, err
+		return info.Execution.RunID, err
 	}
 
 	return "", err
 }
 
-func (c *ChildRelator) WorkflowExecutionInfo(client *Client, domain string, workflowId string) (*WorkflowExecutionInfo, error) {
+func (c *ChildRelator) WorkflowExecutionInfo(client WorkflowInfoClient, domain string, workflowID string) (*WorkflowExecutionInfo, error) {
 	resp, err := client.ListOpenWorkflowExecutions(ListOpenWorkflowExecutionsRequest{
 		Domain: domain,
 		ExecutionFilter: &ExecutionFilter{
-			WorkflowId: workflowId,
+			WorkflowID: workflowID,
 		},
 	})
 	if err != nil {

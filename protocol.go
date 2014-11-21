@@ -34,29 +34,29 @@ type StartWorkflowRequest struct {
 	TagList                      []string     `json:"tagList,omitempty"`
 	TaskList                     *TaskList    `json:"taskList,omitempty"`
 	TaskStartToCloseTimeout      string       `json:"taskStartToCloseTimeout,omitempty"`
-	WorkflowId                   string       `json:"workflowId"`
+	WorkflowID                   string       `json:"workflowId"`
 	WorkflowType                 WorkflowType `json:"workflowType"`
 }
 
 // StartWorkflowResponse models the swf json protocol.
 type StartWorkflowResponse struct {
-	RunId string `json:"runId"`
+	RunID string `json:"runId"`
 }
 
 // RequestCancelWorkflowExecution models the swf json protocol.
 type RequestCancelWorkflowExecution struct {
 	Domain     string `json:"domain"`
-	RunId      string `json:"runId,omitempty"`
-	WorkflowId string `json:"workflowId"`
+	RunID      string `json:"runId,omitempty"`
+	WorkflowID string `json:"workflowId"`
 }
 
 // SignalWorkflowRequest models the swf json protocol.
 type SignalWorkflowRequest struct {
 	Domain     string `json:"domain"`
 	Input      string `json:"input,omitempty"`
-	RunId      string `json:"runId,omitempty"`
+	RunID      string `json:"runId,omitempty"`
 	SignalName string `json:"signalName"`
-	WorkflowId string `json:"workflowId"`
+	WorkflowID string `json:"workflowId"`
 }
 
 // ListWorkflowTypesRequest models the swf json protocol.
@@ -81,8 +81,8 @@ type TerminateWorkflowExecution struct {
 	Details     string `json:"details,omitempty"`
 	Domain      string `json:"domain"`
 	Reason      string `json:"reason,omitempty"`
-	RunId       string `json:"runId,omitempty"`
-	WorkflowId  string `json:"workflowId,omitempty"`
+	RunID       string `json:"runId,omitempty"`
+	WorkflowID  string `json:"workflowId,omitempty"`
 }
 
 /*DecisionWorkerProtocol*/
@@ -101,8 +101,8 @@ type PollForDecisionTaskRequest struct {
 type PollForDecisionTaskResponse struct {
 	Events                 []HistoryEvent    `json:"events"`
 	NextPageToken          string            `json:"nextPageToken"`
-	PreviousStartedEventId int               `json:"previousStartedEventId"`
-	StartedEventId         int               `json:"startedEventId"`
+	PreviousStartedEventID int               `json:"previousStartedEventId"`
+	StartedEventID         int               `json:"startedEventId"`
 	TaskToken              string            `json:"taskToken"`
 	WorkflowExecution      WorkflowExecution `json:"workflowExecution"`
 	WorkflowType           WorkflowType      `json:"workflowType"`
@@ -242,7 +242,7 @@ type HistoryEvent struct {
 	DecisionTaskScheduledEventAttributes                           *DecisionTaskScheduledEventAttributes                           `json:"decisionTaskScheduledEventAttributes,omitempty"`
 	DecisionTaskStartedEventAttributes                             *DecisionTaskStartedEventAttributes                             `json:"decisionTaskStartedEventAttributes,omitempty"`
 	DecisionTaskTimedOutEventAttributes                            *DecisionTaskTimedOutEventAttributes                            `json:"decisionTaskTimedOutEventAttributes,omitempty"`
-	EventId                                                        int                                                             `json:"eventId"`
+	EventID                                                        int                                                             `json:"eventId"`
 	EventTimestamp                                                 *Date                                                           `json:"eventTimestamp"`
 	EventType                                                      string                                                          `json:"eventType"`
 	ExternalWorkflowExecutionCancelRequestedEventAttributes        *ExternalWorkflowExecutionCancelRequestedEventAttributes        `json:"externalWorkflowExecutionCancelRequestedEventAttributes,omitempty"`
@@ -276,7 +276,7 @@ type HistoryEvent struct {
 func (h HistoryEvent) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("HistoryEvent{ ")
-	buffer.WriteString(fmt.Sprintf("EventId: %d,", h.EventId))
+	buffer.WriteString(fmt.Sprintf("EventId: %d,", h.EventID))
 	buffer.WriteString(fmt.Sprintf("EventTimestamp: %s, ", h.EventTimestamp))
 	buffer.WriteString(fmt.Sprintf("EventType:, %s", h.EventType))
 	buffer.WriteString(fmt.Sprintf("%+v", eventTypes[h.EventType](h)))
@@ -295,39 +295,39 @@ func EventTypes() []string {
 
 // ActivityTaskCancelRequestedEventAttributes models the swf json protocol.
 type ActivityTaskCancelRequestedEventAttributes struct {
-	ActivityId                   string `json:"activityId"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	ActivityID                   string `json:"activityId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 }
 
 // ActivityTaskCanceledEventAttributes models the swf json protocol.
 type ActivityTaskCanceledEventAttributes struct {
 	Details                      string `json:"details"`
-	LatestCancelRequestedEventId int    `json:"latestCancelRequestedEventId"`
-	ScheduledEventId             int    `json:"scheduledEventId"`
-	StartedEventId               int    `json:"startedEventId"`
+	LatestCancelRequestedEventID int    `json:"latestCancelRequestedEventId"`
+	ScheduledEventID             int    `json:"scheduledEventId"`
+	StartedEventID               int    `json:"startedEventId"`
 }
 
 // ActivityTaskCompletedEventAttributes models the swf json protocol.
 type ActivityTaskCompletedEventAttributes struct {
 	Result           string `json:"result"`
-	ScheduledEventId int    `json:"scheduledEventId"`
-	StartedEventId   int    `json:"startedEventId"`
+	ScheduledEventID int    `json:"scheduledEventId"`
+	StartedEventID   int    `json:"startedEventId"`
 }
 
 // ActivityTaskFailedEventAttributes models the swf json protocol.
 type ActivityTaskFailedEventAttributes struct {
 	Details          string `json:"details"`
 	Reason           string `json:"reason"`
-	ScheduledEventId int    `json:"scheduledEventId"`
-	StartedEventId   int    `json:"startedEventId"`
+	ScheduledEventID int    `json:"scheduledEventId"`
+	StartedEventID   int    `json:"startedEventId"`
 }
 
 // ActivityTaskScheduledEventAttributes models the swf json protocol.
 type ActivityTaskScheduledEventAttributes struct {
-	ActivityId                   string       `json:"activityId"`
+	ActivityID                   string       `json:"activityId"`
 	ActivityType                 ActivityType `json:"activityType"`
 	Control                      string       `json:"control"`
-	DecisionTaskCompletedEventId int          `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int          `json:"decisionTaskCompletedEventId"`
 	HeartbeatTimeout             string       `json:"heartbeatTimeout"`
 	Input                        string       `json:"input"`
 	ScheduleToCloseTimeout       string       `json:"scheduleToCloseTimeout"`
@@ -339,44 +339,44 @@ type ActivityTaskScheduledEventAttributes struct {
 // ActivityTaskStartedEventAttributes models the swf json protocol.
 type ActivityTaskStartedEventAttributes struct {
 	Identity         string `json:"identity"`
-	ScheduledEventId int    `json:"scheduledEventId"`
+	ScheduledEventID int    `json:"scheduledEventId"`
 }
 
 // ActivityTaskTimedOutEventAttributes models the swf json protocol.
 type ActivityTaskTimedOutEventAttributes struct {
 	Details          string `json:"details"`
-	ScheduledEventId int    `json:"scheduledEventId"`
-	StartedEventId   int    `json:"startedEventId"`
+	ScheduledEventID int    `json:"scheduledEventId"`
+	StartedEventID   int    `json:"startedEventId"`
 	TimeoutType      string `json:"timeoutType"`
 }
 
 // CancelTimerFailedEventAttributes models the swf json protocol.
 type CancelTimerFailedEventAttributes struct {
 	Cause                        string `json:"cause"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
-	TimerId                      string `json:"timerId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
+	TimerID                      string `json:"timerId"`
 }
 
 // CancelWorkflowExecutionFailedEventAttributes models the swf json protocol.
 type CancelWorkflowExecutionFailedEventAttributes struct {
 	Cause                        string `json:"cause"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 }
 
 // ChildWorkflowExecutionCanceledEventAttributes models the swf json protocol.
 type ChildWorkflowExecutionCanceledEventAttributes struct {
 	Details           string            `json:"details"`
-	InitiatedEventId  int               `json:"initiatedEventId"`
-	StartedEventId    int               `json:"startedEventId"`
+	InitiatedEventID  int               `json:"initiatedEventId"`
+	StartedEventID    int               `json:"startedEventId"`
 	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
 	WorkflowType      WorkflowType      `json:"workflowType"`
 }
 
 // ChildWorkflowExecutionCompletedEventAttributes models the swf json protocol.
 type ChildWorkflowExecutionCompletedEventAttributes struct {
-	InitiatedEventId  int               `json:"initiatedEventId"`
+	InitiatedEventID  int               `json:"initiatedEventId"`
 	Result            string            `json:"result"`
-	StartedEventId    int               `json:"startedEventId"`
+	StartedEventID    int               `json:"startedEventId"`
 	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
 	WorkflowType      WorkflowType      `json:"workflowType"`
 }
@@ -384,32 +384,32 @@ type ChildWorkflowExecutionCompletedEventAttributes struct {
 // ChildWorkflowExecutionFailedEventAttributes models the swf json protocol.
 type ChildWorkflowExecutionFailedEventAttributes struct {
 	Details           string            `json:"details"`
-	InitiatedEventId  int               `json:"initiatedEventId"`
+	InitiatedEventID  int               `json:"initiatedEventId"`
 	Reason            string            `json:"reason"`
-	StartedEventId    int               `json:"startedEventId"`
+	StartedEventID    int               `json:"startedEventId"`
 	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
 	WorkflowType      WorkflowType      `json:"workflowType"`
 }
 
 // ChildWorkflowExecutionStartedEventAttributes models the swf json protocol.
 type ChildWorkflowExecutionStartedEventAttributes struct {
-	InitiatedEventId  int               `json:"initiatedEventId"`
+	InitiatedEventID  int               `json:"initiatedEventId"`
 	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
 	WorkflowType      WorkflowType      `json:"workflowType"`
 }
 
 // ChildWorkflowExecutionTerminatedEventAttributes models the swf json protocol.
 type ChildWorkflowExecutionTerminatedEventAttributes struct {
-	InitiatedEventId  int               `json:"initiatedEventId"`
-	StartedEventId    int               `json:"startedEventId"`
+	InitiatedEventID  int               `json:"initiatedEventId"`
+	StartedEventID    int               `json:"startedEventId"`
 	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
 	WorkflowType      WorkflowType      `json:"workflowType"`
 }
 
 // ChildWorkflowExecutionTimedOutEventAttributes models the swf json protocol.
 type ChildWorkflowExecutionTimedOutEventAttributes struct {
-	InitiatedEventId  int               `json:"initiatedEventId"`
-	StartedEventId    int               `json:"startedEventId"`
+	InitiatedEventID  int               `json:"initiatedEventId"`
+	StartedEventID    int               `json:"startedEventId"`
 	TimeoutType       string            `json:"timeoutType"`
 	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
 	WorkflowType      WorkflowType      `json:"workflowType"`
@@ -418,20 +418,20 @@ type ChildWorkflowExecutionTimedOutEventAttributes struct {
 // CompleteWorkflowExecutionFailedEventAttributes models the swf json protocol.
 type CompleteWorkflowExecutionFailedEventAttributes struct {
 	Cause                        string `json:"cause"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 }
 
 // ContinueAsNewWorkflowExecutionFailedEventAttributes models the swf json protocol.
 type ContinueAsNewWorkflowExecutionFailedEventAttributes struct {
 	Cause                        string `json:"cause"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 }
 
 // DecisionTaskCompletedEventAttributes models the swf json protocol.
 type DecisionTaskCompletedEventAttributes struct {
 	ExecutionContext string `json:"executionContext"`
-	ScheduledEventId int    `json:"scheduledEventId"`
-	StartedEventId   int    `json:"startedEventId"`
+	ScheduledEventID int    `json:"scheduledEventId"`
+	StartedEventID   int    `json:"startedEventId"`
 }
 
 // DecisionTaskScheduledEventAttributes models the swf json protocol.
@@ -443,37 +443,37 @@ type DecisionTaskScheduledEventAttributes struct {
 // DecisionTaskStartedEventAttributes models the swf json protocol.
 type DecisionTaskStartedEventAttributes struct {
 	Identity         string `json:"identity"`
-	ScheduledEventId int    `json:"scheduledEventId"`
+	ScheduledEventID int    `json:"scheduledEventId"`
 }
 
 // DecisionTaskTimedOutEventAttributes models the swf json protocol.
 type DecisionTaskTimedOutEventAttributes struct {
-	ScheduledEventId int    `json:"scheduledEventId"`
-	StartedEventId   int    `json:"startedEventId"`
+	ScheduledEventID int    `json:"scheduledEventId"`
+	StartedEventID   int    `json:"startedEventId"`
 	TimeoutType      string `json:"timeoutType"`
 }
 
 // ExternalWorkflowExecutionCancelRequestedEventAttributes models the swf json protocol.
 type ExternalWorkflowExecutionCancelRequestedEventAttributes struct {
-	InitiatedEventId  int               `json:"initiatedEventId"`
+	InitiatedEventID  int               `json:"initiatedEventId"`
 	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
 }
 
 // ExternalWorkflowExecutionSignaledEventAttributes models the swf json protocol.
 type ExternalWorkflowExecutionSignaledEventAttributes struct {
-	InitiatedEventId  int               `json:"initiatedEventId"`
+	InitiatedEventID  int               `json:"initiatedEventId"`
 	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
 }
 
 // FailWorkflowExecutionFailedEventAttributes models the swf json protocol.
 type FailWorkflowExecutionFailedEventAttributes struct {
 	Cause                        string `json:"cause"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 }
 
 // MarkerRecordedEventAttributes models the swf json protocol.
 type MarkerRecordedEventAttributes struct {
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 	Details                      string `json:"details"`
 	MarkerName                   string `json:"markerName"`
 }
@@ -481,70 +481,70 @@ type MarkerRecordedEventAttributes struct {
 // RecordMarkerFailedEventAttributes models the swf json protocol.
 type RecordMarkerFailedEventAttributes struct {
 	Cause                        string `json:"cause"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 	MarkerName                   string `json:"markerName"`
 }
 
 // RequestCancelActivityTaskFailedEventAttributes models the swf json protocol.
 type RequestCancelActivityTaskFailedEventAttributes struct {
-	ActivityId                   string `json:"activityId"`
+	ActivityID                   string `json:"activityId"`
 	Cause                        string `json:"cause"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 }
 
 // RequestCancelExternalWorkflowExecutionFailedEventAttributes models the swf json protocol.
 type RequestCancelExternalWorkflowExecutionFailedEventAttributes struct {
 	Cause                        string `json:"cause"`
 	Control                      string `json:"control"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
-	InitiatedEventId             int    `json:"initiatedEventId"`
-	RunId                        string `json:"runId"`
-	WorkflowId                   string `json:"workflowId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
+	InitiatedEventID             int    `json:"initiatedEventId"`
+	RunID                        string `json:"runId"`
+	WorkflowID                   string `json:"workflowId"`
 }
 
 // RequestCancelExternalWorkflowExecutionInitiatedEventAttributes models the swf json protocol.
 type RequestCancelExternalWorkflowExecutionInitiatedEventAttributes struct {
 	Control                      string `json:"control"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
-	RunId                        string `json:"runId"`
-	WorkflowId                   string `json:"workflowId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
+	RunID                        string `json:"runId"`
+	WorkflowID                   string `json:"workflowId"`
 }
 
 // ScheduleActivityTaskFailedEventAttributes models the swf json protocol.
 type ScheduleActivityTaskFailedEventAttributes struct {
-	ActivityId                   string `json:"activityId"`
+	ActivityID                   string `json:"activityId"`
 	ActivityType                 ActivityType
 	Cause                        string `json:"cause"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 }
 
 // SignalExternalWorkflowExecutionFailedEventAttributes models the swf json protocol.
 type SignalExternalWorkflowExecutionFailedEventAttributes struct {
 	Cause                        string `json:"cause"`
 	Control                      string `json:"control"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
-	InitiatedEventId             int    `json:"initiatedEventId"`
-	RunId                        string `json:"runId"`
-	WorkflowId                   string `json:"workflowId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
+	InitiatedEventID             int    `json:"initiatedEventId"`
+	RunID                        string `json:"runId"`
+	WorkflowID                   string `json:"workflowId"`
 }
 
 // SignalExternalWorkflowExecutionInitiatedEventAttributes models the swf json protocol.
 type SignalExternalWorkflowExecutionInitiatedEventAttributes struct {
 	Control                      string `json:"control"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 	Input                        string `json:"input"`
-	RunId                        string `json:"runId"`
+	RunID                        string `json:"runId"`
 	SignalName                   string `json:"signalName"`
-	WorkflowId                   string `json:"workflowId"`
+	WorkflowID                   string `json:"workflowId"`
 }
 
 // StartChildWorkflowExecutionFailedEventAttributes models the swf json protocol.
 type StartChildWorkflowExecutionFailedEventAttributes struct {
 	Cause                        string       `json:"cause"`
 	Control                      string       `json:"control"`
-	DecisionTaskCompletedEventId int          `json:"decisionTaskCompletedEventId"`
-	InitiatedEventId             int          `json:"initiatedEventId"`
-	WorkflowId                   string       `json:"workflowId"`
+	DecisionTaskCompletedEventID int          `json:"decisionTaskCompletedEventId"`
+	InitiatedEventID             int          `json:"initiatedEventId"`
+	WorkflowID                   string       `json:"workflowId"`
 	WorkflowType                 WorkflowType `json:"workflowType"`
 }
 
@@ -552,70 +552,70 @@ type StartChildWorkflowExecutionFailedEventAttributes struct {
 type StartChildWorkflowExecutionInitiatedEventAttributes struct {
 	ChildPolicy                  string       `json:"childPolicy"`
 	Control                      string       `json:"control"`
-	DecisionTaskCompletedEventId int          `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int          `json:"decisionTaskCompletedEventId"`
 	ExecutionStartToCloseTimeout string       `json:"executionStartToCloseTimeout"`
 	Input                        string       `json:"input"`
 	TagList                      []string     `json:"tagList"`
 	TaskList                     TaskList     `json:"taskList"`
 	TaskStartToCloseTimeout      string       `json:"taskStartToCloseTimeout"`
-	WorkflowId                   string       `json:"workflowId"`
+	WorkflowID                   string       `json:"workflowId"`
 	WorkflowType                 WorkflowType `json:"workflowType"`
 }
 
 // StartTimerFailedEventAttributes models the swf json protocol.
 type StartTimerFailedEventAttributes struct {
 	Cause                        string `json:"cause"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
-	TimerId                      string `json:"timerId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
+	TimerID                      string `json:"timerId"`
 }
 
 // TimerCanceledEventAttributes models the swf json protocol.
 type TimerCanceledEventAttributes struct {
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
-	StartedEventId               int    `json:"startedEventId"`
-	TimerId                      string `json:"timerId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
+	StartedEventID               int    `json:"startedEventId"`
+	TimerID                      string `json:"timerId"`
 }
 
 // TimerFiredEventAttributes models the swf json protocol.
 type TimerFiredEventAttributes struct {
-	StartedEventId int    `json:"startedEventId"`
-	TimerId        string `json:"timerId"`
+	StartedEventID int    `json:"startedEventId"`
+	TimerID        string `json:"timerId"`
 }
 
 // TimerStartedEventAttributes models the swf json protocol.
 type TimerStartedEventAttributes struct {
 	Control                      string `json:"control"`
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 	StartToFireTimeout           string `json:"startToFireTimeout"`
-	TimerId                      string `json:"timerId"`
+	TimerID                      string `json:"timerId"`
 }
 
 // WorkflowExecutionCancelRequestedEventAttributes models the swf json protocol.
 type WorkflowExecutionCancelRequestedEventAttributes struct {
 	Cause                     string            `json:"cause"`
-	ExternalInitiatedEventId  int               `json:"externalInitiatedEventId"`
+	ExternalInitiatedEventID  int               `json:"externalInitiatedEventId"`
 	ExternalWorkflowExecution WorkflowExecution `json:"externalWorkflowExecution"`
 }
 
 // WorkflowExecutionCanceledEventAttributes models the swf json protocol.
 type WorkflowExecutionCanceledEventAttributes struct {
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 	Details                      string `json:"details"`
 }
 
 // WorkflowExecutionCompletedEventAttributes models the swf json protocol.
 type WorkflowExecutionCompletedEventAttributes struct {
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 	Result                       string `json:"result"`
 }
 
 // WorkflowExecutionContinuedAsNewEventAttributes models the swf json protocol.
 type WorkflowExecutionContinuedAsNewEventAttributes struct {
 	ChildPolicy                  string       `json:"childPolicy"`
-	DecisionTaskCompletedEventId int          `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int          `json:"decisionTaskCompletedEventId"`
 	ExecutionStartToCloseTimeout string       `json:"executionStartToCloseTimeout"`
 	Input                        string       `json:"input"`
-	NewExecutionRunId            string       `json:"newExecutionRunId"`
+	NewExecutionRunID            string       `json:"newExecutionRunId"`
 	TagList                      []string     `json:"tagList"`
 	TaskList                     TaskList     `json:"taskList"`
 	TaskStartToCloseTimeout      string       `json:"taskStartToCloseTimeout"`
@@ -624,14 +624,14 @@ type WorkflowExecutionContinuedAsNewEventAttributes struct {
 
 // WorkflowExecutionFailedEventAttributes models the swf json protocol.
 type WorkflowExecutionFailedEventAttributes struct {
-	DecisionTaskCompletedEventId int    `json:"decisionTaskCompletedEventId"`
+	DecisionTaskCompletedEventID int    `json:"decisionTaskCompletedEventId"`
 	Details                      string `json:"details"`
 	Reason                       string `json:"reason"`
 }
 
 // WorkflowExecutionSignaledEventAttributes models the swf json protocol.
 type WorkflowExecutionSignaledEventAttributes struct {
-	ExternalInitiatedEventId  int               `json:"externalInitiatedEventId"`
+	ExternalInitiatedEventID  int               `json:"externalInitiatedEventId"`
 	ExternalWorkflowExecution WorkflowExecution `json:"externalWorkflowExecution"`
 	Input                     string            `json:"input"`
 	SignalName                string            `json:"signalName"`
@@ -640,10 +640,10 @@ type WorkflowExecutionSignaledEventAttributes struct {
 // WorkflowExecutionStartedEventAttributes models the swf json protocol.
 type WorkflowExecutionStartedEventAttributes struct {
 	ChildPolicy                  string            `json:"childPolicy"`
-	ContinuedExecutionRunId      string            `json:"continuedExecutionRunId"`
+	ContinuedExecutionRunID      string            `json:"continuedExecutionRunId"`
 	ExecutionStartToCloseTimeout string            `json:"executionStartToCloseTimeout"`
 	Input                        string            `json:"input"`
-	ParentInitiatedEventId       int               `json:"parentInitiatedEventId"`
+	ParentInitiatedEventID       int               `json:"parentInitiatedEventId"`
 	ParentWorkflowExecution      WorkflowExecution `json:"parentWorkflowExecution"`
 	TagList                      []string          `json:"tagList"`
 	TaskList                     TaskList          `json:"taskList"`
@@ -735,7 +735,7 @@ func DecisionTypes() []string {
 
 // CancelTimerDecisionAttributes models the swf json protocol.
 type CancelTimerDecisionAttributes struct {
-	TimerId string `json:"timerId"`
+	TimerID string `json:"timerId"`
 }
 
 // CancelWorkflowExecutionDecisionAttributes models the swf json protocol.
@@ -773,19 +773,19 @@ type RecordMarkerDecisionAttributes struct {
 
 // RequestCancelActivityTaskDecisionAttributes models the swf json protocol.
 type RequestCancelActivityTaskDecisionAttributes struct {
-	ActivityId string `json:"activityId"`
+	ActivityID string `json:"activityId"`
 }
 
 // RequestCancelExternalWorkflowExecutionDecisionAttributes models the swf json protocol.
 type RequestCancelExternalWorkflowExecutionDecisionAttributes struct {
 	Control    string `json:"control"`
-	RunId      string `json:"runId"`
-	WorkflowId string `json:"workflowId"`
+	RunID      string `json:"runId"`
+	WorkflowID string `json:"workflowId"`
 }
 
 // ScheduleActivityTaskDecisionAttributes models the swf json protocol.
 type ScheduleActivityTaskDecisionAttributes struct {
-	ActivityId             string       `json:"activityId"`
+	ActivityID             string       `json:"activityId"`
 	ActivityType           ActivityType `json:"activityType"`
 	Control                string       `json:"control"`
 	HeartbeatTimeout       string       `json:"heartbeatTimeout,omitempty"`
@@ -800,9 +800,9 @@ type ScheduleActivityTaskDecisionAttributes struct {
 type SignalExternalWorkflowExecutionDecisionAttributes struct {
 	Control    string `json:"control"`
 	Input      string `json:"input"`
-	RunId      string `json:"runId"`
+	RunID      string `json:"runId"`
 	SignalName string `json:"signalName"`
-	WorkflowId string `json:"workflowId"`
+	WorkflowID string `json:"workflowId"`
 }
 
 // StartChildWorkflowExecutionDecisionAttributes models the swf json protocol.
@@ -814,7 +814,7 @@ type StartChildWorkflowExecutionDecisionAttributes struct {
 	TagList                      []string     `json:"tagList"`
 	TaskList                     TaskList     `json:"taskList"`
 	TaskStartToCloseTimeout      string       `json:"taskStartToCloseTimeout"`
-	WorkflowId                   string       `json:"workflowId"`
+	WorkflowID                   string       `json:"workflowId"`
 	WorkflowType                 WorkflowType `json:"workflowType"`
 }
 
@@ -822,7 +822,7 @@ type StartChildWorkflowExecutionDecisionAttributes struct {
 type StartTimerDecisionAttributes struct {
 	Control            string `json:"control"`
 	StartToFireTimeout string `json:"startToFireTimeout"`
-	TimerId            string `json:"timerId"`
+	TimerID            string `json:"timerId"`
 }
 
 // RespondDecisionTaskCompletedRequest models the swf json protocol.
@@ -843,10 +843,10 @@ type PollForActivityTaskRequest struct {
 
 // PollForActivityTaskResponse models the swf json protocol.
 type PollForActivityTaskResponse struct {
-	ActivityId        string            `json:"activityId"`
+	ActivityID        string            `json:"activityId"`
 	ActivityType      ActivityType      `json:"activityType"`
 	Input             string            `json:"input"`
-	StartedEventId    int               `json:"startedEventId"`
+	StartedEventID    int               `json:"startedEventId"`
 	TaskToken         string            `json:"taskToken"`
 	WorkflowExecution WorkflowExecution `json:"workflowExecution"`
 }
@@ -1172,7 +1172,7 @@ type TimeFilter struct {
 
 // ExecutionFilter models the swf json protocol.
 type ExecutionFilter struct {
-	WorkflowId string `json:"workflowId"`
+	WorkflowID string `json:"workflowId"`
 }
 
 // TagFilter models the swf json protocol.
@@ -1201,8 +1201,8 @@ type WorkflowType struct {
 
 // WorkflowExecution models the swf json protocol.
 type WorkflowExecution struct {
-	RunId      string `json:"runId"`
-	WorkflowId string `json:"workflowId"`
+	RunID      string `json:"runId"`
+	WorkflowID string `json:"workflowId"`
 }
 
 // ActivityType models the swf json protocol.
@@ -1241,7 +1241,7 @@ type PutRecordRequest struct {
 
 type PutRecordResponse struct {
 	SequenceNumber string
-	ShardId        string
+	ShardID        string
 }
 
 type CreateStream struct {
@@ -1250,7 +1250,7 @@ type CreateStream struct {
 }
 
 type DescribeStreamRequest struct {
-	ExclusiveStartShardId *string
+	ExclusiveStartShardID *string
 	Limit                 *int
 	StreamName            string
 }
@@ -1259,17 +1259,17 @@ type DescribeStreamResponse struct {
 	StreamDescription struct {
 		HasMoreShards bool
 		Shards        []struct {
-			AdjacentParentShardId string
+			AdjacentParentShardID string
 			HashKeyRange          struct {
 				EndingHashKey   string
 				StartingHashKey string
 			}
-			ParentShardId       string
+			ParentShardID       string
 			SequenceNumberRange struct {
 				EndingSequenceNumber   string
 				StartingSequenceNumber string
 			}
-			ShardId string
+			ShardID string
 		}
 		StreamARN    string
 		StreamName   string
