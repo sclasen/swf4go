@@ -3,6 +3,8 @@ swf4go
 
 go client library for amazon simple workflow service
 
+[![Build Status](https://travis-ci.org/sclasen/swf4go.svg?branch=master)](https://travis-ci.org/sclasen/swf4go)
+
 * godoc here: http://godoc.org/github.com/sclasen/swf4go
 
 * the `swf.Client` struct implements the below interfaces
