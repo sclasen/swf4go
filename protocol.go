@@ -1242,7 +1242,7 @@ type PutRecordRequest struct {
 // PutRecordResponse models the kinesis json protocol.
 type PutRecordResponse struct {
 	SequenceNumber string
-	ShardID        string
+	ShardID        string `json:"ShardId"`
 }
 
 // CreateStream models the kinesis json protocol.
@@ -1253,7 +1253,7 @@ type CreateStream struct {
 
 // DescribeStreamRequest models the kinesis json protocol.
 type DescribeStreamRequest struct {
-	ExclusiveStartShardID *string
+	ExclusiveStartShardID *string `json:"ExclusiveStartShardId"`
 	Limit                 *int
 	StreamName            string
 }
@@ -1263,17 +1263,17 @@ type DescribeStreamResponse struct {
 	StreamDescription struct {
 		HasMoreShards bool
 		Shards        []struct {
-			AdjacentParentShardID string
+			AdjacentParentShardID string `json:"AdjacentParentShardId"`
 			HashKeyRange          struct {
 				EndingHashKey   string
 				StartingHashKey string
 			}
-			ParentShardID       string
+			ParentShardID       string `json:"ParentShardId"`
 			SequenceNumberRange struct {
 				EndingSequenceNumber   string
 				StartingSequenceNumber string
 			}
-			ShardID string
+			ShardID string `json:"ShardId"`
 		}
 		StreamARN    string
 		StreamName   string
