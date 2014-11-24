@@ -8,6 +8,7 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 	"code.google.com/p/goprotobuf/proto"
+	"os"
 )
 
 //Todo add tests of error handling mechanism
@@ -461,6 +462,24 @@ func TestChildRelator(t *testing.T) {
 	}
 	if c.Version != "123" {
 		t.Fatal("version not test")
+	}
+
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		log.Printf("WARNING: NO AWS CREDS SPECIFIED, SKIPPING CLIENTS TEST")
+		return
+	}
+
+	client := NewClient(MustGetenv("AWS_ACCESS_KEY_ID"), MustGetenv("AWS_SECRET_ACCESS_KEY"), USEast1)
+	client.Debug = true
+
+	resp, err := freshRelator.WorkflowExecutionInfo(client, "swf4go", "123")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp != nil {
+		//nil is expected since there shouldnt be an execution with id 123
+		t.Fatal(resp)
 	}
 
 }

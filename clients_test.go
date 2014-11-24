@@ -33,10 +33,8 @@ func TestListWorkflowTypes(t *testing.T) {
 	}
 
 	count, err := client.CountOpenWorkflowExecutions(CountOpenWorkflowExecutionsRequest{
-		Domain: "swf4go",
-		StartTimeFilter: &TimeFilter{
-			OldestDate: &Date{time.Unix(0, 0)},
-		},
+		Domain:          "swf4go",
+		StartTimeFilter: *ZeroTimeFilter(),
 	})
 
 	if err != nil {

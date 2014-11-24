@@ -914,9 +914,15 @@ func (c *ChildRelator) WorkflowExecutionInfo(client WorkflowInfoClient, domain s
 		ExecutionFilter: &ExecutionFilter{
 			WorkflowID: workflowID,
 		},
+		StartTimeFilter: *ZeroTimeFilter(),
 	})
+
 	if err != nil {
 		return nil, err
+	}
+
+	if len(resp.ExecutionInfos) == 0 {
+		return nil, nil
 	}
 
 	if len(resp.ExecutionInfos) == 1 {

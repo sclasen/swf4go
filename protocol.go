@@ -3,6 +3,7 @@ package swf
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 )
@@ -946,7 +947,7 @@ type CountClosedWorkflowExecutionsRequest struct {
 type CountOpenWorkflowExecutionsRequest struct {
 	Domain          string           `json:"domain"`
 	ExecutionFilter *ExecutionFilter `json:"executionFilter,omitempty"`
-	StartTimeFilter *TimeFilter      `json:"startTimeFilter,omitempty"`
+	StartTimeFilter TimeFilter       `json:"startTimeFilter,omitempty"`
 	TagFilter       *TagFilter       `json:"tagFilter,omitempty"`
 	TypeFilter      *TypeFilter      `json:"typeFilter,omitempty"`
 }
@@ -1168,7 +1169,13 @@ type CountResponse struct {
 // TimeFilter models the swf json protocol.
 type TimeFilter struct {
 	LatestDate *Date `json:"latestDate,omitempty"`
-	OldestDate *Date `json:"oldestDate"`
+	OldestDate *Date  `json:"oldestDate"`
+}
+
+func ZeroTimeFilter() *TimeFilter {
+	return &TimeFilter{
+		OldestDate: &Date{time.Unix(0, 0)},
+	}
 }
 
 // ExecutionFilter models the swf json protocol.
@@ -1296,6 +1303,7 @@ func (s *Date) UnmarshalJSON(b []byte) error {
 
 //MarshalJSON formats a time.Time into swf's expected format.
 func (s *Date) MarshalJSON() ([]byte, error) {
+	log.Println("MARSHAL DOG")
 	timestamp := s.Time.Unix()
 	return []byte(strconv.FormatFloat(float64(timestamp), 'g', -1, 64)), nil
 }
