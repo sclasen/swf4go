@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"os"
+
 	"code.google.com/p/go-uuid/uuid"
 	"code.google.com/p/goprotobuf/proto"
-	"os"
 )
 
 //Todo add tests of error handling mechanism

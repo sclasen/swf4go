@@ -1169,7 +1169,7 @@ type CountResponse struct {
 // TimeFilter models the swf json protocol.
 type TimeFilter struct {
 	LatestDate *Date `json:"latestDate,omitempty"`
-	OldestDate *Date  `json:"oldestDate"`
+	OldestDate *Date `json:"oldestDate"`
 }
 
 func ZeroTimeFilter() *TimeFilter {
