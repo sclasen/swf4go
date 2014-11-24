@@ -1172,6 +1172,7 @@ type TimeFilter struct {
 	OldestDate *Date `json:"oldestDate"`
 }
 
+// ZeroTimeFilter returns a TimeFiter with the OldestDate set to 0 and the LatestDate nil
 func ZeroTimeFilter() *TimeFilter {
 	return &TimeFilter{
 		OldestDate: &Date{time.Unix(0, 0)},
