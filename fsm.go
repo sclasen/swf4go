@@ -497,13 +497,9 @@ func (f *FSM) captureError(signal string, execution WorkflowExecution, error int
 	return append(decisions, d)
 }
 
-// EventData works in combination with the FSM.Serializer and the FSM.EventDataType function to provide
-// deserialization of data sent in a HistoryEvent. For example if you know that any WorkflowExecutionSignaled
-// event that your FSM receives will contain a serialized Foo struct, and your EventDataType func returns a zero value Foo,
-// for WorkflowExecutionSignaled events, you can use EventData plus a type assertion to get back the deserialized Foo.
-//   if event.EventType == swf.EventTypeWorkflowExecutionSignaled {
-//       f.EventData(event).(*Foo)
-//   }
+// EventData works in combination with the FSM.Serializer to provide
+// deserialization of data sent in a HistoryEvent. It is sugar around extracting the event payload from the proper
+// field of the proper Attributes struct on the HistoryEvent
 func (f *FSM) EventData(ctx *FSMContext, event HistoryEvent, eventData interface{}) {
 
 	if eventData != nil {
@@ -526,6 +522,8 @@ func (f *FSM) EventData(ctx *FSMContext, event HistoryEvent, eventData interface
 		}
 		if serialized != "" {
 			f.Deserialize(serialized, eventData)
+		} else {
+			panic(fmt.Sprintf("event payload was empty for %s", event.String()))
 		}
 	}
 
