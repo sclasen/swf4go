@@ -33,6 +33,9 @@ type Outcome interface {
 	Data() interface{}
 	// Decisions returns the list of Decisions for this Outcome.
 	Decisions() []Decision
+	// State returns the state to transition to. An empty string means no
+	// transition.
+	State() string
 }
 
 // TransitionOutcome is an Outcome in which the FSM will transtion to a new state.
@@ -48,6 +51,9 @@ func (t TransitionOutcome) Data() interface{} { return t.data }
 // Decisions returns the list of Decisions for this Outcome.
 func (t TransitionOutcome) Decisions() []Decision { return t.decisions }
 
+// State returns the next state for this TransitionOutcome.
+func (t TransitionOutcome) State() string { return t.state }
+
 // StayOutcome is an Outcome in which the FSM will remain in the same state.
 type StayOutcome struct {
 	data      interface{}
@@ -59,6 +65,9 @@ func (s StayOutcome) Data() interface{} { return s.data }
 
 // Decisions returns the list of Decisions for this Outcome.
 func (s StayOutcome) Decisions() []Decision { return s.decisions }
+
+// State returns the next state for the StayOutcome, which is always empty.
+func (s StayOutcome) State() string { return "" }
 
 // TerminationOutcome can do things like check that the last decision is a termination.
 type TerminationOutcome struct {
@@ -72,6 +81,10 @@ func (t TerminationOutcome) Data() interface{} { return t.data }
 // Decisions returns the list of Decisions for this Outcome.
 func (t TerminationOutcome) Decisions() []Decision { return t.decisions }
 
+// State returns the next state for the TerminationOutcome, which is always
+// "TERMINATED".
+func (t TerminationOutcome) State() string { return "TERMINATED" }
+
 // ErrorOutcome can be used to purposefully put the workflow into an error state.
 type ErrorOutcome struct {
 	state     string
@@ -84,6 +97,9 @@ func (e ErrorOutcome) Data() interface{} { return e.data }
 
 // Decisions returns the list of Decisions for this Outcome.
 func (e ErrorOutcome) Decisions() []Decision { return e.decisions }
+
+// State returns the next state for the ErrorOutcome, which is always "error".
+func (t ErrorOutcome) State() string { return "error" }
 
 // FSMState defines the behavior of one state of an FSM
 type FSMState struct {
@@ -285,7 +301,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []Decision {
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventID, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
 	outcome := new(TransitionOutcome)
-	context := &FSMContext{f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, "", nil}
+	context := NewFSMContext(f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, "", nil)
 	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
 	if len(errorEvents) > 0 {
 		outcome.data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
@@ -414,25 +430,10 @@ func (f *FSMContext) Error(data interface{}, decisions []Decision) Outcome {
 }
 
 func (f *FSM) mergeOutcomes(final *TransitionOutcome, intermediate Outcome) {
-	switch i := intermediate.(type) {
-	case TransitionOutcome:
-		final.state = i.state
-		final.decisions = append(final.decisions, i.decisions...)
-		final.data = i.data
-	case StayOutcome:
-		final.decisions = append(final.decisions, i.decisions...)
-		final.data = i.data
-	case TerminationOutcome:
-		final.state = "TERMINATED"
-		final.decisions = append(final.decisions, i.decisions...)
-		final.data = i.data
-	case ErrorOutcome:
-		final.state = "error"
-		final.decisions = append(final.decisions, i.decisions...)
-		final.data = i.data
-	default:
-		panic("funky")
-
+	final.decisions = append(final.decisions, intermediate.Decisions()...)
+	final.data = intermediate.Data()
+	if _, ok := intermediate.(StayOutcome); !ok {
+		final.state = intermediate.State()
 	}
 }
 
@@ -483,7 +484,7 @@ func (f *FSM) captureError(signal string, execution WorkflowExecution, error int
 	r, err := f.recordMarker(signal, error)
 	if err != nil {
 		//really bail
-		panic(fmt.Sprintf("giving up, cant even create a RecordMarker decsion: %s", err))
+		panic(fmt.Sprintf("giving up, can't even create a RecordMarker decsion: %s", err))
 	}
 	d := Decision{
 		DecisionType: DecisionTypeSignalExternalWorkflowExecution,
@@ -579,7 +580,6 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryE
 }
 
 func (f *FSM) appendState(outcome *TransitionOutcome) ([]Decision, error) {
-
 	serializedData, err := f.Serializer.Serialize(outcome.data)
 
 	state := SerializedState{
@@ -775,6 +775,16 @@ type FSMContext struct {
 	WorkflowExecution
 	State     string
 	stateData interface{}
+}
+
+func NewFSMContext(fsm *FSM, wfType WorkflowType, wfExec WorkflowExecution, state string, stateData interface{}) *FSMContext {
+	return &FSMContext{
+		fsm:               fsm,
+		WorkflowType:      wfType,
+		WorkflowExecution: wfExec,
+		State:             state,
+		stateData:         stateData,
+	}
 }
 
 // EventData will extract a payload from the given HistoryEvent and unmarshall it into the given struct.
