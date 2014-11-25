@@ -224,7 +224,7 @@ func (f *FSM) Start() {
 			})
 
 		if err != nil {
-			f.log("action=tick at=decide-request-failed error=%s", err.Error())
+			f.log("action=tick at=decide-request-failed error=%q", err.Error())
 		}
 
 		if f.KinesisStream != "" {
@@ -237,7 +237,7 @@ func (f *FSM) Start() {
 					Data:         []byte(stateToReplicate),
 				})
 				if err != nil {
-					f.log("action=tick at=replicate-state-failed error=%s", err.Error())
+					f.log("action=tick at=replicate-state-failed error=%q", err.Error())
 				} else {
 					f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardID, resp.SequenceNumber)
 				}
@@ -296,7 +296,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []Decision {
 			e := errorEvents[i]
 			anOutcome, err := f.panicSafeDecide(f.errorState, context, e, outcome.data)
 			if err != nil {
-				f.log("at=error error=error-handling-decision-execution-error err=%s state=%s next-state=%", err, f.errorState.Name, outcome.state)
+				f.log("at=error error=error-handling-decision-execution-error err=%q state=%s next-state=%", err, f.errorState.Name, outcome.state)
 				//we wont get here if panics are allowed
 				return append(outcome.decisions, f.captureDecisionError(execution, i, errorEvents, outcome.state, outcome.data, err)...)
 			}
@@ -310,7 +310,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []Decision {
 		serializedState, err := f.findSerializedState(decisionTask.Events)
 
 		if err != nil {
-			f.log("action=tick at=error=find-serialized-state-failed err=%s", err)
+			f.log("action=tick at=error=find-serialized-state-failed err=%q", err)
 			if f.allowPanics {
 				panic(err)
 			}
@@ -345,7 +345,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []Decision {
 			context.stateData = outcome.data
 			anOutcome, err := f.panicSafeDecide(fsmState, context, e, outcome.data)
 			if err != nil {
-				f.log("at=error error=decision-execution-error err=%s state=%s next-state=%", err, fsmState.Name, outcome.state)
+				f.log("at=error error=decision-execution-error err=%q state=%s next-state=%", err, fsmState.Name, outcome.state)
 				if f.allowPanics {
 					panic(err)
 				}
@@ -370,7 +370,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []Decision {
 
 	final, err := f.appendState(outcome)
 	if err != nil {
-		f.log("action=tick at=error error=state-serialization-error err=%s error-type=system", err)
+		f.log("action=tick at=error error=state-serialization-error err=%q error-type=system", err)
 		if f.allowPanics {
 			panic(err)
 		}
