@@ -296,7 +296,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []Decision {
 			e := errorEvents[i]
 			anOutcome, err := f.panicSafeDecide(f.errorState, context, e, outcome.data)
 			if err != nil {
-				f.log("at=error error=error-handling-decision-execution-error err=%q state=%s next-state=%", err, f.errorState.Name, outcome.state)
+				f.log("at=error error=error-handling-decision-execution-error err=%q state=%s next-state=%s", err, f.errorState.Name, outcome.state)
 				//we wont get here if panics are allowed
 				return append(outcome.decisions, f.captureDecisionError(execution, i, errorEvents, outcome.state, outcome.data, err)...)
 			}
