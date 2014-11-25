@@ -192,7 +192,7 @@ func (p *PollerShutdownManager) eventLoop() {
 		select {
 		case sig, ok := <-p.exitChan:
 			if ok {
-				log.Printf("component=PollerShutdownManager at=singal signal=%s", sig)
+				log.Printf("component=PollerShutdownManager at=signal signal=%s", sig)
 				for _, r := range p.registeredPollers {
 					log.Printf("component=PollerShutdownManager at=sending-stop name=%s", r.name)
 					r.stopChannel <- true
