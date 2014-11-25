@@ -285,7 +285,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) []Decision {
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventID, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
 	outcome := new(TransitionOutcome)
-	context := &FSMContext{f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, "", nil}
+	context := NewFSMContext(f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, "", nil)
 	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
 	if len(errorEvents) > 0 {
 		outcome.data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
@@ -775,6 +775,16 @@ type FSMContext struct {
 	WorkflowExecution
 	State     string
 	stateData interface{}
+}
+
+func NewFSMContext(fsm *FSM, wfType WorkflowType, wfExec WorkflowExecution, state string, stateData interface{}) *FSMContext {
+	return &FSMContext{
+		fsm:               fsm,
+		WorkflowType:      wfType,
+		WorkflowExecution: wfExec,
+		State:             state,
+		stateData:         stateData,
+	}
 }
 
 // EventData will extract a payload from the given HistoryEvent and unmarshall it into the given struct.
