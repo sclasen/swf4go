@@ -1253,6 +1253,22 @@ type PutRecordResponse struct {
 	ShardID        string `json:"ShardId"`
 }
 
+// GetRecordsRequest models the kinesis json protocol.
+type GetRecordsRequest struct {
+	Limit         int
+	ShardIterator string
+}
+
+// GetRecordsResponse models the kinesis json protocol.
+type GetRecordsResponse struct {
+	NextShardIterator string
+	Records           []struct {
+		Data           []byte
+		PartitionKey   string
+		SequenceNumber string
+	}
+}
+
 // GetShardIteratorRequest models the kinesis json protocol.
 type GetShardIteratorRequest struct {
 	StreamName        string

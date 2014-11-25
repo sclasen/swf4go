@@ -80,6 +80,7 @@ type WorkflowInfoClient interface {
 // KinesisClient specifies operations used by this library on the aws kinesis api.
 type KinesisClient interface {
 	PutRecord(request PutRecordRequest) (*PutRecordResponse, error)
+	GetRecords(request GetRecordsRequest) (*GetRecordsResponse, error)
 	CreateStream(request CreateStream) error
 	DescribeStream(request DescribeStreamRequest) (*DescribeStreamResponse, error)
 	GetShardIterator(request GetShardIteratorRequest) (*GetShardIteratorResponse, error)
@@ -345,6 +346,13 @@ func (c *Client) ListDomains(request ListDomainsRequest) (*ListDomainsResponse, 
 func (c *Client) PutRecord(request PutRecordRequest) (*PutRecordResponse, error) {
 	resp := &PutRecordResponse{}
 	err := c.kinesisReqWithResponse("PutRecord", request, resp)
+	return resp, err
+}
+
+// GetRecords executes http://docs.aws.amazon.com/kinesis/latest/APIReference/API_GetRecords.html
+func (c *Client) GetRecords(request GetRecordsRequest) (*GetRecordsResponse, error) {
+	resp := &GetRecordsResponse{}
+	err := c.kinesisReqWithResponse("GetRecords", request, resp)
 	return resp, err
 }
 

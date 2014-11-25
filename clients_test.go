@@ -68,6 +68,61 @@ func TestPutRecord(t *testing.T) {
 
 }
 
+func TestGetRecords(t *testing.T) {
+	requireAwsKeys(t)
+	keyID := MustGetenv("AWS_ACCESS_KEY_ID")
+	secretKey := MustGetenv("AWS_SECRET_ACCESS_KEY")
+	streamName := "swf4go"
+
+	client := NewClientWithHTTPClient(keyID, secretKey, USEast1, customHTTPClient())
+	client.Debug = true
+
+	// creating a PutRecord request to obtain a ShardID
+	putReq := PutRecordRequest{
+		Data:                      []byte("foo"),
+		PartitionKey:              "the-key",
+		SequenceNumberForOrdering: fmt.Sprintf("%d", time.Now().UnixNano()),
+		StreamName:                streamName,
+	}
+
+	putResp, err := client.PutRecord(putReq)
+
+	if err != nil {
+		log.Printf("%+v", err)
+		t.Fail()
+	}
+
+	// get shard iterator
+	shardID := putResp.ShardID
+	shardReq := GetShardIteratorRequest{
+		StreamName:        "swf4go",
+		ShardID:           shardID,
+		ShardIteratorType: "LATEST",
+	}
+
+	shardResp, err := client.GetShardIterator(shardReq)
+
+	if err != nil {
+		log.Printf("%+v", err)
+		t.Fail()
+	}
+
+	// get records
+	shardIterator := shardResp.ShardIterator
+	getReq := GetRecordsRequest{
+		Limit:         10,
+		ShardIterator: shardIterator,
+	}
+
+	getResp, err := client.GetRecords(getReq)
+	if err != nil {
+		log.Printf("%+v", err)
+		t.Fail()
+	}
+
+	log.Printf("%+v", getResp)
+}
+
 func TestGetShardIterator(t *testing.T) {
 	requireAwsKeys(t)
 	keyID := MustGetenv("AWS_ACCESS_KEY_ID")
