@@ -82,6 +82,7 @@ type KinesisClient interface {
 	PutRecord(request PutRecordRequest) (*PutRecordResponse, error)
 	CreateStream(request CreateStream) error
 	DescribeStream(request DescribeStreamRequest) (*DescribeStreamResponse, error)
+	GetShardIterator(request GetShardIteratorRequest) (*GetShardIteratorResponse, error)
 }
 
 // Region specifies the AWS region that a client should connect to.
@@ -344,6 +345,13 @@ func (c *Client) ListDomains(request ListDomainsRequest) (*ListDomainsResponse, 
 func (c *Client) PutRecord(request PutRecordRequest) (*PutRecordResponse, error) {
 	resp := &PutRecordResponse{}
 	err := c.kinesisReqWithResponse("PutRecord", request, resp)
+	return resp, err
+}
+
+// GetShardIterator executes http://docs.aws.amazon.com/kinesis/latest/APIReference/API_GetShardIterator.html
+func (c *Client) GetShardIterator(request GetShardIteratorRequest) (*GetShardIteratorResponse, error) {
+	resp := &GetShardIteratorResponse{}
+	err := c.kinesisReqWithResponse("GetShardIterator", request, resp)
 	return resp, err
 }
 

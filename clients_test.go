@@ -46,10 +46,7 @@ func TestListWorkflowTypes(t *testing.T) {
 }
 
 func TestPutRecord(t *testing.T) {
-	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		log.Printf("WARNING: NO AWS CREDS SPECIFIED, SKIPPING CLIENTS TEST")
-		return
-	}
+	requireAwsKeys(t)
 
 	client := NewClientWithHTTPClient(MustGetenv("AWS_ACCESS_KEY_ID"), MustGetenv("AWS_SECRET_ACCESS_KEY"), USEast1, customHTTPClient())
 	client.Debug = true
@@ -69,6 +66,54 @@ func TestPutRecord(t *testing.T) {
 
 	log.Printf("%+v", resp)
 
+}
+
+func TestGetShardIterator(t *testing.T) {
+	requireAwsKeys(t)
+	keyID := MustGetenv("AWS_ACCESS_KEY_ID")
+	secretKey := MustGetenv("AWS_SECRET_ACCESS_KEY")
+	streamName := "swf4go"
+
+	client := NewClientWithHTTPClient(keyID, secretKey, USEast1, customHTTPClient())
+	client.Debug = true
+
+	// creating a PutRecord request to obtain a ShardID
+	putReq := PutRecordRequest{
+		Data:                      []byte("foo"),
+		PartitionKey:              "the-key",
+		SequenceNumberForOrdering: fmt.Sprintf("%d", time.Now().UnixNano()),
+		StreamName:                streamName,
+	}
+
+	putResp, err := client.PutRecord(putReq)
+
+	if err != nil {
+		log.Printf("%+v", err)
+		t.Fail()
+	}
+
+	shardID := putResp.ShardID
+
+	getReq := GetShardIteratorRequest{
+		StreamName:        "swf4go",
+		ShardID:           shardID,
+		ShardIteratorType: "LATEST",
+	}
+
+	getResp, err := client.GetShardIterator(getReq)
+
+	if err != nil {
+		log.Printf("%+v", err)
+		t.Fail()
+	}
+
+	log.Printf("%+v", getResp)
+}
+
+func requireAwsKeys(t *testing.T) {
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		t.Skipf("WARNING: NO AWS CREDS SPECIFIED, SKIPPING CLIENTS TEST")
+	}
 }
 
 func customHTTPClient() *http.Client {
