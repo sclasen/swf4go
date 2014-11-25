@@ -99,7 +99,7 @@ func (e ErrorOutcome) Data() interface{} { return e.data }
 func (e ErrorOutcome) Decisions() []Decision { return e.decisions }
 
 // State returns the next state for the ErrorOutcome, which is always "error".
-func (t ErrorOutcome) State() string { return "error" }
+func (e ErrorOutcome) State() string { return "error" }
 
 // FSMState defines the behavior of one state of an FSM
 type FSMState struct {
@@ -777,6 +777,7 @@ type FSMContext struct {
 	stateData interface{}
 }
 
+// NewFSMContext constructs an FSMContext.
 func NewFSMContext(fsm *FSM, wfType WorkflowType, wfExec WorkflowExecution, state string, stateData interface{}) *FSMContext {
 	return &FSMContext{
 		fsm:               fsm,
