@@ -497,9 +497,8 @@ func TestContinuedWorkflows(t *testing.T) {
 		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) Outcome {
 			if h.EventType == EventTypeWorkflowExecutionSignaled && d.(*TestData).States[0] == "continuing" {
 				return f.Stay(d, nil)
-			} else {
-				panic("broken")
 			}
+			panic("broken")
 		},
 	})
 
