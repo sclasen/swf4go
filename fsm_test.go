@@ -495,13 +495,11 @@ func TestContinuedWorkflows(t *testing.T) {
 	fsm.AddInitialState(&FSMState{
 		Name: "ok",
 		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) Outcome {
-			if h.EventType == EventTypeWorkflowExecutionSignaled && d.(*TestData).States[0] == "recovered" {
-				log.Println("recovered")
+			if h.EventType == EventTypeWorkflowExecutionSignaled && d.(*TestData).States[0] == "continuing" {
 				return f.Stay(d, nil)
+			} else {
+				panic("broken")
 			}
-			t.Fatalf("ok state did not get recovered %s", h)
-			return nil
-
 		},
 	})
 
@@ -522,7 +520,7 @@ func TestContinuedWorkflows(t *testing.T) {
 		}},
 		StartedEventID: 5,
 	}
-	_, updatedSerializedState := fsm.Tick(resp)
+	decisions, updatedSerializedState := fsm.Tick(resp)
 	updatedState := new(SerializedState)
 	fsm.Deserialize(updatedSerializedState, updatedState)
 
@@ -532,5 +530,9 @@ func TestContinuedWorkflows(t *testing.T) {
 
 	if updatedState.WorkflowEpoch != 4 {
 		t.Fatal("workflowEpoch != 4")
+	}
+
+	if len(decisions) != 1 && decisions[0].RecordMarkerDecisionAttributes.MarkerName != StateMarker {
+		t.Fatal("unexpected decisions")
 	}
 }
