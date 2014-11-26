@@ -92,7 +92,7 @@ func TestFSM(t *testing.T) {
 		PreviousStartedEventID: 0,
 	}
 
-	decisions := fsm.Tick(first)
+	decisions, _ := fsm.Tick(first)
 
 	if !Find(decisions, stateMarkerPredicate) {
 		t.Fatal("No Record State Marker")
@@ -114,7 +114,7 @@ func TestFSM(t *testing.T) {
 		t.Fatal("current state is not 'working'", secondEvents)
 	}
 
-	secondDecisions := fsm.Tick(second)
+	secondDecisions, _ := fsm.Tick(second)
 
 	if !Find(secondDecisions, stateMarkerPredicate) {
 		t.Fatal("No Record State Marker")
@@ -275,7 +275,7 @@ func TestErrorHandling(t *testing.T) {
 		PreviousStartedEventID: 0,
 	}
 
-	decisions := fsm.Tick(resp)
+	decisions, _ := fsm.Tick(resp)
 	if len(decisions) != 1 && decisions[0].DecisionType != DecisionTypeRecordMarker {
 		t.Fatalf("no state marker!")
 	}
@@ -285,7 +285,7 @@ func TestErrorHandling(t *testing.T) {
 	ie := fsm.errorState.Decider
 	fsm.errorState.Decider = TypedDecider(func(f *FSMContext, h HistoryEvent, d *TestData) Outcome { return ie(f, h, d) })
 
-	decisions2 := fsm.Tick(resp)
+	decisions2, _ := fsm.Tick(resp)
 	if len(decisions2) != 1 && decisions2[0].DecisionType != DecisionTypeRecordMarker {
 		t.Fatalf("no state marker for typed decider!")
 	}
@@ -483,4 +483,54 @@ func TestChildRelator(t *testing.T) {
 		t.Fatal(resp)
 	}
 
+}
+
+func TestContinuedWorkflows(t *testing.T) {
+	fsm := FSM{
+		Name:       "test-fsm",
+		DataType:   TestData{},
+		Serializer: JSONStateSerializer{},
+	}
+
+	fsm.AddInitialState(&FSMState{
+		Name: "ok",
+		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) Outcome {
+			if h.EventType == EventTypeWorkflowExecutionSignaled && d.(*TestData).States[0] == "recovered" {
+				log.Println("recovered")
+				return f.Stay(d, nil)
+			}
+			t.Fatalf("ok state did not get recovered %s", h)
+			return nil
+
+		},
+	})
+
+	stateData := fsm.Serialize(TestData{States: []string{"continuing"}})
+	state := SerializedState{
+		WorkflowEpoch:  3,
+		StartedEventId: 77,
+		StateName:      "ok",
+		StateData:      stateData,
+	}
+	serializedState := fsm.Serialize(state)
+	resp := &PollForDecisionTaskResponse{
+		Events: []HistoryEvent{HistoryEvent{
+			EventType: EventTypeWorkflowExecutionContinuedAsNew,
+			WorkflowExecutionContinuedAsNewEventAttributes: &WorkflowExecutionContinuedAsNewEventAttributes{
+				Input: serializedState,
+			},
+		}},
+		StartedEventID: 5,
+	}
+	_, updatedSerializedState := fsm.Tick(resp)
+	updatedState := new(SerializedState)
+	fsm.Deserialize(updatedSerializedState, updatedState)
+
+	if updatedState.StartedEventId != 5 {
+		t.Fatal("startedEventId != 5")
+	}
+
+	if updatedState.WorkflowEpoch != 4 {
+		t.Fatal("workflowEpoch != 4")
+	}
 }
