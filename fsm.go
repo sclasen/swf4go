@@ -362,7 +362,6 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, strin
 		outcome.state = serializedState.StateName
 		outcome.workflowEpoch = serializedState.WorkflowEpoch
 		context.WorkflowEpoch = serializedState.WorkflowEpoch
-		f.log("%+v", serializedState)
 	}
 
 	//iterate through events oldest to newest, calling the decider for the current state.
