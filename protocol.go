@@ -719,7 +719,7 @@ type Decision struct {
 
 func (d Decision) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString("Decisiomn{ ")
+	buffer.WriteString("Decision{ ")
 	buffer.WriteString(fmt.Sprintf("DecisionType: %s,", d.DecisionType))
 	buffer.WriteString(fmt.Sprintf("%+v", decisionTypes[d.DecisionType](d)))
 	buffer.WriteString(" }")
