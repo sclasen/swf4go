@@ -319,7 +319,6 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, strin
 		for i := len(errorEvents) - 1; i >= 0; i-- {
 			e := errorEvents[i]
 			epochExtractor := new(workflowEpochExtractor)
-			f.log("%v", e)
 			f.Deserialize(e.WorkflowExecutionSignaledEventAttributes.Input, epochExtractor) //gets the epoch from the error
 			outcome.workflowEpoch = epochExtractor.WorkflowEpoch
 			context.WorkflowEpoch = epochExtractor.WorkflowEpoch
