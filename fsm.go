@@ -102,8 +102,8 @@ func (e ErrorOutcome) Decisions() []Decision { return e.decisions }
 func (e ErrorOutcome) State() string { return "error" }
 
 type intermediateOutcome struct {
-	originalState  *SerializedState
-	startedEventId int
+	workflowEpoch  int
+	startedEventID int
 	state          string
 	data           interface{}
 	decisions      []Decision
@@ -308,8 +308,8 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, strin
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventID, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
 	outcome := new(intermediateOutcome)
-	outcome.startedEventId = decisionTask.StartedEventID
-	context := NewFSMContext(f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, "", nil)
+	outcome.startedEventID = decisionTask.StartedEventID
+	context := NewFSMContext(f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, "", nil, 0)
 	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
 	if len(errorEvents) > 0 {
 		outcome.data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
@@ -318,6 +318,11 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, strin
 		context.stateData = outcome.data
 		for i := len(errorEvents) - 1; i >= 0; i-- {
 			e := errorEvents[i]
+			epochExtractor := new(workflowEpochExtractor)
+			f.log("%v", e)
+			f.Deserialize(e.WorkflowExecutionSignaledEventAttributes.Input, epochExtractor) //gets the epoch from the error
+			outcome.workflowEpoch = epochExtractor.WorkflowEpoch
+			context.WorkflowEpoch = epochExtractor.WorkflowEpoch
 			anOutcome, err := f.panicSafeDecide(f.errorState, context, e, outcome.data)
 			if err != nil {
 				f.log("at=error error=error-handling-decision-execution-error err=%q state=%s next-state=%s", err, f.errorState.Name, outcome.state)
@@ -356,7 +361,9 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, strin
 
 		outcome.data = data
 		outcome.state = serializedState.StateName
-		outcome.originalState = serializedState
+		outcome.workflowEpoch = serializedState.WorkflowEpoch
+		context.WorkflowEpoch = serializedState.WorkflowEpoch
+		f.log("%+v", serializedState)
 	}
 
 	//iterate through events oldest to newest, calling the decider for the current state.
@@ -558,8 +565,8 @@ func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, erro
 			state := &SerializedState{}
 			err := f.Serializer.Deserialize(event.WorkflowExecutionContinuedAsNewEventAttributes.Input, state)
 			if err == nil {
-				state.WorkflowEpoch += 1
-				state.StartedEventId = 0
+				state.WorkflowEpoch++
+				state.StartedEventID = 0
 			}
 			return state, err
 		}
@@ -602,8 +609,8 @@ func (f *FSM) appendState(outcome *intermediateOutcome) ([]Decision, string, err
 	serializedData, err := f.Serializer.Serialize(outcome.data)
 
 	state := SerializedState{
-		WorkflowEpoch:  outcome.originalState.WorkflowEpoch,
-		StartedEventId: outcome.startedEventId,
+		WorkflowEpoch:  outcome.workflowEpoch,
+		StartedEventID: outcome.startedEventID,
 		StateName:      outcome.state,
 		StateData:      serializedData,
 	}
@@ -670,7 +677,7 @@ func (f *FSM) EmptyDecisions() []Decision {
 // of state over the lifetime of different runs of a workflow.
 type SerializedState struct {
 	WorkflowEpoch  int    `json:"workflowEpoch"`
-	StartedEventId int    `json:"startedEventId"`
+	StartedEventID int    `json:"startedEventId"`
 	StateName      string `json:"stateName"`
 	StateData      string `json:"stateData"`
 }
@@ -678,6 +685,7 @@ type SerializedState struct {
 // SerializedDecisionError is a wrapper struct that allows serializing the context in which an error in a Decider occurred
 // into a WorkflowSignaledEvent in the workflow history.
 type SerializedDecisionError struct {
+	WorkflowEpoch       int         `json:"workflowEpoch"`
 	ErrorEventID        int         `json:"errorEventIds"`
 	UnprocessedEventIDs []int       `json:"unprocessedEventIds"`
 	StateName           string      `json:"stateName"`
@@ -688,9 +696,14 @@ type SerializedDecisionError struct {
 // into a WorkflowSignaledEvent in the workflow history. These errors are generally in finding the current state and data for a workflow, or
 // in serializing and deserializing said state.
 type SerializedSystemError struct {
+	WorkflowEpoch       int         `json:"workflowEpoch"`
 	ErrorType           string      `json:"errorType"`
 	Error               interface{} `json:"error"`
 	UnprocessedEventIDs []int       `json:"unprocessedEventIds"`
+}
+
+type workflowEpochExtractor struct {
+	WorkflowEpoch int `json:"workflowEpoch"`
 }
 
 // StateSerializer defines the interface for serializing state to and deserializing state from the workflow history.
@@ -798,18 +811,20 @@ type FSMContext struct {
 	fsm *FSM
 	WorkflowType
 	WorkflowExecution
-	State     string
-	stateData interface{}
+	State         string
+	stateData     interface{}
+	WorkflowEpoch int
 }
 
 // NewFSMContext constructs an FSMContext.
-func NewFSMContext(fsm *FSM, wfType WorkflowType, wfExec WorkflowExecution, state string, stateData interface{}) *FSMContext {
+func NewFSMContext(fsm *FSM, wfType WorkflowType, wfExec WorkflowExecution, state string, stateData interface{}, wfEpoch int) *FSMContext {
 	return &FSMContext{
 		fsm:               fsm,
 		WorkflowType:      wfType,
 		WorkflowExecution: wfExec,
 		State:             state,
 		stateData:         stateData,
+		WorkflowEpoch:     wfEpoch,
 	}
 }
 

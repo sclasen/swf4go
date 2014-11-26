@@ -264,7 +264,7 @@ func TestErrorHandling(t *testing.T) {
 			EventType: EventTypeWorkflowExecutionSignaled,
 			WorkflowExecutionSignaledEventAttributes: &WorkflowExecutionSignaledEventAttributes{
 				SignalName: ErrorSignal,
-				Input:      "{}",
+				Input:      "{\"workflowEpoch\":2}",
 			},
 		},
 	}
@@ -508,7 +508,7 @@ func TestContinuedWorkflows(t *testing.T) {
 	stateData := fsm.Serialize(TestData{States: []string{"continuing"}})
 	state := SerializedState{
 		WorkflowEpoch:  3,
-		StartedEventId: 77,
+		StartedEventID: 77,
 		StateName:      "ok",
 		StateData:      stateData,
 	}
@@ -526,7 +526,7 @@ func TestContinuedWorkflows(t *testing.T) {
 	updatedState := new(SerializedState)
 	fsm.Deserialize(updatedSerializedState, updatedState)
 
-	if updatedState.StartedEventId != 5 {
+	if updatedState.StartedEventID != 5 {
 		t.Fatal("startedEventId != 5")
 	}
 
