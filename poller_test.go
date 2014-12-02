@@ -23,18 +23,17 @@ func TestPollerManager(t *testing.T) {
 	}
 
 	shutdown := make(chan struct{})
-	go func(){
+	go func() {
 		mgr.StopPollers()
 		shutdown <- struct{}{}
 	}()
 
 	select {
-	case <-time.After(1 *time.Second):
+	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting on shtutdown")
 	case <-shutdown:
 
 	}
-
 
 }
 

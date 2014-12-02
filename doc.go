@@ -22,17 +22,15 @@ SWF does not recognize this condition so it can result in assigning a task to a 
 This is not terrible if the task has a short timeout but can cause big delays if the task does have a long timeout.
 
 Both types of pollers allow you to manage polling yourself by calling Poll() directly. However it is recommended that you use the
-PollUntilShutdownBy(...) function, which works in concert with a PollerShutdownManager to handle os.Signals properly and await all in-flight polls to complete before allowing
-a process to exit.
+PollUntilShutdownBy(...) function, which works in concert with a PollerShutdownManager to await all in-flight polls to complete. This facilitates clean shutdown of end
+user processes.
 
 PollerShutdownManager
 
-The PollerShutdownManager, once created by calling swf.RegisterPollerShutdownManager() will handle SIGHUP,SIGINT,SIGTERM,SIGQUIT by signalling any registered pollers to shut down
-once any in-flight polls have completed. Once this process is complete, the PollerShutdownManager will call os.Exit(0), causing the process to terminate. The shutdown process can take up to 60 seconds
+When PollerShutdownManager.ShutdownPollers() is called, it will signal any registered pollers to shut down
+once any in-flight polls have completed, and block until this happens. The shutdown process can take up to 60 seconds
 due to the length of SWF long polls before an empty response is returned.
 
-Care should be taken to only use a single PollerShutdownManager per process, since it calls os.Exit. If you have more than one, the shutdowns will race and one
-wont complete successfully.
 
 FSM
 
