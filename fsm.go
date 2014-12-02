@@ -230,7 +230,7 @@ func (f *FSM) Init() {
 	}
 
 	if f.PollerShutdownManager == nil {
-		f.PollerShutdownManager = RegisterPollerShutdownManager()
+		f.PollerShutdownManager = NewPollerShutdownManager()
 	}
 }
 
