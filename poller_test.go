@@ -2,15 +2,13 @@ package swf
 
 import (
 	"strconv"
-	"syscall"
 	"testing"
 	"time"
 )
 
 func TestPollerManager(t *testing.T) {
 
-	mgr := RegisterPollerShutdownManager()
-	mgr.exitOnSignal = false
+	mgr := NewPollerShutdownManager()
 
 	for i := 1; i < 10; i++ {
 		p := TestPoller{strconv.FormatInt(int64(i), 10), make(chan bool, 1), make(chan bool, 1)}
@@ -24,8 +22,19 @@ func TestPollerManager(t *testing.T) {
 		mgr.Register(p.name, p.stop, p.stopAck)
 	}
 
-	mgr.exitChan <- syscall.SIGQUIT
-	time.Sleep(1 * time.Second)
+	shutdown := make(chan struct{})
+	go func() {
+		mgr.StopPollers()
+		shutdown <- struct{}{}
+	}()
+
+	select {
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting on shtutdown")
+	case <-shutdown:
+
+	}
+
 }
 
 type TestPoller struct {

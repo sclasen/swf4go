@@ -2,9 +2,6 @@ package swf
 
 import (
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
@@ -149,14 +146,10 @@ func (p *ActivityTaskPoller) PollUntilShutdownBy(mgr *PollerShutdownManager, pol
 	}
 }
 
-// PollerShutdownManager facilitates cleanly shutting down pollers in response to os.Signals before allowing the application to exit. When it receives an os.Signal it will
-// send to each of the stopChan that have been registered, then recieve from each of the ackChan that have been registered.  Once this dance is done, it will call system.Exit(0).
+// PollerShutdownManager facilitates cleanly shutting down pollers when the application decides to exit. When StopPollers() is called it will
+// send to each of the stopChan that have been registered, then recieve from each of the ackChan that have been registered. At this point StopPollers() returns.
 type PollerShutdownManager struct {
-	exitChan                chan os.Signal
-	registeredPollers       map[string]*registeredPoller
-	registerChannelsInput   chan *registeredPoller
-	deregisterChannelsInput chan string
-	exitOnSignal            bool
+	registeredPollers map[string]*registeredPoller
 }
 
 type registeredPoller struct {
@@ -165,74 +158,37 @@ type registeredPoller struct {
 	stopAckChannel chan bool
 }
 
-// RegisterPollerShutdownManager creates a PollerShutdownManager and registers a os.Signal handler. This should be called once per process.
-func RegisterPollerShutdownManager() *PollerShutdownManager {
+// NewPollerShutdownManager creates a PollerShutdownManager
+func NewPollerShutdownManager() *PollerShutdownManager {
 
 	mgr := &PollerShutdownManager{
-		exitChan:                make(chan os.Signal),
-		registeredPollers:       make(map[string]*registeredPoller),
-		registerChannelsInput:   make(chan *registeredPoller),
-		deregisterChannelsInput: make(chan string),
-		exitOnSignal:            true,
+		registeredPollers: make(map[string]*registeredPoller),
 	}
-
-	signal.Notify(mgr.exitChan, syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT)
-
-	go mgr.eventLoop()
 
 	return mgr
 
 }
 
-func (p *PollerShutdownManager) eventLoop() {
-	for {
-		select {
-		case sig, ok := <-p.exitChan:
-			if ok {
-				log.Printf("component=PollerShutdownManager at=signal signal=%s", sig)
-				for _, r := range p.registeredPollers {
-					log.Printf("component=PollerShutdownManager at=sending-stop name=%s", r.name)
-					r.stopChannel <- true
-				}
-				for _, r := range p.registeredPollers {
-					log.Printf("component=PollerShutdownManager at=awaiting-stop-ack name=%s", r.name)
-					<-r.stopAckChannel
-					log.Printf("component=PollerShutdownManager at=stop-ack name=%s", r.name)
-				}
-				if p.exitOnSignal {
-					log.Println("component=PollerShutdownManager at=calling-os.Exit(0)")
-					os.Exit(0)
-				}
-			} else {
-				log.Println("component=PollerShutdownManager at=signal-error")
-			}
-		case register, ok := <-p.registerChannelsInput:
-			if ok {
-				log.Printf("component=PollerShutdownManager at=register name=%s", register.name)
-				p.registeredPollers[register.name] = register
-			} else {
-				log.Printf("component=PollerShutdownManager at=register-error name=%s", register.name)
-			}
-		case deregister, ok := <-p.deregisterChannelsInput:
-			if ok {
-				log.Printf("component=PollerShutdownManager at=deregister name=%s", deregister)
-				delete(p.registeredPollers, deregister)
-			} else {
-				log.Printf("component=PollerShutdownManager at=deregister-error name=%s", deregister)
-			}
-		}
+//StopPollers blocks until it is able to stop all the registered pollers, which can take up to 60 seconds.
+func (p *PollerShutdownManager) StopPollers() {
+	log.Printf("component=PollerShutdownManager at=stop-pollers")
+	for _, r := range p.registeredPollers {
+		log.Printf("component=PollerShutdownManager at=sending-stop name=%s", r.name)
+		r.stopChannel <- true
+	}
+	for _, r := range p.registeredPollers {
+		log.Printf("component=PollerShutdownManager at=awaiting-stop-ack name=%s", r.name)
+		<-r.stopAckChannel
+		log.Printf("component=PollerShutdownManager at=stop-ack name=%s", r.name)
 	}
 }
 
 // Register registers a named pair of channels to the shutdown manager. Buffered channels please!
 func (p *PollerShutdownManager) Register(name string, stopChan chan bool, ackChan chan bool) {
-	p.registerChannelsInput <- &registeredPoller{name, stopChan, ackChan}
+	p.registeredPollers[name] = &registeredPoller{name, stopChan, ackChan}
 }
 
 // Deregister removes a registered pair of channels from the shutdown manager.
 func (p *PollerShutdownManager) Deregister(name string) {
-	p.deregisterChannelsInput <- name
+	delete(p.registeredPollers, name)
 }
