@@ -11,3 +11,5 @@ swf4go provides a full client library for amazon simple workflow service, as wel
 some of the eccentricities of the swf service.
 
 swf4go also uses these facilities to provide an erlang/akka style Finite State Machine abstraction, which is used to model workflows as FSMs.
+
+Please see the godoc for detailed documentation and examples.
