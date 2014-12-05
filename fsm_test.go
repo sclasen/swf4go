@@ -2,6 +2,7 @@ package swf
 
 import (
 	"log"
+	"math/rand"
 	"strconv"
 	"testing"
 	"time"
@@ -105,13 +106,13 @@ func TestFSM(t *testing.T) {
 	secondEvents := DecisionsToEvents(decisions)
 	secondEvents = append(secondEvents, events...)
 
+	if state, _ := fsm.findSerializedState(secondEvents); state.StateName != "working" {
+		t.Fatal("current state is not 'working'", secondEvents)
+	}
+
 	second := &PollForDecisionTaskResponse{
 		Events:                 secondEvents,
 		PreviousStartedEventID: 3,
-	}
-
-	if state, _ := fsm.findSerializedState(secondEvents); state.StateName != "working" {
-		t.Fatal("current state is not 'working'", secondEvents)
 	}
 
 	secondDecisions, _ := fsm.Tick(second)
@@ -519,9 +520,7 @@ func TestContinuedWorkflows(t *testing.T) {
 		}},
 		StartedEventID: 5,
 	}
-	decisions, updatedSerializedState := fsm.Tick(resp)
-	updatedState := new(SerializedState)
-	fsm.Deserialize(updatedSerializedState, updatedState)
+	decisions, updatedState := fsm.Tick(resp)
 
 	if updatedState.StartedEventID != 5 {
 		t.Fatal("startedEventId != 5")
@@ -533,5 +532,90 @@ func TestContinuedWorkflows(t *testing.T) {
 
 	if len(decisions) != 1 && decisions[0].RecordMarkerDecisionAttributes.MarkerName != StateMarker {
 		t.Fatal("unexpected decisions")
+	}
+}
+
+type MockKinesisClient struct {
+	*Client
+	putRecords []PutRecordRequest
+	seqNumber  int
+}
+
+func (c *MockKinesisClient) PutRecord(req PutRecordRequest) (*PutRecordResponse, error) {
+	if c.putRecords == nil {
+		c.seqNumber = rand.Int()
+		c.putRecords = make([]PutRecordRequest, 0)
+	}
+	c.putRecords = append(c.putRecords, req)
+	c.seqNumber++
+	return &PutRecordResponse{
+		SequenceNumber: strconv.Itoa(c.seqNumber),
+		ShardID:        req.PartitionKey,
+	}, nil
+}
+
+func (c *MockKinesisClient) RespondDecisionTaskCompleted(request RespondDecisionTaskCompletedRequest) error {
+	return nil
+}
+
+func TestKinesisReplication(t *testing.T) {
+	client := &MockKinesisClient{}
+	fsm := FSM{
+		Client:        client,
+		Name:          "test-fsm",
+		DataType:      TestData{},
+		KinesisStream: "test-stream",
+		Serializer:    JSONStateSerializer{},
+	}
+	fsm.AddInitialState(&FSMState{
+		Name: "initial",
+		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) Outcome {
+			if h.EventType == EventTypeWorkflowExecutionStarted {
+				return f.Goto("done", d, f.EmptyDecisions())
+			}
+			t.Fatal("unexpected")
+			return nil // unreachable
+		},
+	})
+	fsm.AddState(&FSMState{
+		Name: "done",
+		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) Outcome {
+			go fsm.PollerShutdownManager.StopPollers()
+			return f.Stay(d, f.EmptyDecisions())
+		},
+	})
+	events := []HistoryEvent{
+		HistoryEvent{EventType: "DecisionTaskStarted", EventID: 3},
+		HistoryEvent{EventType: "DecisionTaskScheduled", EventID: 2},
+		HistoryEvent{
+			EventID:   1,
+			EventType: "WorkflowExecutionStarted",
+			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
+				Input: "{\"States\":[]}",
+			},
+		},
+	}
+	decisionTask := &PollForDecisionTaskResponse{
+		Events:                 events,
+		PreviousStartedEventID: 0,
+	}
+	fsm.handleDecisionTask(decisionTask)
+
+	if client.putRecords == nil || len(client.putRecords) != 1 {
+		t.Fatal("expected only one state to be replicated, got: %v", client.putRecords)
+	}
+	replication := client.putRecords[0]
+	if replication.StreamName != fsm.KinesisStream {
+		t.Fatalf("expected Kinesis stream: %q, got %q", fsm.KinesisStream, replication.StreamName)
+	}
+	var replicatedState SerializedState
+	if err := fsm.Serializer.Deserialize(string(replication.Data), &replicatedState); err != nil {
+		t.Fatal(err)
+	}
+	if replicatedState.StartedEventID != 0 {
+		t.Fatal("state.StartedEventID != 0, got: %d", replicatedState.StartedEventID)
+	}
+	if replicatedState.StateName != "done" {
+		t.Fatalf("current state being replicated is not 'done', got %q", replicatedState.StateName)
 	}
 }
