@@ -1255,7 +1255,7 @@ type PutRecordResponse struct {
 
 // GetRecordsRequest models the kinesis json protocol.
 type GetRecordsRequest struct {
-	Limit         int
+	Limit         int `Limit,omitempty`
 	ShardIterator string
 }
 
