@@ -2,6 +2,8 @@ package swf
 
 import (
 	"log"
+	"math/rand"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -14,6 +16,8 @@ import (
 
 //Todo add tests of error handling mechanism
 //assert that the decisions have the mark and the signal external...hmm need workflow id for signal external.
+
+var testActivityType = ActivityType{Name: "activity", Version: "activityVersion"}
 
 func TestFSM(t *testing.T) {
 
@@ -33,7 +37,7 @@ func TestFSM(t *testing.T) {
 				DecisionType: DecisionTypeScheduleActivityTask,
 				ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
 					ActivityID:   uuid.New(),
-					ActivityType: ActivityType{Name: "activity", Version: "activityVersion"},
+					ActivityType: testActivityType,
 					TaskList:     &TaskList{Name: "taskList"},
 					Input:        serialized,
 				},
@@ -63,7 +67,7 @@ func TestFSM(t *testing.T) {
 					DecisionType: DecisionTypeScheduleActivityTask,
 					ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
 						ActivityID:   uuid.New(),
-						ActivityType: ActivityType{Name: "activity", Version: "activityVersion"},
+						ActivityType: testActivityType,
 						TaskList:     &TaskList{Name: "taskList"},
 						Input:        serialized,
 					},
@@ -105,13 +109,13 @@ func TestFSM(t *testing.T) {
 	secondEvents := DecisionsToEvents(decisions)
 	secondEvents = append(secondEvents, events...)
 
+	if state, _ := fsm.findSerializedState(secondEvents); state.ReplicationData.StateName != "working" {
+		t.Fatal("current state is not 'working'", secondEvents)
+	}
+
 	second := &PollForDecisionTaskResponse{
 		Events:                 secondEvents,
 		PreviousStartedEventID: 3,
-	}
-
-	if state, _ := fsm.findSerializedState(secondEvents); state.StateName != "working" {
-		t.Fatal("current state is not 'working'", secondEvents)
 	}
 
 	secondDecisions, _ := fsm.Tick(second)
@@ -127,12 +131,16 @@ func TestFSM(t *testing.T) {
 }
 
 func Find(decisions []Decision, predicate func(Decision) bool) bool {
+	return FindDecision(decisions, predicate) != nil
+}
+
+func FindDecision(decisions []Decision, predicate func(Decision) bool) *Decision {
 	for _, d := range decisions {
 		if predicate(d) {
-			return true
+			return &d
 		}
 	}
-	return false
+	return nil
 }
 
 func stateMarkerPredicate(d Decision) bool {
@@ -147,6 +155,10 @@ func completeWorkflowPredicate(d Decision) bool {
 	return d.DecisionType == "CompleteWorkflowExecution"
 }
 
+func startTimerPredicate(d Decision) bool {
+	return d.DecisionType == "StartTimer"
+}
+
 func DecisionsToEvents(decisions []Decision) []HistoryEvent {
 	var events []HistoryEvent
 	for _, d := range decisions {
@@ -154,11 +166,17 @@ func DecisionsToEvents(decisions []Decision) []HistoryEvent {
 			event := HistoryEvent{
 				EventType: "ActivityTaskCompleted",
 				EventID:   7,
+				ActivityTaskCompletedEventAttributes: &ActivityTaskCompletedEventAttributes{
+					ScheduledEventID: 6,
+				},
 			}
 			events = append(events, event)
 			event = HistoryEvent{
 				EventType: "ActivityTaskScheduled",
 				EventID:   6,
+				ActivityTaskScheduledEventAttributes: &ActivityTaskScheduledEventAttributes{
+					ActivityType: testActivityType,
+				},
 			}
 			events = append(events, event)
 		}
@@ -227,6 +245,9 @@ func TestErrorHandling(t *testing.T) {
 	fsm.AddInitialState(&FSMState{
 		Name: "ok",
 		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) Outcome {
+			if h.EventType == EventTypeWorkflowExecutionStarted {
+				return f.Stay(d, nil)
+			}
 			if h.EventType == EventTypeWorkflowExecutionSignaled && d.(*TestData).States[0] == "recovered" {
 				log.Println("recovered")
 				return f.Stay(d, nil)
@@ -252,7 +273,7 @@ func TestErrorHandling(t *testing.T) {
 
 	events := []HistoryEvent{
 		HistoryEvent{
-			EventID:   2,
+			EventID:   3,
 			EventType: EventTypeWorkflowExecutionSignaled,
 			WorkflowExecutionSignaledEventAttributes: &WorkflowExecutionSignaledEventAttributes{
 				SignalName: "NOT AN ERROR",
@@ -260,11 +281,18 @@ func TestErrorHandling(t *testing.T) {
 			},
 		},
 		HistoryEvent{
-			EventID:   1,
+			EventID:   2,
 			EventType: EventTypeWorkflowExecutionSignaled,
 			WorkflowExecutionSignaledEventAttributes: &WorkflowExecutionSignaledEventAttributes{
 				SignalName: ErrorSignal,
 				Input:      "{\"workflowEpoch\":2}",
+			},
+		},
+		HistoryEvent{
+			EventID:   1,
+			EventType: EventTypeWorkflowExecutionStarted,
+			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
+				Input: "",
 			},
 		},
 	}
@@ -504,10 +532,13 @@ func TestContinuedWorkflows(t *testing.T) {
 
 	stateData := fsm.Serialize(TestData{States: []string{"continuing"}})
 	state := SerializedState{
-		WorkflowEpoch:  3,
-		StartedEventID: 77,
-		StateName:      "ok",
-		StateData:      stateData,
+		ReplicationData: ReplicationData{
+			WorkflowEpoch:  3,
+			StartedEventID: 77,
+			StateName:      "ok",
+			StateData:      stateData,
+		},
+		PendingActivities: ActivityCorrelator{},
 	}
 	serializedState := fsm.Serialize(state)
 	resp := &PollForDecisionTaskResponse{
@@ -519,19 +550,340 @@ func TestContinuedWorkflows(t *testing.T) {
 		}},
 		StartedEventID: 5,
 	}
-	decisions, updatedSerializedState := fsm.Tick(resp)
-	updatedState := new(SerializedState)
-	fsm.Deserialize(updatedSerializedState, updatedState)
+	decisions, updatedState := fsm.Tick(resp)
 
-	if updatedState.StartedEventID != 5 {
+	if updatedState.ReplicationData.StartedEventID != 5 {
 		t.Fatal("startedEventId != 5")
 	}
 
-	if updatedState.WorkflowEpoch != 4 {
+	if updatedState.ReplicationData.WorkflowEpoch != 4 {
 		t.Fatal("workflowEpoch != 4")
 	}
 
 	if len(decisions) != 1 && decisions[0].RecordMarkerDecisionAttributes.MarkerName != StateMarker {
 		t.Fatal("unexpected decisions")
 	}
+}
+
+type MockKinesisClient struct {
+	*Client
+	putRecords []PutRecordRequest
+	seqNumber  int
+}
+
+func (c *MockKinesisClient) PutRecord(req PutRecordRequest) (*PutRecordResponse, error) {
+	if c.putRecords == nil {
+		c.seqNumber = rand.Int()
+		c.putRecords = make([]PutRecordRequest, 0)
+	}
+	c.putRecords = append(c.putRecords, req)
+	c.seqNumber++
+	return &PutRecordResponse{
+		SequenceNumber: strconv.Itoa(c.seqNumber),
+		ShardID:        req.PartitionKey,
+	}, nil
+}
+
+func (c *MockKinesisClient) RespondDecisionTaskCompleted(request RespondDecisionTaskCompletedRequest) error {
+	return nil
+}
+
+func TestKinesisReplication(t *testing.T) {
+	client := &MockKinesisClient{}
+	fsm := FSM{
+		Client:        client,
+		Name:          "test-fsm",
+		DataType:      TestData{},
+		KinesisStream: "test-stream",
+		Serializer:    JSONStateSerializer{},
+	}
+	fsm.AddInitialState(&FSMState{
+		Name: "initial",
+		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) Outcome {
+			if h.EventType == EventTypeWorkflowExecutionStarted {
+				return f.Goto("done", d, f.EmptyDecisions())
+			}
+			t.Fatal("unexpected")
+			return nil // unreachable
+		},
+	})
+	fsm.AddState(&FSMState{
+		Name: "done",
+		Decider: func(f *FSMContext, h HistoryEvent, d interface{}) Outcome {
+			go fsm.PollerShutdownManager.StopPollers()
+			return f.Stay(d, f.EmptyDecisions())
+		},
+	})
+	events := []HistoryEvent{
+		HistoryEvent{EventType: "DecisionTaskStarted", EventID: 3},
+		HistoryEvent{EventType: "DecisionTaskScheduled", EventID: 2},
+		HistoryEvent{
+			EventID:   1,
+			EventType: "WorkflowExecutionStarted",
+			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
+				Input: "{\"States\":[]}",
+			},
+		},
+	}
+	decisionTask := &PollForDecisionTaskResponse{
+		Events:                 events,
+		PreviousStartedEventID: 0,
+	}
+	fsm.handleDecisionTask(decisionTask)
+
+	if client.putRecords == nil || len(client.putRecords) != 1 {
+		t.Fatal("expected only one state to be replicated, got: %v", client.putRecords)
+	}
+	replication := client.putRecords[0]
+	if replication.StreamName != fsm.KinesisStream {
+		t.Fatalf("expected Kinesis stream: %q, got %q", fsm.KinesisStream, replication.StreamName)
+	}
+	var replicatedState SerializedState
+	if err := fsm.Serializer.Deserialize(string(replication.Data), &replicatedState); err != nil {
+		t.Fatal(err)
+	}
+	if replicatedState.ReplicationData.StartedEventID != 0 {
+		t.Fatal("state.StartedEventID != 0, got: %d", replicatedState.ReplicationData.StartedEventID)
+	}
+	if replicatedState.ReplicationData.StateName != "done" {
+		t.Fatalf("current state being replicated is not 'done', got %q", replicatedState.ReplicationData.StateName)
+	}
+}
+
+func TestTrackPendingActivities(t *testing.T) {
+	fsm := &FSM{
+		Name:       "test-fsm",
+		DataType:   TestData{},
+		Serializer: JSONStateSerializer{},
+	}
+
+	fsm.AddInitialState(&FSMState{
+		Name: "start",
+		Decider: func(f *FSMContext, lastEvent HistoryEvent, data interface{}) Outcome {
+			testData := data.(*TestData)
+			testData.States = append(testData.States, "start")
+			serialized := f.Serialize(testData)
+			decision := Decision{
+				DecisionType: DecisionTypeScheduleActivityTask,
+				ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
+					ActivityID:   uuid.New(),
+					ActivityType: testActivityType,
+					TaskList:     &TaskList{Name: "taskList"},
+					Input:        serialized,
+				},
+			}
+			return f.Goto("working", testData, []Decision{decision})
+		},
+	})
+
+	// Deciders should be able to retrieve info about the pending activity
+	fsm.AddState(&FSMState{
+		Name: "working",
+		Decider: TypedDecider(func(f *FSMContext, lastEvent HistoryEvent, testData *TestData) Outcome {
+			testData.States = append(testData.States, "working")
+			serialized := f.Serialize(testData)
+			var decisions = f.EmptyDecisions()
+			if lastEvent.EventType == EventTypeActivityTaskCompleted {
+				trackedActivityType := f.ActivityType(lastEvent)
+				if !reflect.DeepEqual(*trackedActivityType, testActivityType) {
+					t.Fatalf("pending activity not being tracked\nExpected:\n%+v\nGot:\n%+v",
+						testActivityType, trackedActivityType,
+					)
+				}
+				timeoutSeconds := "5" //swf uses stringy numbers in many places
+				decision := Decision{
+					DecisionType: DecisionTypeStartTimer,
+					StartTimerDecisionAttributes: &StartTimerDecisionAttributes{
+						StartToFireTimeout: timeoutSeconds,
+						TimerID:            "timeToComplete",
+					},
+				}
+				return f.Goto("done", testData, []Decision{decision})
+			} else if lastEvent.EventType == EventTypeActivityTaskFailed {
+				trackedActivityType := f.ActivityType(lastEvent)
+				if !reflect.DeepEqual(*trackedActivityType, testActivityType) {
+					t.Fatalf("pending activity not being tracked\nExpected:\n%+v\nGot:\n%+v",
+						testActivityType, trackedActivityType,
+					)
+				}
+				decision := Decision{
+					DecisionType: DecisionTypeScheduleActivityTask,
+					ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
+						ActivityID:   uuid.New(),
+						ActivityType: testActivityType,
+						TaskList:     &TaskList{Name: "taskList"},
+						Input:        serialized,
+					},
+				}
+				decisions = append(decisions, decision)
+			}
+			return f.Stay(testData, decisions)
+		}),
+	})
+
+	// Pending activities are cleared after finished
+	fsm.AddState(&FSMState{
+		Name: "done",
+		Decider: TypedDecider(func(f *FSMContext, lastEvent HistoryEvent, testData *TestData) Outcome {
+			decisions := f.EmptyDecisions()
+			if lastEvent.EventType == EventTypeTimerFired {
+				testData.States = append(testData.States, "done")
+				serialized := f.Serialize(testData)
+				trackedActivityType := f.ActivityType(lastEvent)
+				if trackedActivityType != nil {
+					t.Fatalf("pending activity not being cleared\nGot:\n%+v", trackedActivityType)
+				}
+				decision := Decision{
+					DecisionType: DecisionTypeCompleteWorkflowExecution,
+					CompleteWorkflowExecutionDecisionAttributes: &CompleteWorkflowExecutionDecisionAttributes{
+						Result: serialized,
+					},
+				}
+				decisions = append(decisions, decision)
+			}
+			return f.Stay(testData, decisions)
+		}),
+	})
+
+	// Schedule a task
+	events := []HistoryEvent{
+		HistoryEvent{EventType: "DecisionTaskStarted", EventID: 3},
+		HistoryEvent{EventType: "DecisionTaskScheduled", EventID: 2},
+		HistoryEvent{
+			EventID:   1,
+			EventType: "WorkflowExecutionStarted",
+			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
+				Input: "{\"States\":[]}",
+			},
+		},
+	}
+	first := &PollForDecisionTaskResponse{
+		Events:                 events,
+		PreviousStartedEventID: 0,
+	}
+	decisions, _ := fsm.Tick(first)
+	recordMarker := FindDecision(decisions, stateMarkerPredicate)
+	if recordMarker == nil {
+		t.Fatal("No Record State Marker")
+	}
+	if !Find(decisions, scheduleActivityPredicate) {
+		t.Fatal("No ScheduleActivityTask")
+	}
+
+	// Fail the task
+	secondEvents := []HistoryEvent{
+		{
+			EventType: "ActivityTaskFailed",
+			EventID:   7,
+			ActivityTaskFailedEventAttributes: &ActivityTaskFailedEventAttributes{
+				ScheduledEventID: 6,
+			},
+		},
+		{
+			EventType: "ActivityTaskScheduled",
+			EventID:   6,
+			ActivityTaskScheduledEventAttributes: &ActivityTaskScheduledEventAttributes{
+				ActivityType: testActivityType,
+			},
+		},
+		{
+			EventType: "MarkerRecorded",
+			EventID:   5,
+			MarkerRecordedEventAttributes: &MarkerRecordedEventAttributes{
+				MarkerName: StateMarker,
+				Details:    recordMarker.RecordMarkerDecisionAttributes.Details,
+			},
+		},
+	}
+	secondEvents = append(secondEvents, events...)
+	if state, _ := fsm.findSerializedState(secondEvents); state.ReplicationData.StateName != "working" {
+		t.Fatal("current state is not 'working'", secondEvents)
+	}
+	second := &PollForDecisionTaskResponse{
+		Events:                 secondEvents,
+		PreviousStartedEventID: 3,
+	}
+	secondDecisions, _ := fsm.Tick(second)
+	recordMarker = FindDecision(secondDecisions, stateMarkerPredicate)
+	if recordMarker == nil {
+		t.Fatal("No Record State Marker")
+	}
+	if !Find(secondDecisions, scheduleActivityPredicate) {
+		t.Fatal("No ScheduleActivityTask (retry)")
+	}
+
+	// Complete the task
+	thirdEvents := []HistoryEvent{
+		{
+			EventType: "ActivityTaskCompleted",
+			EventID:   11,
+			ActivityTaskCompletedEventAttributes: &ActivityTaskCompletedEventAttributes{
+				ScheduledEventID: 10,
+			},
+		},
+		{
+			EventType: "ActivityTaskScheduled",
+			EventID:   10,
+			ActivityTaskScheduledEventAttributes: &ActivityTaskScheduledEventAttributes{
+				ActivityType: testActivityType,
+			},
+		},
+		{
+			EventType: "MarkerRecorded",
+			EventID:   9,
+			MarkerRecordedEventAttributes: &MarkerRecordedEventAttributes{
+				MarkerName: StateMarker,
+				Details:    recordMarker.RecordMarkerDecisionAttributes.Details,
+			},
+		},
+	}
+	thirdEvents = append(thirdEvents, secondEvents...)
+	if state, _ := fsm.findSerializedState(thirdEvents); state.ReplicationData.StateName != "working" {
+		t.Fatal("current state is not 'working'", thirdEvents)
+	}
+	third := &PollForDecisionTaskResponse{
+		Events:                 thirdEvents,
+		PreviousStartedEventID: 7,
+	}
+	thirdDecisions, _ := fsm.Tick(third)
+	recordMarker = FindDecision(thirdDecisions, stateMarkerPredicate)
+	if recordMarker == nil {
+		t.Fatal("No Record State Marker")
+	}
+	if !Find(thirdDecisions, startTimerPredicate) {
+		t.Fatal("No StartTimer")
+	}
+
+	// Finish the workflow, check if pending activities were cleared
+	fourthEvents := []HistoryEvent{
+		{
+			EventType: "TimerFired",
+			EventID:   14,
+		},
+		{
+			EventType: "MarkerRecorded",
+			EventID:   13,
+			MarkerRecordedEventAttributes: &MarkerRecordedEventAttributes{
+				MarkerName: StateMarker,
+				Details:    recordMarker.RecordMarkerDecisionAttributes.Details,
+			},
+		},
+	}
+	fourthEvents = append(fourthEvents, thirdEvents...)
+	if state, _ := fsm.findSerializedState(fourthEvents); state.ReplicationData.StateName != "done" {
+		t.Fatal("current state is not 'done'", fourthEvents)
+	}
+	fourth := &PollForDecisionTaskResponse{
+		Events:                 fourthEvents,
+		PreviousStartedEventID: 11,
+	}
+	fourthDecisions, _ := fsm.Tick(fourth)
+	recordMarker = FindDecision(fourthDecisions, stateMarkerPredicate)
+	if recordMarker == nil {
+		t.Fatal("No Record State Marker")
+	}
+	if !Find(fourthDecisions, completeWorkflowPredicate) {
+		t.Fatal("No CompleteWorkflow")
+	}
+
 }

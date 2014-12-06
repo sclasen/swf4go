@@ -239,36 +239,41 @@ func (f *FSM) Init() {
 func (f *FSM) Start() {
 	f.Init()
 	poller := NewDecisionTaskPoller(f.Client, f.Domain, f.Identity, f.TaskList)
-	go poller.PollUntilShutdownBy(f.PollerShutdownManager, fmt.Sprintf("%s-poller", f.Name), func(decisionTask *PollForDecisionTaskResponse) {
-		decisions, stateToReplicate := f.Tick(decisionTask)
-		err := f.Client.RespondDecisionTaskCompleted(
-			RespondDecisionTaskCompletedRequest{
-				Decisions: decisions,
-				TaskToken: decisionTask.TaskToken,
-			})
+	go poller.PollUntilShutdownBy(f.PollerShutdownManager, fmt.Sprintf("%s-poller", f.Name), f.handleDecisionTask)
+}
 
-		if err != nil {
-			f.log("action=tick at=decide-request-failed error=%q", err.Error())
-		}
+func (f *FSM) handleDecisionTask(decisionTask *PollForDecisionTaskResponse) {
+	decisions, state := f.Tick(decisionTask)
+	if err := f.Client.RespondDecisionTaskCompleted(
+		RespondDecisionTaskCompletedRequest{
+			Decisions: decisions,
+			TaskToken: decisionTask.TaskToken,
+		},
+	); err != nil {
+		f.log("action=tick at=decide-request-failed error=%q", err.Error())
+		return
+	}
 
-		if f.KinesisStream != "" {
-			if stateToReplicate != "" {
-				resp, err := f.Client.PutRecord(PutRecordRequest{
-					StreamName: f.KinesisStream,
-					//partition by workflow
-					PartitionKey: decisionTask.WorkflowExecution.WorkflowID,
-					Data:         []byte(stateToReplicate),
-				})
-				if err != nil {
-					f.log("action=tick at=replicate-state-failed error=%q", err.Error())
-				} else {
-					f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardID, resp.SequenceNumber)
-				}
-				//todo error handling retries etc.
-			}
-		}
-
+	if state == nil || f.KinesisStream == "" {
+		return // nothing to replicate
+	}
+	stateToReplicate, err := f.Serializer.Serialize(state)
+	if err != nil {
+		f.log("action=tick at=serialize-state-failed error=%q", err.Error())
+		return
+	}
+	resp, err := f.Client.PutRecord(PutRecordRequest{
+		StreamName: f.KinesisStream,
+		//partition by workflow
+		PartitionKey: decisionTask.WorkflowExecution.WorkflowID,
+		Data:         []byte(stateToReplicate),
 	})
+	if err != nil {
+		f.log("action=tick at=replicate-state-failed error=%q", err.Error())
+		return
+	}
+	f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardID, resp.SequenceNumber)
+	//todo error handling retries etc.
 }
 
 func (f *FSM) stateFromDecisions(decisions []Decision) string {
@@ -303,13 +308,30 @@ func (f *FSM) Deserialize(serialized string, data interface{}) {
 }
 
 // Tick is called when the DecisionTaskPoller receives a PollForDecisionTaskResponse in its polling loop.
+// On errors, a nil *SerializedState is returned, and an error Outcome is included in the Decision list.
 // It is exported to facilitate testing.
-func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, string) {
+func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, *SerializedState) {
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventID, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
 	outcome := new(intermediateOutcome)
 	outcome.startedEventID = decisionTask.StartedEventID
-	context := NewFSMContext(f, decisionTask.WorkflowType, decisionTask.WorkflowExecution, "", nil, 0)
+	serializedState, err := f.findSerializedState(decisionTask.Events)
+	if err != nil {
+		f.log("action=tick at=error=find-serialized-state-failed err=%q", err)
+		if f.allowPanics {
+			panic(err)
+		}
+		return append(outcome.decisions, f.captureSystemError(execution, "FindSerializedStateError", decisionTask.Events, err)...), nil
+	}
+	f.log("action=tick at=find-serialized-state state=%s", serializedState.ReplicationData.StateName)
+	pendingActivities := &serializedState.PendingActivities
+	context := NewFSMContext(f,
+		decisionTask.WorkflowType,
+		decisionTask.WorkflowExecution,
+		pendingActivities,
+		"", nil, 0,
+	)
+
 	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
 	if len(errorEvents) > 0 {
 		outcome.data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
@@ -326,42 +348,28 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, strin
 			if err != nil {
 				f.log("at=error error=error-handling-decision-execution-error err=%q state=%s next-state=%s", err, f.errorState.Name, outcome.state)
 				//we wont get here if panics are allowed
-				return append(outcome.decisions, f.captureDecisionError(execution, i, errorEvents, outcome.state, outcome.data, err)...), "" //todo is empty string the thing to do
+				return append(outcome.decisions, f.captureDecisionError(execution, i, errorEvents, outcome.state, outcome.data, err)...), nil //TODO: is nil the thing to do?
 			}
 			f.mergeOutcomes(outcome, anOutcome)
 		}
-
 	}
 
-	//if there was no error processing, we recover the state + data from the expected marker
+	//if there was no error processing, we recover the state + data from the marker
 	if outcome.data == nil && outcome.state == "" {
-		serializedState, err := f.findSerializedState(decisionTask.Events)
-
-		if err != nil {
-			f.log("action=tick at=error=find-serialized-state-failed err=%q", err)
-			if f.allowPanics {
-				panic(err)
-			}
-			return append(outcome.decisions, f.captureSystemError(execution, "FindSerializedStateError", decisionTask.Events, err)...), ""
-		}
-
-		f.log("action=tick at=find-current-state state=%s", serializedState.StateName)
 		data := reflect.New(reflect.TypeOf(f.DataType)).Interface()
-		err = f.Serializer.Deserialize(serializedState.StateData, data)
-		if err != nil {
+		if err = f.Serializer.Deserialize(serializedState.ReplicationData.StateData, data); err != nil {
 			f.log("action=tick at=error=deserialize-state-failed err=&s", err)
 			if f.allowPanics {
 				panic(err)
 			}
-			return append(outcome.decisions, f.captureSystemError(execution, "DeserializeStateError", decisionTask.Events, err)...), ""
+			return append(outcome.decisions, f.captureSystemError(execution, "DeserializeStateError", decisionTask.Events, err)...), nil
 		}
-
 		f.log("action=tick at=find-current-data data=%v", data)
 
 		outcome.data = data
-		outcome.state = serializedState.StateName
-		outcome.workflowEpoch = serializedState.WorkflowEpoch
-		context.WorkflowEpoch = serializedState.WorkflowEpoch
+		outcome.state = serializedState.ReplicationData.StateName
+		outcome.workflowEpoch = serializedState.ReplicationData.WorkflowEpoch
+		context.WorkflowEpoch = serializedState.ReplicationData.WorkflowEpoch
 	}
 
 	//iterate through events oldest to newest, calling the decider for the current state.
@@ -379,16 +387,15 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, strin
 				if f.allowPanics {
 					panic(err)
 				}
-				return append(outcome.decisions, f.captureDecisionError(execution, i, lastEvents, outcome.state, outcome.data, err)...), ""
+				return append(outcome.decisions, f.captureDecisionError(execution, i, lastEvents, outcome.state, outcome.data, err)...), nil
 			}
-
+			pendingActivities.Track(e)
 			curr := outcome.state
 			f.mergeOutcomes(outcome, anOutcome)
 			f.log("action=tick at=decided-event state=%s next-state=%s decisions=%d", curr, outcome.state, len(anOutcome.Decisions()))
-
 		} else {
 			f.log("action=tick at=error error=marked-state-not-in-fsm state=%s", outcome.state)
-			return append(outcome.decisions, f.captureSystemError(execution, "MissingFsmStateError", lastEvents[i:], errors.New(outcome.state))...), ""
+			return append(outcome.decisions, f.captureSystemError(execution, "MissingFsmStateError", lastEvents[i:], errors.New(outcome.state))...), nil
 		}
 	}
 
@@ -398,13 +405,13 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, strin
 		f.log("action=tick at=decide next-state=%s decision=%s", outcome.state, d.DecisionType)
 	}
 
-	final, serializedState, err := f.appendState(outcome)
+	final, serializedState, err := f.recordStateMarker(outcome, pendingActivities)
 	if err != nil {
 		f.log("action=tick at=error error=state-serialization-error err=%q error-type=system", err)
 		if f.allowPanics {
 			panic(err)
 		}
-		return append(outcome.decisions, f.captureSystemError(execution, "StateSerializationError", []HistoryEvent{}, err)...), ""
+		return append(outcome.decisions, f.captureSystemError(execution, "StateSerializationError", []HistoryEvent{}, err)...), nil
 	}
 	return final, serializedState
 }
@@ -556,15 +563,21 @@ func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, erro
 			err := f.Serializer.Deserialize(event.MarkerRecordedEventAttributes.Details, state)
 			return state, err
 		} else if event.EventType == EventTypeWorkflowExecutionStarted {
-			return &SerializedState{StateName: f.initialState.Name, StateData: event.WorkflowExecutionStartedEventAttributes.Input}, nil
+			return &SerializedState{
+				ReplicationData: ReplicationData{
+					StateName: f.initialState.Name,
+					StateData: event.WorkflowExecutionStartedEventAttributes.Input,
+				},
+				PendingActivities: ActivityCorrelator{},
+			}, nil
 		} else if event.EventType == EventTypeWorkflowExecutionContinuedAsNew {
 			//when a workflow is continued, it is expected that the Input is the full SerializedState struct, so that
 			//we can increment the epoch here, and zero the startedEventId
 			state := &SerializedState{}
 			err := f.Serializer.Deserialize(event.WorkflowExecutionContinuedAsNewEventAttributes.Input, state)
 			if err == nil {
-				state.WorkflowEpoch++
-				state.StartedEventID = 0
+				state.ReplicationData.WorkflowEpoch++
+				state.ReplicationData.StartedEventID = 0
 			}
 			return state, err
 		}
@@ -603,24 +616,27 @@ func (f *FSM) findLastEvents(prevStarted int, events []HistoryEvent) ([]HistoryE
 	return lastEvents, errorEvents
 }
 
-func (f *FSM) appendState(outcome *intermediateOutcome) ([]Decision, string, error) {
+func (f *FSM) recordStateMarker(outcome *intermediateOutcome, pending *ActivityCorrelator) ([]Decision, *SerializedState, error) {
 	serializedData, err := f.Serializer.Serialize(outcome.data)
 
-	state := SerializedState{
-		WorkflowEpoch:  outcome.workflowEpoch,
-		StartedEventID: outcome.startedEventID,
-		StateName:      outcome.state,
-		StateData:      serializedData,
+	state := &SerializedState{
+		ReplicationData: ReplicationData{
+			WorkflowEpoch:  outcome.workflowEpoch,
+			StartedEventID: outcome.startedEventID,
+			StateName:      outcome.state,
+			StateData:      serializedData,
+		},
+		PendingActivities: *pending,
 	}
 
 	d, err := f.recordMarker(StateMarker, state)
 	if err != nil {
-		return nil, "", err
+		return nil, state, err
 	}
 	decisions := f.EmptyDecisions()
 	decisions = append(decisions, d)
 	decisions = append(decisions, outcome.decisions...)
-	return decisions, d.RecordMarkerDecisionAttributes.Details, nil
+	return decisions, state, nil
 }
 
 func (f *FSM) recordMarker(markerName string, details interface{}) (Decision, error) {
@@ -674,6 +690,12 @@ func (f *FSM) EmptyDecisions() []Decision {
 // been continued, and the StartedId of the DecisionTask that generated this state.  The epoch + the id provide a total ordering
 // of state over the lifetime of different runs of a workflow.
 type SerializedState struct {
+	ReplicationData   ReplicationData
+	PendingActivities ActivityCorrelator
+}
+
+// ReplicationData is the part of SerializedState that will be replicated onto Kinesis streams.
+type ReplicationData struct {
 	WorkflowEpoch  int    `json:"workflowEpoch"`
 	StartedEventID int    `json:"startedEventId"`
 	StateName      string `json:"stateName"`
@@ -809,17 +831,24 @@ type FSMContext struct {
 	fsm *FSM
 	WorkflowType
 	WorkflowExecution
-	State         string
-	stateData     interface{}
-	WorkflowEpoch int
+	pendingActivities *ActivityCorrelator
+	State             string
+	stateData         interface{}
+	WorkflowEpoch     int
 }
 
 // NewFSMContext constructs an FSMContext.
-func NewFSMContext(fsm *FSM, wfType WorkflowType, wfExec WorkflowExecution, state string, stateData interface{}, wfEpoch int) *FSMContext {
+func NewFSMContext(
+	fsm *FSM,
+	wfType WorkflowType, wfExec WorkflowExecution,
+	pending *ActivityCorrelator,
+	state string, stateData interface{}, wfEpoch int,
+) *FSMContext {
 	return &FSMContext{
 		fsm:               fsm,
 		WorkflowType:      wfType,
 		WorkflowExecution: wfExec,
+		pendingActivities: pending,
 		State:             state,
 		stateData:         stateData,
 		WorkflowEpoch:     wfEpoch,
@@ -829,6 +858,13 @@ func NewFSMContext(fsm *FSM, wfType WorkflowType, wfExec WorkflowExecution, stat
 // EventData will extract a payload from the given HistoryEvent and unmarshall it into the given struct.
 func (f *FSMContext) EventData(h HistoryEvent, data interface{}) {
 	f.fsm.EventData(f, h, data)
+}
+
+// ActivityType will find information for ActivityTasks being tracked. It can only be used when handling events related to ActivityTasks.
+// ActivityTasks are automatically tracked after a EventTypeActivityTaskScheduled event.
+// When there is no pending activity related to the event, nil is returned.
+func (f *FSMContext) ActivityType(h HistoryEvent) *ActivityType {
+	return f.pendingActivities.ActivityType(h)
 }
 
 // Serialize will use the current fsm's Serializer to serialize the given struct. It will panic on errors, which is ok in the context of a Decider.
@@ -858,6 +894,13 @@ func (f *FSMContext) EmptyDecisions() []Decision {
 // end or an activity hits your Decider.  This is missing from the SWF api.
 type ActivityCorrelator struct {
 	Activities map[string]*ActivityType
+}
+
+// Track will add or remove entries based on the EventType.
+// A new entry is added when there is a new ActivityTask, or an entry is removed when the ActivityTask is terminating.
+func (a *ActivityCorrelator) Track(h HistoryEvent) {
+	a.RemoveCorrelation(h)
+	a.Correlate(h)
 }
 
 // Correlate establishes a mapping of eventId to ActivityType. The HistoryEvent is expected to be of type EventTypeActivityTaskScheduled.
