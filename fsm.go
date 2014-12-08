@@ -867,6 +867,11 @@ func (f *FSMContext) ActivityInfo(h HistoryEvent) *ActivityInfo {
 	return f.pendingActivities.ActivityType(h)
 }
 
+// ActivitiesInfo will return a map of activityId -> ActivityInfo for all in-flight activities in the workflow.
+func (f *FSMContext) ActivitiesInfo() map[string]*ActivityInfo{
+	return f.pendingActivities.Activities
+}
+
 // Serialize will use the current fsm's Serializer to serialize the given struct. It will panic on errors, which is ok in the context of a Decider.
 // If you want to handle errors, use Serializer().Serialize(...) instead.
 func (f *FSMContext) Serialize(data interface{}) string {
