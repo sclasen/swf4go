@@ -1,6 +1,7 @@
 package swf
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"reflect"
@@ -887,5 +888,91 @@ func TestTrackPendingActivities(t *testing.T) {
 	if !Find(fourthDecisions, completeWorkflowPredicate) {
 		t.Fatal("No CompleteWorkflow")
 	}
+}
 
+func TestFSMContextActivityTracking(t *testing.T) {
+	ctx := NewFSMContext(
+		&FSM{
+			Name:       "test-fsm",
+			DataType:   TestData{},
+			Serializer: JSONStateSerializer{},
+		},
+		WorkflowType{Name: "test-workflow", Version: "1"},
+		WorkflowExecution{WorkflowID: "test-workflow-1", RunID: "123123"},
+		&ActivityCorrelator{},
+		"InitialState", &TestData{}, 0,
+	)
+	scheduledEventID := rand.Int()
+	activityID := fmt.Sprintf("test-activity-%d", scheduledEventID)
+	taskScheduled := HistoryEvent{
+		EventType: "ActivityTaskScheduled",
+		EventID:   scheduledEventID,
+		ActivityTaskScheduledEventAttributes: &ActivityTaskScheduledEventAttributes{
+			ActivityID: activityID,
+			ActivityType: ActivityType{
+				Name:    "test-activity",
+				Version: "1",
+			},
+		},
+	}
+	ctx.Decide(taskScheduled, &TestData{}, func(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
+		if len(ctx.ActivitiesInfo()) != 0 {
+			t.Fatal("There should be no activies being tracked yet")
+		}
+		if !reflect.DeepEqual(h, taskScheduled) {
+			t.Fatal("Got an unexpected event")
+		}
+		return ctx.Stay(data, ctx.EmptyDecisions())
+	})
+	if len(ctx.ActivitiesInfo()) < 1 {
+		t.Fatal("Pending activity task is not being tracked")
+	}
+
+	// the pending activity can now be retrieved
+	taskCompleted := HistoryEvent{
+		EventType: "ActivityTaskCompleted",
+		EventID:   rand.Int(),
+		ActivityTaskCompletedEventAttributes: &ActivityTaskCompletedEventAttributes{
+			ScheduledEventID: scheduledEventID,
+		},
+	}
+	taskFailed := HistoryEvent{
+		EventType: "ActivityTaskFailed",
+		EventID:   rand.Int(),
+		ActivityTaskFailedEventAttributes: &ActivityTaskFailedEventAttributes{
+			ScheduledEventID: scheduledEventID,
+		},
+	}
+	infoOnCompleted := ctx.ActivityInfo(taskCompleted)
+	infoOnFailed := ctx.ActivityInfo(taskFailed)
+	if infoOnCompleted.ActivityID != activityID ||
+		infoOnCompleted.Name != "test-activity" ||
+		infoOnCompleted.Version != "1" {
+		t.Fatal("Pending activity can not be retrieved when completed")
+	}
+	if infoOnFailed.ActivityID != activityID ||
+		infoOnFailed.Name != "test-activity" ||
+		infoOnFailed.Version != "1" {
+		t.Fatal("Pending activity can not be retrieved when failed")
+	}
+
+	// pending activities are also cleared after terminated
+	ctx.Decide(taskCompleted, &TestData{}, func(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
+		if len(ctx.ActivitiesInfo()) != 1 {
+			t.Fatal("There should be one activity being tracked")
+		}
+		if !reflect.DeepEqual(h, taskCompleted) {
+			t.Fatal("Got an unexpected event")
+		}
+		infoOnCompleted := ctx.ActivityInfo(taskCompleted)
+		if infoOnCompleted.ActivityID != activityID ||
+			infoOnCompleted.Name != "test-activity" ||
+			infoOnCompleted.Version != "1" {
+			t.Fatal("Pending activity can not be retrieved when completed")
+		}
+		return ctx.Stay(data, ctx.EmptyDecisions())
+	})
+	if len(ctx.ActivitiesInfo()) > 0 {
+		t.Fatal("Pending activity task is not being cleared after completed")
+	}
 }
