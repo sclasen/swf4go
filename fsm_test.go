@@ -10,14 +10,13 @@ import (
 
 	"os"
 
-	"code.google.com/p/go-uuid/uuid"
 	"code.google.com/p/goprotobuf/proto"
 )
 
 //Todo add tests of error handling mechanism
 //assert that the decisions have the mark and the signal external...hmm need workflow id for signal external.
 
-var testActivityType = ActivityType{Name: "activity", Version: "activityVersion"}
+var testActivityInfo = ActivityInfo{ActivityID: "activityId", ActivityType: ActivityType{Name: "activity", Version: "activityVersion"}}
 
 func TestFSM(t *testing.T) {
 
@@ -36,8 +35,8 @@ func TestFSM(t *testing.T) {
 			decision := Decision{
 				DecisionType: DecisionTypeScheduleActivityTask,
 				ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
-					ActivityID:   uuid.New(),
-					ActivityType: testActivityType,
+					ActivityID:   testActivityInfo.ActivityID,
+					ActivityType: testActivityInfo.ActivityType,
 					TaskList:     &TaskList{Name: "taskList"},
 					Input:        serialized,
 				},
@@ -66,8 +65,8 @@ func TestFSM(t *testing.T) {
 				decision := Decision{
 					DecisionType: DecisionTypeScheduleActivityTask,
 					ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
-						ActivityID:   uuid.New(),
-						ActivityType: testActivityType,
+						ActivityID:   testActivityInfo.ActivityID,
+						ActivityType: testActivityInfo.ActivityType,
 						TaskList:     &TaskList{Name: "taskList"},
 						Input:        serialized,
 					},
@@ -175,7 +174,8 @@ func DecisionsToEvents(decisions []Decision) []HistoryEvent {
 				EventType: "ActivityTaskScheduled",
 				EventID:   6,
 				ActivityTaskScheduledEventAttributes: &ActivityTaskScheduledEventAttributes{
-					ActivityType: testActivityType,
+					ActivityID:   testActivityInfo.ActivityID,
+					ActivityType: testActivityInfo.ActivityType,
 				},
 			}
 			events = append(events, event)
@@ -666,8 +666,8 @@ func TestTrackPendingActivities(t *testing.T) {
 			decision := Decision{
 				DecisionType: DecisionTypeScheduleActivityTask,
 				ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
-					ActivityID:   uuid.New(),
-					ActivityType: testActivityType,
+					ActivityID:   testActivityInfo.ActivityID,
+					ActivityType: testActivityInfo.ActivityType,
 					TaskList:     &TaskList{Name: "taskList"},
 					Input:        serialized,
 				},
@@ -684,10 +684,10 @@ func TestTrackPendingActivities(t *testing.T) {
 			serialized := f.Serialize(testData)
 			var decisions = f.EmptyDecisions()
 			if lastEvent.EventType == EventTypeActivityTaskCompleted {
-				trackedActivityType := f.ActivityType(lastEvent)
-				if !reflect.DeepEqual(*trackedActivityType, testActivityType) {
+				trackedActivityInfo := f.ActivityInfo(lastEvent)
+				if !reflect.DeepEqual(*trackedActivityInfo, testActivityInfo) {
 					t.Fatalf("pending activity not being tracked\nExpected:\n%+v\nGot:\n%+v",
-						testActivityType, trackedActivityType,
+						testActivityInfo, trackedActivityInfo,
 					)
 				}
 				timeoutSeconds := "5" //swf uses stringy numbers in many places
@@ -700,17 +700,17 @@ func TestTrackPendingActivities(t *testing.T) {
 				}
 				return f.Goto("done", testData, []Decision{decision})
 			} else if lastEvent.EventType == EventTypeActivityTaskFailed {
-				trackedActivityType := f.ActivityType(lastEvent)
-				if !reflect.DeepEqual(*trackedActivityType, testActivityType) {
+				trackedActivityInfo := f.ActivityInfo(lastEvent)
+				if !reflect.DeepEqual(*trackedActivityInfo, testActivityInfo) {
 					t.Fatalf("pending activity not being tracked\nExpected:\n%+v\nGot:\n%+v",
-						testActivityType, trackedActivityType,
+						testActivityInfo, trackedActivityInfo,
 					)
 				}
 				decision := Decision{
 					DecisionType: DecisionTypeScheduleActivityTask,
 					ScheduleActivityTaskDecisionAttributes: &ScheduleActivityTaskDecisionAttributes{
-						ActivityID:   uuid.New(),
-						ActivityType: testActivityType,
+						ActivityID:   testActivityInfo.ActivityID,
+						ActivityType: testActivityInfo.ActivityType,
 						TaskList:     &TaskList{Name: "taskList"},
 						Input:        serialized,
 					},
@@ -729,9 +729,9 @@ func TestTrackPendingActivities(t *testing.T) {
 			if lastEvent.EventType == EventTypeTimerFired {
 				testData.States = append(testData.States, "done")
 				serialized := f.Serialize(testData)
-				trackedActivityType := f.ActivityType(lastEvent)
-				if trackedActivityType != nil {
-					t.Fatalf("pending activity not being cleared\nGot:\n%+v", trackedActivityType)
+				trackedActivityInfo := f.ActivityInfo(lastEvent)
+				if trackedActivityInfo != nil {
+					t.Fatalf("pending activity not being cleared\nGot:\n%+v", trackedActivityInfo)
 				}
 				decision := Decision{
 					DecisionType: DecisionTypeCompleteWorkflowExecution,
@@ -783,7 +783,8 @@ func TestTrackPendingActivities(t *testing.T) {
 			EventType: "ActivityTaskScheduled",
 			EventID:   6,
 			ActivityTaskScheduledEventAttributes: &ActivityTaskScheduledEventAttributes{
-				ActivityType: testActivityType,
+				ActivityID:   testActivityInfo.ActivityID,
+				ActivityType: testActivityInfo.ActivityType,
 			},
 		},
 		{
@@ -825,7 +826,8 @@ func TestTrackPendingActivities(t *testing.T) {
 			EventType: "ActivityTaskScheduled",
 			EventID:   10,
 			ActivityTaskScheduledEventAttributes: &ActivityTaskScheduledEventAttributes{
-				ActivityType: testActivityType,
+				ActivityID:   testActivityInfo.ActivityID,
+				ActivityType: testActivityInfo.ActivityType,
 			},
 		},
 		{

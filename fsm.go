@@ -860,10 +860,10 @@ func (f *FSMContext) EventData(h HistoryEvent, data interface{}) {
 	f.fsm.EventData(f, h, data)
 }
 
-// ActivityType will find information for ActivityTasks being tracked. It can only be used when handling events related to ActivityTasks.
+// ActivityInfo will find information for ActivityTasks being tracked. It can only be used when handling events related to ActivityTasks.
 // ActivityTasks are automatically tracked after a EventTypeActivityTaskScheduled event.
 // When there is no pending activity related to the event, nil is returned.
-func (f *FSMContext) ActivityType(h HistoryEvent) *ActivityType {
+func (f *FSMContext) ActivityInfo(h HistoryEvent) *ActivityInfo {
 	return f.pendingActivities.ActivityType(h)
 }
 
