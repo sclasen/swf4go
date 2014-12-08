@@ -893,7 +893,13 @@ func (f *FSMContext) EmptyDecisions() []Decision {
 // You can use it to track the type of a given activity, so you know how to react when an event that signals the
 // end or an activity hits your Decider.  This is missing from the SWF api.
 type ActivityCorrelator struct {
-	Activities map[string]*ActivityType
+	Activities map[string]*ActivityInfo
+}
+
+// ActivityInfo holds the ActivityID and ActivityType for an activity
+type ActivityInfo struct {
+	ActivityID string
+	ActivityType
 }
 
 // Track will add or remove entries based on the EventType.
@@ -906,17 +912,20 @@ func (a *ActivityCorrelator) Track(h HistoryEvent) {
 // Correlate establishes a mapping of eventId to ActivityType. The HistoryEvent is expected to be of type EventTypeActivityTaskScheduled.
 func (a *ActivityCorrelator) Correlate(h HistoryEvent) {
 	if a.Activities == nil {
-		a.Activities = make(map[string]*ActivityType)
+		a.Activities = make(map[string]*ActivityInfo)
 	}
 	if h.EventType == EventTypeActivityTaskScheduled {
-		a.Activities[strconv.Itoa(h.EventID)] = &h.ActivityTaskScheduledEventAttributes.ActivityType
+		a.Activities[strconv.Itoa(h.EventID)] = &ActivityInfo{
+			ActivityID:   h.ActivityTaskScheduledEventAttributes.ActivityID,
+			ActivityType: h.ActivityTaskScheduledEventAttributes.ActivityType,
+		}
 	}
 }
 
 // RemoveCorrelation gcs a mapping of eventId to ActivityType. The HistoryEvent is expected to be of type EventTypeActivityTaskCompleted,EventTypeActivityTaskFailed,EventTypeActivityTaskTimedOut.
 func (a *ActivityCorrelator) RemoveCorrelation(h HistoryEvent) {
 	if a.Activities == nil {
-		a.Activities = make(map[string]*ActivityType)
+		a.Activities = make(map[string]*ActivityInfo)
 	}
 	switch h.EventType {
 	case EventTypeActivityTaskCompleted:
@@ -929,9 +938,9 @@ func (a *ActivityCorrelator) RemoveCorrelation(h HistoryEvent) {
 }
 
 // ActivityType returns the ActivityType that is correlates with a given event. The HistoryEvent is expected to be of type EventTypeActivityTaskCompleted,EventTypeActivityTaskFailed,EventTypeActivityTaskTimedOut.
-func (a *ActivityCorrelator) ActivityType(h HistoryEvent) *ActivityType {
+func (a *ActivityCorrelator) ActivityType(h HistoryEvent) *ActivityInfo {
 	if a.Activities == nil {
-		a.Activities = make(map[string]*ActivityType)
+		a.Activities = make(map[string]*ActivityInfo)
 	}
 	switch h.EventType {
 	case EventTypeActivityTaskCompleted:
