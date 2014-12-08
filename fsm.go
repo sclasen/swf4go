@@ -939,6 +939,8 @@ func (a *ActivityCorrelator) RemoveCorrelation(h HistoryEvent) {
 		delete(a.Activities, strconv.Itoa(h.ActivityTaskFailedEventAttributes.ScheduledEventID))
 	case EventTypeActivityTaskTimedOut:
 		delete(a.Activities, strconv.Itoa(h.ActivityTaskTimedOutEventAttributes.ScheduledEventID))
+	case EventTypeActivityTaskCanceled:
+		delete(a.Activities, strconv.Itoa(h.ActivityTaskCanceledEventAttributes.ScheduledEventID))
 	}
 }
 
@@ -954,6 +956,8 @@ func (a *ActivityCorrelator) ActivityType(h HistoryEvent) *ActivityInfo {
 		return a.Activities[strconv.Itoa(h.ActivityTaskFailedEventAttributes.ScheduledEventID)]
 	case EventTypeActivityTaskTimedOut:
 		return a.Activities[strconv.Itoa(h.ActivityTaskTimedOutEventAttributes.ScheduledEventID)]
+	case EventTypeActivityTaskCanceled:
+		return a.Activities[strconv.Itoa(h.ActivityTaskCanceledEventAttributes.ScheduledEventID)]
 	}
 	return nil
 }
