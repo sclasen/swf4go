@@ -868,7 +868,7 @@ func (f *FSMContext) ActivityInfo(h HistoryEvent) *ActivityInfo {
 }
 
 // ActivitiesInfo will return a map of activityId -> ActivityInfo for all in-flight activities in the workflow.
-func (f *FSMContext) ActivitiesInfo() map[string]*ActivityInfo{
+func (f *FSMContext) ActivitiesInfo() map[string]*ActivityInfo {
 	return f.pendingActivities.Activities
 }
 
