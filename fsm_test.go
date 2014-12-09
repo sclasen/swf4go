@@ -976,3 +976,36 @@ func TestFSMContextActivityTracking(t *testing.T) {
 		t.Fatal("Pending activity task is not being cleared after completed")
 	}
 }
+
+func TestContinuationDecision(t *testing.T) {
+	ctx := NewFSMContext(
+		&FSM{
+			Name:       "test-fsm",
+			DataType:   TestData{},
+			Serializer: JSONStateSerializer{},
+		},
+		WorkflowType{Name: "test-workflow", Version: "1"},
+		WorkflowExecution{WorkflowID: "test-workflow-1", RunID: "123123"},
+		&ActivityCorrelator{},
+		"InitialState", &TestData{}, 7,
+	)
+
+	ctx.stateData = &TestData{States: []string{"continuing"}}
+	ctx.fsm.AddInitialState(&FSMState{
+		Name: "InitialState",
+		Decider: func(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
+			return nil
+		},
+	},
+	)
+
+	cont := ctx.ContinuationDecision()
+	testData := new(TestData)
+	serState := new(SerializedState)
+	ctx.Deserialize(cont.ContinueAsNewWorkflowExecutionDecisionAttributes.Input, serState)
+	ctx.Deserialize(serState.ReplicationData.StateData, testData)
+	if len(testData.States) != 1 || testData.States[0] != "continuing" || serState.ReplicationData.WorkflowEpoch != 7 || serState.ReplicationData.StateName != "InitialState"{
+		t.Fatal(testData, cont)
+	}
+
+}
