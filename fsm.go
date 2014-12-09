@@ -246,8 +246,9 @@ func (f *FSM) handleDecisionTask(decisionTask *PollForDecisionTaskResponse) {
 	decisions, state := f.Tick(decisionTask)
 	if err := f.Client.RespondDecisionTaskCompleted(
 		RespondDecisionTaskCompletedRequest{
-			Decisions: decisions,
-			TaskToken: decisionTask.TaskToken,
+			ExecutionContext: state.ReplicationData.StateName,
+			Decisions:        decisions,
+			TaskToken:        decisionTask.TaskToken,
 		},
 	); err != nil {
 		f.log("action=tick at=decide-request-failed error=%q", err.Error())
