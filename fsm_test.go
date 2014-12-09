@@ -633,7 +633,7 @@ func TestKinesisReplication(t *testing.T) {
 	fsm.handleDecisionTask(decisionTask)
 
 	if client.putRecords == nil || len(client.putRecords) != 1 {
-		t.Fatal("expected only one state to be replicated, got: %v", client.putRecords)
+		t.Fatalf("expected only one state to be replicated, got: %v", client.putRecords)
 	}
 	replication := client.putRecords[0]
 	if replication.StreamName != fsm.KinesisStream {
@@ -644,7 +644,7 @@ func TestKinesisReplication(t *testing.T) {
 		t.Fatal(err)
 	}
 	if replicatedState.ReplicationData.StartedEventID != 0 {
-		t.Fatal("state.StartedEventID != 0, got: %d", replicatedState.ReplicationData.StartedEventID)
+		t.Fatalf("state.StartedEventID != 0, got: %d", replicatedState.ReplicationData.StartedEventID)
 	}
 	if replicatedState.ReplicationData.StateName != "done" {
 		t.Fatalf("current state being replicated is not 'done', got %q", replicatedState.ReplicationData.StateName)
