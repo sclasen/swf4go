@@ -471,7 +471,7 @@ func (f *FSM) panicSafeDecide(state *FSMState, context *FSMContext, event Histor
 			log.Printf("at=panic-safe-decide-allowing-panic fsm-allow-panics=%t", f.allowPanics)
 		}
 	}()
-	anOutcome = state.Decider(context, event, data)
+	anOutcome = context.Decide(event, data, state.Decider)
 	return
 }
 
@@ -853,6 +853,13 @@ func NewFSMContext(
 		stateData:         stateData,
 		WorkflowEpoch:     wfEpoch,
 	}
+}
+
+// Decide executes a decider making sure that Activity tasks are being tracked.
+func (f *FSMContext) Decide(h HistoryEvent, data interface{}, decider Decider) Outcome {
+	outcome := decider(f, h, data)
+	f.pendingActivities.Track(h)
+	return outcome
 }
 
 // EventData will extract a payload from the given HistoryEvent and unmarshall it into the given struct.
