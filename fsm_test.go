@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"os"
-
 	"code.google.com/p/goprotobuf/proto"
 )
 
@@ -457,61 +455,6 @@ func ExampleFSM() {
 
 	//start it up!
 	fsm.Start()
-}
-
-func TestChildRelator(t *testing.T) {
-	start := StartWorkflowRequest{
-		WorkflowID: "123",
-		WorkflowType: WorkflowType{
-			Name:    "test",
-			Version: "123",
-		},
-	}
-
-	relator := new(ChildRelator)
-
-	relator.Relate("child.1", start.WorkflowID, start.WorkflowType)
-
-	serialized, err := JSONStateSerializer{}.Serialize(relator)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	freshRelator := new(ChildRelator)
-
-	JSONStateSerializer{}.Deserialize(serialized, freshRelator)
-
-	if freshRelator.WorkflowID("child.1") != "123" {
-		t.Fatal("id not 123")
-	}
-
-	c := freshRelator.WorkflowType("child.1")
-	if c.Name != "test" {
-		t.Fatal("name not test")
-	}
-	if c.Version != "123" {
-		t.Fatal("version not test")
-	}
-
-	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		log.Printf("WARNING: NO AWS CREDS SPECIFIED, SKIPPING CLIENTS TEST")
-		return
-	}
-
-	client := NewClient(MustGetenv("AWS_ACCESS_KEY_ID"), MustGetenv("AWS_SECRET_ACCESS_KEY"), USEast1)
-	client.Debug = true
-
-	resp, err := freshRelator.WorkflowExecutionInfo(client, "swf4go", "123")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if resp != nil {
-		//nil is expected since there shouldnt be an execution with id 123
-		t.Fatal(resp)
-	}
-
 }
 
 func TestContinuedWorkflows(t *testing.T) {
