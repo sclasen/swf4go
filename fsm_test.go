@@ -1004,7 +1004,7 @@ func TestContinuationDecision(t *testing.T) {
 	serState := new(SerializedState)
 	ctx.Deserialize(cont.ContinueAsNewWorkflowExecutionDecisionAttributes.Input, serState)
 	ctx.Deserialize(serState.ReplicationData.StateData, testData)
-	if len(testData.States) != 1 || testData.States[0] != "continuing" || serState.ReplicationData.WorkflowEpoch != 7 || serState.ReplicationData.StateName != "InitialState"{
+	if len(testData.States) != 1 || testData.States[0] != "continuing" || serState.ReplicationData.WorkflowEpoch != 7 || serState.ReplicationData.StateName != "InitialState" {
 		t.Fatal(testData, cont)
 	}
 
