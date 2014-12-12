@@ -752,13 +752,13 @@ type CompleteWorkflowExecutionDecisionAttributes struct {
 
 // ContinueAsNewWorkflowExecutionDecisionAttributes models the swf json protocol.
 type ContinueAsNewWorkflowExecutionDecisionAttributes struct {
-	ChildPolicy                  string   `json:"childPolicy"`
-	ExecutionStartToCloseTimeout string   `json:"executionStartToCloseTimeout"`
+	ChildPolicy                  string   `json:"childPolicy,omitempty"`
+	ExecutionStartToCloseTimeout string   `json:"executionStartToCloseTimeout,omitempty"`
 	Input                        string   `json:"input"`
 	TagList                      []string `json:"tagList"`
-	TaskList                     TaskList `json:"taskList"`
-	TaskStartToCloseTimeout      string   `json:"taskStartToCloseTimeout"`
-	WorkflowTypeVersion          string   `json:"workflowTypeVersion"`
+	TaskList                     TaskList `json:"taskList,omitempty"`
+	TaskStartToCloseTimeout      string   `json:"taskStartToCloseTimeout,omitempty"`
+	WorkflowTypeVersion          string   `json:"workflowTypeVersion,omitempty"`
 }
 
 // FailWorkflowExecutionDecisionAttributes models the swf json protocol.
