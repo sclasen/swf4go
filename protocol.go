@@ -756,7 +756,7 @@ type ContinueAsNewWorkflowExecutionDecisionAttributes struct {
 	ExecutionStartToCloseTimeout string   `json:"executionStartToCloseTimeout,omitempty"`
 	Input                        string   `json:"input"`
 	TagList                      []string `json:"tagList"`
-	TaskList                     TaskList `json:"taskList,omitempty"`
+	TaskList                     *TaskList `json:"taskList,omitempty"`
 	TaskStartToCloseTimeout      string   `json:"taskStartToCloseTimeout,omitempty"`
 	WorkflowTypeVersion          string   `json:"workflowTypeVersion,omitempty"`
 }
