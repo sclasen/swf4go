@@ -3,7 +3,6 @@ package swf
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 )
