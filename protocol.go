@@ -1334,7 +1334,6 @@ func (s *Date) UnmarshalJSON(b []byte) error {
 
 //MarshalJSON formats a time.Time into swf's expected format.
 func (s *Date) MarshalJSON() ([]byte, error) {
-	log.Println("MARSHAL DOG")
 	timestamp := s.Time.Unix()
 	return []byte(strconv.FormatFloat(float64(timestamp), 'g', -1, 64)), nil
 }
