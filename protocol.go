@@ -17,10 +17,11 @@ type ErrorResponse struct {
 
 // constants for various SWF and Kinesis status and error codes.
 const (
-	StatusRegistered              = "REGISTERED"
-	StatusDeprecated              = "DEPRECATED"
-	ErrorTypeUnknownResourceFault = "com.amazonaws.swf.base.model#UnknownResourceFault"
-	ErrorTypeStreamNotFound       = "ResourceNotFoundException"
+	StatusRegistered                              = "REGISTERED"
+	StatusDeprecated                              = "DEPRECATED"
+	ErrorTypeUnknownResourceFault                 = "com.amazonaws.swf.base.model#UnknownResourceFault"
+	ErrorTypeWorkflowExecutionAlreadyStartedFault = "com.amazonaws.swf.base.model#WorkflowExecutionAlreadyStartedFault"
+	ErrorTypeStreamNotFound                       = "ResourceNotFoundException"
 )
 
 func (err *ErrorResponse) Error() string {
