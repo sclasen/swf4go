@@ -86,7 +86,7 @@ func TestFSM(t *testing.T) {
 			EventID:   1,
 			EventType: "WorkflowExecutionStarted",
 			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
-				Input: "{\"States\":[]}",
+				Input: StartFSMWorkflowInput(fsm.Serializer, new(TestData)),
 			},
 		},
 	}
@@ -293,7 +293,7 @@ func TestErrorHandling(t *testing.T) {
 			EventID:   1,
 			EventType: EventTypeWorkflowExecutionStarted,
 			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
-				Input: "",
+				Input: StartFSMWorkflowInput(fsm.Serializer, ""),
 			},
 		},
 	}
@@ -457,6 +457,16 @@ func ExampleFSM() {
 
 	//start it up!
 	fsm.Start()
+
+	//To start workflows using this fsm
+	client.StartWorkflow(StartWorkflowRequest{
+		Domain:     "exaple-swf-domain",
+		WorkflowID: "your-id",
+		//you will have previously regiestered a WorkflowType that this FSM will work.
+		WorkflowType: WorkflowType{Name: "the-name", Version: "the-version"},
+		// It is *very* important to use StartFSMWorkflowInput so the state management works properly
+		Input: StartFSMWorkflowInput(fsm.Serializer, &StateData{Count: 0, Message: "starting message"}),
+	})
 }
 
 func TestChildRelator(t *testing.T) {
@@ -544,14 +554,16 @@ func TestContinuedWorkflows(t *testing.T) {
 	serializedState := fsm.Serialize(state)
 	resp := &PollForDecisionTaskResponse{
 		Events: []HistoryEvent{HistoryEvent{
-			EventType: EventTypeWorkflowExecutionContinuedAsNew,
-			WorkflowExecutionContinuedAsNewEventAttributes: &WorkflowExecutionContinuedAsNewEventAttributes{
+			EventType: EventTypeWorkflowExecutionStarted,
+			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
 				Input: serializedState,
 			},
 		}},
 		StartedEventID: 5,
 	}
 	decisions, updatedState := fsm.Tick(resp)
+
+	log.Println(updatedState)
 
 	if updatedState.ReplicationData.StartedEventID != 5 {
 		t.Fatal("startedEventId != 5")
@@ -622,7 +634,7 @@ func TestKinesisReplication(t *testing.T) {
 			EventID:   1,
 			EventType: "WorkflowExecutionStarted",
 			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
-				Input: "{\"States\":[]}",
+				Input: StartFSMWorkflowInput(fsm.Serializer, new(TestData)),
 			},
 		},
 	}
@@ -754,7 +766,7 @@ func TestTrackPendingActivities(t *testing.T) {
 			EventID:   1,
 			EventType: "WorkflowExecutionStarted",
 			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
-				Input: "{\"States\":[]}",
+				Input: StartFSMWorkflowInput(fsm.Serializer, new(TestData)),
 			},
 		},
 	}
