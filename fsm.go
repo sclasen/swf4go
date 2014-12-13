@@ -564,21 +564,15 @@ func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, erro
 			err := f.Serializer.Deserialize(event.MarkerRecordedEventAttributes.Details, state)
 			return state, err
 		} else if event.EventType == EventTypeWorkflowExecutionStarted {
-			return &SerializedState{
-				ReplicationData: ReplicationData{
-					StateName: f.initialState.Name,
-					StateData: event.WorkflowExecutionStartedEventAttributes.Input,
-				},
-				PendingActivities: ActivityCorrelator{},
-			}, nil
-		} else if event.EventType == EventTypeWorkflowExecutionContinuedAsNew {
-			//when a workflow is continued, it is expected that the Input is the full SerializedState struct, so that
-			//we can increment the epoch here, and zero the startedEventId
+			log.Println(event)
 			state := &SerializedState{}
-			err := f.Serializer.Deserialize(event.WorkflowExecutionContinuedAsNewEventAttributes.Input, state)
+			err := f.Serializer.Deserialize(event.WorkflowExecutionStartedEventAttributes.Input, state)
 			if err == nil {
 				state.ReplicationData.WorkflowEpoch++
 				state.ReplicationData.StartedEventID = 0
+				if state.ReplicationData.StateName == "" {
+					state.ReplicationData.StateName = f.initialState.Name
+				}
 			}
 			return state, err
 		}
@@ -693,6 +687,35 @@ func (f *FSM) EmptyDecisions() []Decision {
 type SerializedState struct {
 	ReplicationData   ReplicationData
 	PendingActivities ActivityCorrelator
+}
+
+// StartFSMWorkflowInput should be used to construct the input for any StartWorkflowExecutionRequests.
+// This panics on errors cause really this should never err.
+func StartFSMWorkflowInput(serializer StateSerializer, data interface{}) string {
+	ss := new(SerializedState)
+	stateData, err := serializer.Serialize(data)
+	if err != nil {
+		panic(err)
+	}
+
+	ss.ReplicationData.StateData = stateData
+	serialized, err := serializer.Serialize(ss)
+	if err != nil {
+		panic(err)
+	}
+	return serialized
+}
+
+//ContinueFSMWorkflowInput should be used to construct the input for any ContinueAsNewWorkflowExecution decisions.
+func ContinueFSMWorkflowInput(ctx *FSMContext, data interface{}) string {
+	ss := new(SerializedState)
+	stateData := ctx.Serialize(data)
+
+	ss.ReplicationData.StateData = stateData
+	ss.ReplicationData.StateName = ctx.fsm.initialState.Name
+	ss.ReplicationData.WorkflowEpoch = ctx.WorkflowEpoch
+
+	return ctx.Serialize(ss)
 }
 
 // ReplicationData is the part of SerializedState that will be replicated onto Kinesis streams.
