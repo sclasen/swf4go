@@ -906,13 +906,13 @@ func (f *FSMContext) EmptyDecisions() []Decision {
 // This decision should be used when it is appropriate to Continue your workflow.
 // You are unable to ContinueAsNew a workflow that has running activites, so you should assure there are none running before using this.
 // As such there is no need to copy over the ActivityCorrelator.
-func (f *FSMContext) ContinuationDecision() Decision {
+func (f *FSMContext) ContinuationDecision(continuedState string) Decision {
 	return Decision{
 		DecisionType: DecisionTypeContinueAsNewWorkflowExecution,
 		ContinueAsNewWorkflowExecutionDecisionAttributes: &ContinueAsNewWorkflowExecutionDecisionAttributes{
 			Input: f.Serialize(SerializedState{
 				ReplicationData: ReplicationData{
-					StateName:     f.fsm.initialState.Name,
+					StateName:     continuedState,
 					WorkflowEpoch: f.WorkflowEpoch,
 					StateData:     f.Serialize(f.stateData),
 				},
