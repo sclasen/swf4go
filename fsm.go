@@ -102,11 +102,10 @@ func (e ErrorOutcome) Decisions() []Decision { return e.decisions }
 func (e ErrorOutcome) State() string { return "error" }
 
 type intermediateOutcome struct {
-	workflowEpoch  int
-	startedEventID int
-	state          string
-	data           interface{}
-	decisions      []Decision
+	stateVersion uint64
+	state        string
+	data         interface{}
+	decisions    []Decision
 }
 
 // FSMState defines the behavior of one state of an FSM
@@ -315,7 +314,6 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, *Seri
 	lastEvents, errorEvents := f.findLastEvents(decisionTask.PreviousStartedEventID, decisionTask.Events)
 	execution := decisionTask.WorkflowExecution
 	outcome := new(intermediateOutcome)
-	outcome.startedEventID = decisionTask.StartedEventID
 	serializedState, err := f.findSerializedState(decisionTask.Events)
 	if err != nil {
 		f.log("action=tick at=error=find-serialized-state-failed err=%q", err)
@@ -330,21 +328,18 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, *Seri
 		decisionTask.WorkflowType,
 		decisionTask.WorkflowExecution,
 		pendingActivities,
-		"", nil, 0,
+		"", nil, uint64(0),
 	)
 
 	//if there are error events, we dont do normal recovery of state + data, we expect the error state to provide this.
 	if len(errorEvents) > 0 {
+		//todo how can errors mess up versioning
 		outcome.data = reflect.New(reflect.TypeOf(f.DataType)).Interface()
 		outcome.state = f.errorState.Name
 		context.State = f.errorState.Name
 		context.stateData = outcome.data
 		for i := len(errorEvents) - 1; i >= 0; i-- {
 			e := errorEvents[i]
-			epochExtractor := new(workflowEpochExtractor)
-			f.Deserialize(e.WorkflowExecutionSignaledEventAttributes.Input, epochExtractor) //gets the epoch from the error
-			outcome.workflowEpoch = epochExtractor.WorkflowEpoch
-			context.WorkflowEpoch = epochExtractor.WorkflowEpoch
 			anOutcome, err := f.panicSafeDecide(f.errorState, context, e, outcome.data)
 			if err != nil {
 				f.log("at=error error=error-handling-decision-execution-error err=%q state=%s next-state=%s", err, f.errorState.Name, outcome.state)
@@ -369,8 +364,8 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, *Seri
 
 		outcome.data = data
 		outcome.state = serializedState.ReplicationData.StateName
-		outcome.workflowEpoch = serializedState.ReplicationData.WorkflowEpoch
-		context.WorkflowEpoch = serializedState.ReplicationData.WorkflowEpoch
+		outcome.stateVersion = serializedState.ReplicationData.StateVersion
+		context.stateVersion = serializedState.ReplicationData.StateVersion
 	}
 
 	//iterate through events oldest to newest, calling the decider for the current state.
@@ -568,8 +563,6 @@ func (f *FSM) findSerializedState(events []HistoryEvent) (*SerializedState, erro
 			state := &SerializedState{}
 			err := f.Serializer.Deserialize(event.WorkflowExecutionStartedEventAttributes.Input, state)
 			if err == nil {
-				state.ReplicationData.WorkflowEpoch++
-				state.ReplicationData.StartedEventID = 0
 				if state.ReplicationData.StateName == "" {
 					state.ReplicationData.StateName = f.initialState.Name
 				}
@@ -616,10 +609,9 @@ func (f *FSM) recordStateMarker(outcome *intermediateOutcome, pending *ActivityC
 
 	state := &SerializedState{
 		ReplicationData: ReplicationData{
-			WorkflowEpoch:  outcome.workflowEpoch,
-			StartedEventID: outcome.startedEventID,
-			StateName:      outcome.state,
-			StateData:      serializedData,
+			StateVersion: outcome.stateVersion + 1, //increment the version here only.
+			StateName:    outcome.state,
+			StateData:    serializedData,
 		},
 		PendingActivities: *pending,
 	}
@@ -713,23 +705,21 @@ func ContinueFSMWorkflowInput(ctx *FSMContext, data interface{}) string {
 
 	ss.ReplicationData.StateData = stateData
 	ss.ReplicationData.StateName = ctx.fsm.initialState.Name
-	ss.ReplicationData.WorkflowEpoch = ctx.WorkflowEpoch
+	ss.ReplicationData.StateVersion = ctx.stateVersion
 
 	return ctx.Serialize(ss)
 }
 
 // ReplicationData is the part of SerializedState that will be replicated onto Kinesis streams.
 type ReplicationData struct {
-	WorkflowEpoch  int    `json:"workflowEpoch"`
-	StartedEventID int    `json:"startedEventId"`
-	StateName      string `json:"stateName"`
-	StateData      string `json:"stateData"`
+	StateVersion uint64 `json:"stateVersion"`
+	StateName    string `json:"stateName"`
+	StateData    string `json:"stateData"`
 }
 
 // SerializedDecisionError is a wrapper struct that allows serializing the context in which an error in a Decider occurred
 // into a WorkflowSignaledEvent in the workflow history.
 type SerializedDecisionError struct {
-	WorkflowEpoch       int         `json:"workflowEpoch"`
 	ErrorEventID        int         `json:"errorEventIds"`
 	UnprocessedEventIDs []int       `json:"unprocessedEventIds"`
 	StateName           string      `json:"stateName"`
@@ -740,14 +730,9 @@ type SerializedDecisionError struct {
 // into a WorkflowSignaledEvent in the workflow history. These errors are generally in finding the current state and data for a workflow, or
 // in serializing and deserializing said state.
 type SerializedSystemError struct {
-	WorkflowEpoch       int         `json:"workflowEpoch"`
 	ErrorType           string      `json:"errorType"`
 	Error               interface{} `json:"error"`
 	UnprocessedEventIDs []int       `json:"unprocessedEventIds"`
-}
-
-type workflowEpochExtractor struct {
-	WorkflowEpoch int `json:"workflowEpoch"`
 }
 
 // StateSerializer defines the interface for serializing state to and deserializing state from the workflow history.
@@ -858,7 +843,7 @@ type FSMContext struct {
 	pendingActivities *ActivityCorrelator
 	State             string
 	stateData         interface{}
-	WorkflowEpoch     int
+	stateVersion      uint64
 }
 
 // NewFSMContext constructs an FSMContext.
@@ -866,7 +851,7 @@ func NewFSMContext(
 	fsm *FSM,
 	wfType WorkflowType, wfExec WorkflowExecution,
 	pending *ActivityCorrelator,
-	state string, stateData interface{}, wfEpoch int,
+	state string, stateData interface{}, stateVersion uint64,
 ) *FSMContext {
 	return &FSMContext{
 		fsm:               fsm,
@@ -875,7 +860,7 @@ func NewFSMContext(
 		pendingActivities: pending,
 		State:             state,
 		stateData:         stateData,
-		WorkflowEpoch:     wfEpoch,
+		stateVersion:      stateVersion,
 	}
 }
 
@@ -935,9 +920,9 @@ func (f *FSMContext) ContinuationDecision(continuedState string) Decision {
 		ContinueAsNewWorkflowExecutionDecisionAttributes: &ContinueAsNewWorkflowExecutionDecisionAttributes{
 			Input: f.Serialize(SerializedState{
 				ReplicationData: ReplicationData{
-					StateName:     continuedState,
-					WorkflowEpoch: f.WorkflowEpoch,
-					StateData:     f.Serialize(f.stateData),
+					StateName:    continuedState,
+					StateData:    f.Serialize(f.stateData),
+					StateVersion: f.stateVersion,
 				},
 				PendingActivities: ActivityCorrelator{},
 			},
