@@ -544,9 +544,9 @@ func TestContinuedWorkflows(t *testing.T) {
 	stateData := fsm.Serialize(TestData{States: []string{"continuing"}})
 	state := SerializedState{
 		ReplicationData: ReplicationData{
-			StateVersion:   23,
-			StateName:      "ok",
-			StateData:      stateData,
+			StateVersion: 23,
+			StateName:    "ok",
+			StateData:    stateData,
 		},
 		PendingActivities: ActivityCorrelator{},
 	}
@@ -563,7 +563,6 @@ func TestContinuedWorkflows(t *testing.T) {
 	decisions, updatedState := fsm.Tick(resp)
 
 	log.Println(updatedState)
-
 
 	if updatedState.ReplicationData.StateVersion != 24 {
 		t.Fatal("StateVersion !=24 ", updatedState.ReplicationData.StateVersion)

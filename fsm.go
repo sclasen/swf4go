@@ -102,10 +102,10 @@ func (e ErrorOutcome) Decisions() []Decision { return e.decisions }
 func (e ErrorOutcome) State() string { return "error" }
 
 type intermediateOutcome struct {
-	stateVersion   uint64
-	state          string
-	data           interface{}
-	decisions      []Decision
+	stateVersion uint64
+	state        string
+	data         interface{}
+	decisions    []Decision
 }
 
 // FSMState defines the behavior of one state of an FSM
@@ -608,9 +608,9 @@ func (f *FSM) recordStateMarker(outcome *intermediateOutcome, pending *ActivityC
 
 	state := &SerializedState{
 		ReplicationData: ReplicationData{
-			StateVersion:   outcome.stateVersion + 1,  //increment the version here only.
-			StateName:      outcome.state,
-			StateData:      serializedData,
+			StateVersion: outcome.stateVersion + 1, //increment the version here only.
+			StateName:    outcome.state,
+			StateData:    serializedData,
 		},
 		PendingActivities: *pending,
 	}
@@ -860,7 +860,7 @@ func NewFSMContext(
 		State:             state,
 		stateData:         stateData,
 		stateVersion:      stateVersion,
- 	}
+	}
 }
 
 // Decide executes a decider making sure that Activity tasks are being tracked.
@@ -919,9 +919,9 @@ func (f *FSMContext) ContinuationDecision(continuedState string) Decision {
 		ContinueAsNewWorkflowExecutionDecisionAttributes: &ContinueAsNewWorkflowExecutionDecisionAttributes{
 			Input: f.Serialize(SerializedState{
 				ReplicationData: ReplicationData{
-					StateName:     continuedState,
-					StateData:     f.Serialize(f.stateData),
-					StateVersion:  f.stateVersion,
+					StateName:    continuedState,
+					StateData:    f.Serialize(f.stateData),
+					StateVersion: f.stateVersion,
 				},
 				PendingActivities: ActivityCorrelator{},
 			},
