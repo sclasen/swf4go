@@ -365,6 +365,7 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, *Seri
 		outcome.data = data
 		outcome.state = serializedState.ReplicationData.StateName
 		outcome.stateVersion = serializedState.ReplicationData.StateVersion
+		context.stateVersion = serializedState.ReplicationData.StateVersion
 	}
 
 	//iterate through events oldest to newest, calling the decider for the current state.
