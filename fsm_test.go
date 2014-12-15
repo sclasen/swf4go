@@ -544,8 +544,7 @@ func TestContinuedWorkflows(t *testing.T) {
 	stateData := fsm.Serialize(TestData{States: []string{"continuing"}})
 	state := SerializedState{
 		ReplicationData: ReplicationData{
-			WorkflowEpoch:  3,
-			StartedEventID: 77,
+			StateVersion:   23,
 			StateName:      "ok",
 			StateData:      stateData,
 		},
@@ -565,12 +564,9 @@ func TestContinuedWorkflows(t *testing.T) {
 
 	log.Println(updatedState)
 
-	if updatedState.ReplicationData.StartedEventID != 5 {
-		t.Fatal("startedEventId != 5")
-	}
 
-	if updatedState.ReplicationData.WorkflowEpoch != 4 {
-		t.Fatal("workflowEpoch != 4")
+	if updatedState.ReplicationData.StateVersion != 24 {
+		t.Fatal("StateVersion !=24 ", updatedState.ReplicationData.StateVersion)
 	}
 
 	if len(decisions) != 1 && decisions[0].RecordMarkerDecisionAttributes.MarkerName != StateMarker {
@@ -655,8 +651,8 @@ func TestKinesisReplication(t *testing.T) {
 	if err := fsm.Serializer.Deserialize(string(replication.Data), &replicatedState); err != nil {
 		t.Fatal(err)
 	}
-	if replicatedState.ReplicationData.StartedEventID != 0 {
-		t.Fatalf("state.StartedEventID != 0, got: %d", replicatedState.ReplicationData.StartedEventID)
+	if replicatedState.ReplicationData.StateVersion != 1 {
+		t.Fatalf("state.StateVersion != 1, got: %d", replicatedState.ReplicationData.StateVersion)
 	}
 	if replicatedState.ReplicationData.StateName != "done" {
 		t.Fatalf("current state being replicated is not 'done', got %q", replicatedState.ReplicationData.StateName)
@@ -999,7 +995,7 @@ func TestContinuationDecision(t *testing.T) {
 		WorkflowType{Name: "test-workflow", Version: "1"},
 		WorkflowExecution{WorkflowID: "test-workflow-1", RunID: "123123"},
 		&ActivityCorrelator{},
-		"InitialState", &TestData{}, 7,
+		"InitialState", &TestData{}, uint64(7),
 	)
 
 	ctx.stateData = &TestData{States: []string{"continuing"}}
@@ -1016,7 +1012,7 @@ func TestContinuationDecision(t *testing.T) {
 	serState := new(SerializedState)
 	ctx.Deserialize(cont.ContinueAsNewWorkflowExecutionDecisionAttributes.Input, serState)
 	ctx.Deserialize(serState.ReplicationData.StateData, testData)
-	if len(testData.States) != 1 || testData.States[0] != "continuing" || serState.ReplicationData.WorkflowEpoch != 7 || serState.ReplicationData.StateName != "InitialState" {
+	if len(testData.States) != 1 || testData.States[0] != "continuing" || serState.ReplicationData.StateVersion != 7 || serState.ReplicationData.StateName != "InitialState" {
 		t.Fatal(testData, cont)
 	}
 
