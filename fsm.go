@@ -243,13 +243,16 @@ func (f *FSM) Start() {
 
 func (f *FSM) handleDecisionTask(decisionTask *PollForDecisionTaskResponse) {
 	decisions, state := f.Tick(decisionTask)
-	if err := f.Client.RespondDecisionTaskCompleted(
-		RespondDecisionTaskCompletedRequest{
-			ExecutionContext: state.ReplicationData.StateName,
-			Decisions:        decisions,
-			TaskToken:        decisionTask.TaskToken,
-		},
-	); err != nil {
+	complete := RespondDecisionTaskCompletedRequest{
+		Decisions: decisions,
+		TaskToken: decisionTask.TaskToken,
+	}
+	//currently we arent returning state when in in an error state so only set context in non-error state.
+	if state != nil {
+		complete.ExecutionContext = state.ReplicationData.StateName
+	}
+
+	if err := f.Client.RespondDecisionTaskCompleted(complete); err != nil {
 		f.log("action=tick at=decide-request-failed error=%q", err.Error())
 		return
 	}
