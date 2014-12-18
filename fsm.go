@@ -738,7 +738,7 @@ type SerializedDecisionError struct {
 // SerializedSystemError is a wrapper struct that allows serializing the context in which an error internal to FSM processing has occurred
 // into a WorkflowSignaledEvent in the workflow history. These errors are generally in finding the current state and data for a workflow, or
 // in serializing and deserializing said state.
-type SerializedSystemError struct {
+type SerializedSystemError struct {g
 	ErrorType           string      `json:"errorType"`
 	Error               interface{} `json:"error"`
 	UnprocessedEventIDs []int       `json:"unprocessedEventIds"`
