@@ -464,7 +464,11 @@ func (f *FSM) panicSafeDecide(state *FSMState, context *FSMContext, event Histor
 		if !f.allowPanics {
 			if r := recover(); r != nil {
 				f.log("at=error error=decide-panic-recovery %v", r)
-				anErr = errors.New("panic in decider, capture error state")
+				if err, ok := r.(error); ok && err != nil {
+					anErr = err
+				} else {
+					anErr = errors.New("panic in decider, null error, capture error state")
+				}
 			}
 		} else {
 			log.Printf("at=panic-safe-decide-allowing-panic fsm-allow-panics=%t", f.allowPanics)
@@ -480,6 +484,7 @@ func (f *FSM) captureDecisionError(execution WorkflowExecution, event int, lastE
 		UnprocessedEventIDs: f.eventIDs(lastEvents[event+1:]),
 		StateName:           stateName,
 		StateData:           stateData,
+		Error:               err,
 	})
 }
 
@@ -727,6 +732,7 @@ type SerializedDecisionError struct {
 	UnprocessedEventIDs []int       `json:"unprocessedEventIds"`
 	StateName           string      `json:"stateName"`
 	StateData           interface{} `json:"stateData"`
+	Error               interface{} `json:"error"`
 }
 
 // SerializedSystemError is a wrapper struct that allows serializing the context in which an error internal to FSM processing has occurred
