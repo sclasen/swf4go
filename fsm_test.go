@@ -589,15 +589,15 @@ func TestKinesisReplication(t *testing.T) {
 	if replication.StreamName != fsm.KinesisStream {
 		t.Fatalf("expected Kinesis stream: %q, got %q", fsm.KinesisStream, replication.StreamName)
 	}
-	var replicatedState SerializedState
+	var replicatedState ReplicationData
 	if err := fsm.Serializer.Deserialize(string(replication.Data), &replicatedState); err != nil {
 		t.Fatal(err)
 	}
-	if replicatedState.ReplicationData.StateVersion != 1 {
-		t.Fatalf("state.StateVersion != 1, got: %d", replicatedState.ReplicationData.StateVersion)
+	if replicatedState.StateVersion != 1 {
+		t.Fatalf("state.StateVersion != 1, got: %d", replicatedState.StateVersion)
 	}
-	if replicatedState.ReplicationData.StateName != "done" {
-		t.Fatalf("current state being replicated is not 'done', got %q", replicatedState.ReplicationData.StateName)
+	if replicatedState.StateName != "done" {
+		t.Fatalf("current state being replicated is not 'done', got %q", replicatedState.StateName)
 	}
 }
 

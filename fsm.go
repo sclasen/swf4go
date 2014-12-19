@@ -260,7 +260,7 @@ func (f *FSM) handleDecisionTask(decisionTask *PollForDecisionTaskResponse) {
 	if state == nil || f.KinesisStream == "" {
 		return // nothing to replicate
 	}
-	stateToReplicate, err := f.Serializer.Serialize(state)
+	stateToReplicate, err := f.Serializer.Serialize(state.ReplicationData)
 	if err != nil {
 		f.log("action=tick at=serialize-state-failed error=%q", err.Error())
 		return
