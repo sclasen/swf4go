@@ -407,12 +407,12 @@ func (c *Client) swfReqNoResponse(operation string, request interface{}) error {
 }
 
 func (c *Client) swfReqWithResponse(operation string, request interface{}, response interface{}) error {
-	transport := c.httpClient
+	client := c.httpClient
 	switch operation {
 	case "PollForDecisionTask", "PollForActivityTask":
-		transport = c.pollingClient
+		client = c.pollingClient
 	}
-	resp, err := c.prepareAndExecuteRequest("swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
+	resp, err := c.prepareAndExecuteRequest(client, "swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
 	if err != nil {
 		return err
 	}
@@ -471,7 +471,7 @@ func (c *Client) kinesisReqWithResponse(operation string, request interface{}, r
 	return err
 }
 
-func (c *Client) prepareAndExecuteRequest(transport http.RoundTripper, service string, url string, target string, contentType string, request interface{}) (*http.Response, error) {
+func (c *Client) prepareAndExecuteRequest(client *http.Client, service string, url string, target string, contentType string, request interface{}) (*http.Response, error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(request); err != nil {
 		return nil, err
@@ -499,7 +499,7 @@ func (c *Client) prepareAndExecuteRequest(transport http.RoundTripper, service s
 		multiln(string(out))
 	}
 
-	resp, err := transport.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
