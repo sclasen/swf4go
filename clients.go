@@ -110,27 +110,41 @@ var (
 
 // Client is the implementation of the WorkflowClient, DecisionWorkerClient, ActivityWorkerClient, WorkflowAdminClient, and WorkflowInfoClient interfaces.
 type Client struct {
-	keys       *aws4.Keys
-	httpClient *http.Client
-	Region     *Region
-	Debug      bool
+	keys          *aws4.Keys
+	httpClient    *http.Client
+	pollingClient *http.Client
+	Region        *Region
+	Debug         bool
 }
 
 // NewClient creates a new Client which uses the given credentials to talk to the given region with http.DefaultClient.
 func NewClient(key string, secret string, region *Region) *Client {
 	return &Client{
-		keys:       &aws4.Keys{AccessKey: key, SecretKey: secret},
-		httpClient: http.DefaultClient,
-		Region:     region,
+		keys:          &aws4.Keys{AccessKey: key, SecretKey: secret},
+		httpClient:    http.DefaultClient,
+		pollingClient: http.DefaultClient,
+		Region:        region,
 	}
 }
 
 // NewClientWithHTTPClient creates a new Client which uses the given credentials to talk to the given region with the specified http.Client.
 func NewClientWithHTTPClient(key string, secret string, region *Region, client *http.Client) *Client {
 	return &Client{
-		keys:       &aws4.Keys{AccessKey: key, SecretKey: secret},
-		httpClient: client,
-		Region:     region,
+		keys:          &aws4.Keys{AccessKey: key, SecretKey: secret},
+		httpClient:    client,
+		pollingClient: client,
+		Region:        region,
+	}
+}
+
+// NewClientWithHTTPAndPollingClient creates a new Client which uses the given credentials to talk to the given region with the specified http.Client,
+// and does polling calls with the configured polling client
+func NewClientWithHTTPAndPollingClient(key string, secret string, region *Region, client *http.Client, pollingClient *http.Client) *Client {
+	return &Client{
+		keys:          &aws4.Keys{AccessKey: key, SecretKey: secret},
+		httpClient:    client,
+		pollingClient: pollingClient,
+		Region:        region,
 	}
 }
 
@@ -377,7 +391,7 @@ func (c *Client) DescribeStream(request DescribeStreamRequest) (*DescribeStreamR
 }
 
 func (c *Client) swfReqNoResponse(operation string, request interface{}) error {
-	resp, err := c.prepareAndExecuteRequest("swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
+	resp, err := c.prepareAndExecuteRequest(c.httpClient, "swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
 	if err != nil {
 		return err
 	}
@@ -393,7 +407,12 @@ func (c *Client) swfReqNoResponse(operation string, request interface{}) error {
 }
 
 func (c *Client) swfReqWithResponse(operation string, request interface{}, response interface{}) error {
-	resp, err := c.prepareAndExecuteRequest("swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
+	client := c.httpClient
+	switch operation {
+	case "PollForDecisionTask", "PollForActivityTask":
+		client = c.pollingClient
+	}
+	resp, err := c.prepareAndExecuteRequest(client, "swf", c.Region.SWFEndpoint, "SimpleWorkflowService."+operation, "application/x-amz-json-1.0", request)
 	if err != nil {
 		return err
 	}
@@ -415,7 +434,7 @@ func (c *Client) swfReqWithResponse(operation string, request interface{}, respo
 }
 
 func (c *Client) kinesisReqNoResponse(operation string, request interface{}) error {
-	resp, err := c.prepareAndExecuteRequest("kinesis", c.Region.KinesisEndpoint, "Kinesis_20131202."+operation, "application/x-amz-json-1.1", request)
+	resp, err := c.prepareAndExecuteRequest(c.httpClient, "kinesis", c.Region.KinesisEndpoint, "Kinesis_20131202."+operation, "application/x-amz-json-1.1", request)
 	if err != nil {
 		return err
 	}
@@ -431,7 +450,7 @@ func (c *Client) kinesisReqNoResponse(operation string, request interface{}) err
 }
 
 func (c *Client) kinesisReqWithResponse(operation string, request interface{}, response interface{}) error {
-	resp, err := c.prepareAndExecuteRequest("kinesis", c.Region.KinesisEndpoint, "Kinesis_20131202."+operation, "application/x-amz-json-1.1", request)
+	resp, err := c.prepareAndExecuteRequest(c.httpClient, "kinesis", c.Region.KinesisEndpoint, "Kinesis_20131202."+operation, "application/x-amz-json-1.1", request)
 	if err != nil {
 		return err
 	}
@@ -452,7 +471,7 @@ func (c *Client) kinesisReqWithResponse(operation string, request interface{}, r
 	return err
 }
 
-func (c *Client) prepareAndExecuteRequest(service string, url string, target string, contentType string, request interface{}) (*http.Response, error) {
+func (c *Client) prepareAndExecuteRequest(client *http.Client, service string, url string, target string, contentType string, request interface{}) (*http.Response, error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(request); err != nil {
 		return nil, err
@@ -480,7 +499,7 @@ func (c *Client) prepareAndExecuteRequest(service string, url string, target str
 		multiln(string(out))
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
