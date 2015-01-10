@@ -109,13 +109,14 @@ type intermediateOutcome struct {
 }
 
 //KinesisRetrier lets you customize the retry logic around Replicating State to Kinesis.
-type KinesisRetrier func(func() (*PutRecordResponse, error))(*PutRecordResponse, error)
+type KinesisRetrier func(func() (*PutRecordResponse, error)) (*PutRecordResponse, error)
 
 func defaultKinesisRetrier() KinesisRetrier {
-	return func(put func()(*PutRecordResponse, error))(*PutRecordResponse, error){
+	return func(put func() (*PutRecordResponse, error)) (*PutRecordResponse, error) {
 		return put()
 	}
 }
+
 // FSMState defines the behavior of one state of an FSM
 type FSMState struct {
 	// Name is the name of the state. When returning an Outcome, the NextState should match the Name of an FSMState in your FSM.
@@ -280,8 +281,8 @@ func (f *FSM) handleDecisionTask(decisionTask *PollForDecisionTaskResponse) {
 		return
 	}
 
-	put := func()(*PutRecordResponse, error){
-		return	f.Client.PutRecord(PutRecordRequest{
+	put := func() (*PutRecordResponse, error) {
+		return f.Client.PutRecord(PutRecordRequest{
 			StreamName: f.KinesisStream,
 			//partition by workflow
 			PartitionKey: decisionTask.WorkflowExecution.WorkflowID,
