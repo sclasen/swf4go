@@ -109,10 +109,10 @@ type intermediateOutcome struct {
 }
 
 //KinesisRetrier lets you customize the retry logic around Replicating State to Kinesis.
-type KinesisRetrier func(func() (*PutRecordResponse, error)) (*PutRecordResponse, error)
+type KinesisRetrier func(fsm, workflowId string, put func() (*PutRecordResponse, error)) (*PutRecordResponse, error)
 
 func defaultKinesisRetrier() KinesisRetrier {
-	return func(put func() (*PutRecordResponse, error)) (*PutRecordResponse, error) {
+	return func(fsm, workflowID string, put func() (*PutRecordResponse, error)) (*PutRecordResponse, error) {
 		return put()
 	}
 }
@@ -290,7 +290,7 @@ func (f *FSM) handleDecisionTask(decisionTask *PollForDecisionTaskResponse) {
 		})
 	}
 
-	resp, err := f.KinesisRetrier(put)
+	resp, err := f.KinesisRetrier(f.Name, decisionTask.WorkflowExecution.WorkflowID, put)
 
 	if err != nil {
 		f.log("action=tick at=replicate-state-failed error=%q", err.Error())
