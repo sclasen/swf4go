@@ -109,7 +109,7 @@ type intermediateOutcome struct {
 }
 
 //KinesisRetrier lets you customize the retry logic around Replicating State to Kinesis.
-type KinesisRetrier func(fsm, workflowId string, put func() (*PutRecordResponse, error)) (*PutRecordResponse, error)
+type KinesisRetrier func(fsm, workflowID string, put func() (*PutRecordResponse, error)) (*PutRecordResponse, error)
 
 func defaultKinesisRetrier() KinesisRetrier {
 	return func(fsm, workflowID string, put func() (*PutRecordResponse, error)) (*PutRecordResponse, error) {
