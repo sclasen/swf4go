@@ -296,7 +296,6 @@ func (f *FSM) handleDecisionTask(decisionTask *PollForDecisionTaskResponse) {
 		return
 	}
 	f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardID, resp.SequenceNumber)
-	//todo error handling retries etc.
 }
 
 func (f *FSM) stateFromDecisions(decisions []Decision) string {
