@@ -144,7 +144,7 @@ type FSM struct {
 	Serializer StateSerializer
 	// Kinesis stream in the same region to replicate state to.
 	KinesisStream string
-	// Kinseis
+	// Strategy for replication of state to Kinesis.
 	KinesisRetrier KinesisRetrier
 	//PollerShutdownManager is used when the FSM is managing the polling
 	PollerShutdownManager *PollerShutdownManager
