@@ -108,6 +108,15 @@ type intermediateOutcome struct {
 	decisions    []Decision
 }
 
+//KinesisReplicator lets you customize the retry logic around Replicating State to Kinesis.
+type KinesisReplicator func(fsm, workflowID string, put func() (*PutRecordResponse, error)) (*PutRecordResponse, error)
+
+func defaultKinesisReplicator() KinesisReplicator {
+	return func(fsm, workflowID string, put func() (*PutRecordResponse, error)) (*PutRecordResponse, error) {
+		return put()
+	}
+}
+
 // FSMState defines the behavior of one state of an FSM
 type FSMState struct {
 	// Name is the name of the state. When returning an Outcome, the NextState should match the Name of an FSMState in your FSM.
@@ -135,6 +144,8 @@ type FSM struct {
 	Serializer StateSerializer
 	// Kinesis stream in the same region to replicate state to.
 	KinesisStream string
+	// Strategy for replication of state to Kinesis.
+	KinesisReplicator KinesisReplicator
 	//PollerShutdownManager is used when the FSM is managing the polling
 	PollerShutdownManager *PollerShutdownManager
 	states                map[string]*FSMState
@@ -231,6 +242,10 @@ func (f *FSM) Init() {
 	if f.PollerShutdownManager == nil {
 		f.PollerShutdownManager = NewPollerShutdownManager()
 	}
+
+	if f.KinesisReplicator == nil {
+		f.KinesisReplicator = defaultKinesisReplicator()
+	}
 }
 
 // Start begins processing DecisionTasks with the FSM. It creates a DecisionTaskPoller and spawns a goroutine that continues polling until Stop() is called and any in-flight polls have completed.
@@ -265,18 +280,23 @@ func (f *FSM) handleDecisionTask(decisionTask *PollForDecisionTaskResponse) {
 		f.log("action=tick at=serialize-state-failed error=%q", err.Error())
 		return
 	}
-	resp, err := f.Client.PutRecord(PutRecordRequest{
-		StreamName: f.KinesisStream,
-		//partition by workflow
-		PartitionKey: decisionTask.WorkflowExecution.WorkflowID,
-		Data:         []byte(stateToReplicate),
-	})
+
+	put := func() (*PutRecordResponse, error) {
+		return f.Client.PutRecord(PutRecordRequest{
+			StreamName: f.KinesisStream,
+			//partition by workflow
+			PartitionKey: decisionTask.WorkflowExecution.WorkflowID,
+			Data:         []byte(stateToReplicate),
+		})
+	}
+
+	resp, err := f.KinesisReplicator(f.Name, decisionTask.WorkflowExecution.WorkflowID, put)
+
 	if err != nil {
 		f.log("action=tick at=replicate-state-failed error=%q", err.Error())
 		return
 	}
 	f.log("action=tick at=replicated-state shard=%s sequence=%s", resp.ShardID, resp.SequenceNumber)
-	//todo error handling retries etc.
 }
 
 func (f *FSM) stateFromDecisions(decisions []Decision) string {

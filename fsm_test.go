@@ -542,11 +542,12 @@ func (c *MockKinesisClient) RespondDecisionTaskCompleted(request RespondDecision
 func TestKinesisReplication(t *testing.T) {
 	client := &MockKinesisClient{}
 	fsm := FSM{
-		Client:        client,
-		Name:          "test-fsm",
-		DataType:      TestData{},
-		KinesisStream: "test-stream",
-		Serializer:    JSONStateSerializer{},
+		Client:            client,
+		Name:              "test-fsm",
+		DataType:          TestData{},
+		KinesisStream:     "test-stream",
+		Serializer:        JSONStateSerializer{},
+		KinesisReplicator: defaultKinesisReplicator(),
 	}
 	fsm.AddInitialState(&FSMState{
 		Name: "initial",
