@@ -108,10 +108,10 @@ type intermediateOutcome struct {
 	decisions    []Decision
 }
 
-//KinesisRetrier lets you customize the retry logic around Replicating State to Kinesis.
-type KinesisRetrier func(fsm, workflowID string, put func() (*PutRecordResponse, error)) (*PutRecordResponse, error)
+//KinesisReplicator lets you customize the retry logic around Replicating State to Kinesis.
+type KinesisReplicator func(fsm, workflowID string, put func() (*PutRecordResponse, error)) (*PutRecordResponse, error)
 
-func defaultKinesisRetrier() KinesisRetrier {
+func defaultKinesisReplicator() KinesisReplicator {
 	return func(fsm, workflowID string, put func() (*PutRecordResponse, error)) (*PutRecordResponse, error) {
 		return put()
 	}
@@ -145,7 +145,7 @@ type FSM struct {
 	// Kinesis stream in the same region to replicate state to.
 	KinesisStream string
 	// Strategy for replication of state to Kinesis.
-	KinesisRetrier KinesisRetrier
+	KinesisReplicator KinesisReplicator
 	//PollerShutdownManager is used when the FSM is managing the polling
 	PollerShutdownManager *PollerShutdownManager
 	states                map[string]*FSMState
@@ -243,8 +243,8 @@ func (f *FSM) Init() {
 		f.PollerShutdownManager = NewPollerShutdownManager()
 	}
 
-	if f.KinesisRetrier == nil {
-		f.KinesisRetrier = defaultKinesisRetrier()
+	if f.KinesisReplicator == nil {
+		f.KinesisReplicator = defaultKinesisReplicator()
 	}
 }
 
@@ -290,7 +290,7 @@ func (f *FSM) handleDecisionTask(decisionTask *PollForDecisionTaskResponse) {
 		})
 	}
 
-	resp, err := f.KinesisRetrier(f.Name, decisionTask.WorkflowExecution.WorkflowID, put)
+	resp, err := f.KinesisReplicator(f.Name, decisionTask.WorkflowExecution.WorkflowID, put)
 
 	if err != nil {
 		f.log("action=tick at=replicate-state-failed error=%q", err.Error())

@@ -547,7 +547,7 @@ func TestKinesisReplication(t *testing.T) {
 		DataType:       TestData{},
 		KinesisStream:  "test-stream",
 		Serializer:     JSONStateSerializer{},
-		KinesisRetrier: defaultKinesisRetrier(),
+		KinesisReplicator: defaultKinesisReplicator(),
 	}
 	fsm.AddInitialState(&FSMState{
 		Name: "initial",
