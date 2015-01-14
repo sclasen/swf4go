@@ -918,7 +918,7 @@ func (f *FSMContext) Complete(data interface{}, decisions...Decision) Outcome {
 // Goto is a helper func to easily create an ErrorOutcome.
 func (f *FSMContext) Error(data interface{}, decisions []Decision) Outcome {
 	return ErrorOutcome{
-		state:     "error",
+		state:     ErrorState,
 		data:      data,
 		decisions: decisions,
 	}
