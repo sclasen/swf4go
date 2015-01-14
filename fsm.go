@@ -896,7 +896,6 @@ func NewFSMContext(
 	}
 }
 
-
 // Goto is a helper func to easily create a TransitionOutcome.
 func (f *FSMContext) Goto(state string, data interface{}, decisions []Decision) Outcome {
 	return TransitionOutcome{
@@ -907,7 +906,7 @@ func (f *FSMContext) Goto(state string, data interface{}, decisions []Decision) 
 }
 
 // Complete is a helper func to easily create a CompleteOutcome.
-func (f *FSMContext) Complete(data interface{}, decisions...Decision) Outcome {
+func (f *FSMContext) Complete(data interface{}, decisions ...Decision) Outcome {
 	final := append(decisions, f.CompletionDecision(data))
 	return CompleteOutcome{
 		data:      data,
@@ -923,7 +922,6 @@ func (f *FSMContext) Error(data interface{}, decisions []Decision) Outcome {
 		decisions: decisions,
 	}
 }
-
 
 // Decide executes a decider making sure that Activity tasks are being tracked.
 func (f *FSMContext) Decide(h HistoryEvent, data interface{}, decider Decider) Outcome {
