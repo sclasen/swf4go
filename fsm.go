@@ -19,6 +19,8 @@ const (
 	StateMarker       = "FSM.State"
 	ErrorSignal       = "FSM.Error"
 	SystemErrorSignal = "FSM.SystemError"
+	CompleteState     = "complete"
+	ErrorState        = "error"
 )
 
 // Decider decides an Outcome based on an event and the current data for an
@@ -69,21 +71,23 @@ func (s StayOutcome) Decisions() []Decision { return s.decisions }
 // State returns the next state for the StayOutcome, which is always empty.
 func (s StayOutcome) State() string { return "" }
 
-// TerminationOutcome can do things like check that the last decision is a termination.
-type TerminationOutcome struct {
+// CompleteOutcome will send a CompleteWorkflowExecutionDecision, and transition to a 'managed' fsm state
+// that will respond to any further events by attempting to Complete the workflow. This can happen only if there were
+// unhandled decisions
+type CompleteOutcome struct {
 	data      interface{}
 	decisions []Decision
 }
 
 // Data returns the data for this Outcome.
-func (t TerminationOutcome) Data() interface{} { return t.data }
+func (t CompleteOutcome) Data() interface{} { return t.data }
 
 // Decisions returns the list of Decisions for this Outcome.
-func (t TerminationOutcome) Decisions() []Decision { return t.decisions }
+func (t CompleteOutcome) Decisions() []Decision { return t.decisions }
 
-// State returns the next state for the TerminationOutcome, which is always
-// "TERMINATED".
-func (t TerminationOutcome) State() string { return "TERMINATED" }
+// State returns the next state for the CompleteOutcome, which is always
+// "complete".
+func (t CompleteOutcome) State() string { return CompleteState }
 
 // ErrorOutcome can be used to purposefully put the workflow into an error state.
 type ErrorOutcome struct {
@@ -151,6 +155,7 @@ type FSM struct {
 	states                map[string]*FSMState
 	initialState          *FSMState
 	errorState            *FSMState
+	completeState         *FSMState
 	stop                  chan bool
 	stopAck               chan bool
 	allowPanics           bool //makes testing easier
@@ -186,7 +191,7 @@ func (f *FSM) AddErrorState(state *FSMState) {
 // a proper error state to your FSM.
 func (f *FSM) DefaultErrorState() *FSMState {
 	return &FSMState{
-		Name: "error",
+		Name: ErrorState,
 		Decider: func(fsm *FSMContext, h HistoryEvent, data interface{}) Outcome {
 			switch h.EventType {
 			case EventTypeWorkflowExecutionSignaled:
@@ -215,6 +220,26 @@ func (f *FSM) DefaultErrorState() *FSMState {
 	}
 }
 
+// AddCompleteState adds a state to the FSM and uses it as the final state of a workflow.
+// it will only receive events if you returned FSMContext.Complete(...) and the workflow was unable to complete.
+func (f *FSM) AddCompleteState(state *FSMState) {
+	f.AddState(state)
+	f.completeState = state
+}
+
+// DefaultCompleteState is the complete state used in an FSM if one has not been set.
+// It simply responds with a CompleteDecision which attempts to Complete the workflow.
+// This state will only get events if you previously attempted to complete the workflow and it failed.
+func (f *FSM) DefaultCompleteState() *FSMState {
+	return &FSMState{
+		Name: CompleteState,
+		Decider: func(fsm *FSMContext, h HistoryEvent, data interface{}) Outcome {
+			f.log("state=complete at=attempt-completion event=%s", h)
+			return fsm.Complete(data)
+		},
+	}
+}
+
 // Init initializaed any optional, unspecified values such as the error state, stop channel, serializer, PollerShutdownManager.
 // it gets called by Start(), so you should only call this if you are manually managing polling for tasks, and calling Tick yourself.
 func (f *FSM) Init() {
@@ -224,6 +249,10 @@ func (f *FSM) Init() {
 
 	if f.errorState == nil {
 		f.AddErrorState(f.DefaultErrorState())
+	}
+
+	if f.completeState == nil {
+		f.AddCompleteState(f.DefaultCompleteState())
 	}
 
 	if f.stop == nil {
@@ -438,32 +467,6 @@ func (f *FSM) Tick(decisionTask *PollForDecisionTaskResponse) ([]Decision, *Seri
 // Stay is a helper func to easily create a StayOutcome.
 func (f *FSMContext) Stay(data interface{}, decisions []Decision) Outcome {
 	return StayOutcome{
-		data:      data,
-		decisions: decisions,
-	}
-}
-
-// Goto is a helper func to easily create a TransitionOutcome.
-func (f *FSMContext) Goto(state string, data interface{}, decisions []Decision) Outcome {
-	return TransitionOutcome{
-		state:     state,
-		data:      data,
-		decisions: decisions,
-	}
-}
-
-// Terminate is a helper func to easily create a TerminationOutcome.
-func (f *FSMContext) Terminate(data interface{}, decisions []Decision) Outcome {
-	return TerminationOutcome{
-		data:      data,
-		decisions: decisions,
-	}
-}
-
-// Goto is a helper func to easily create an ErrorOutcome.
-func (f *FSMContext) Error(data interface{}, decisions []Decision) Outcome {
-	return ErrorOutcome{
-		state:     "error",
 		data:      data,
 		decisions: decisions,
 	}
@@ -893,6 +896,33 @@ func NewFSMContext(
 	}
 }
 
+// Goto is a helper func to easily create a TransitionOutcome.
+func (f *FSMContext) Goto(state string, data interface{}, decisions []Decision) Outcome {
+	return TransitionOutcome{
+		state:     state,
+		data:      data,
+		decisions: decisions,
+	}
+}
+
+// Complete is a helper func to easily create a CompleteOutcome.
+func (f *FSMContext) Complete(data interface{}, decisions ...Decision) Outcome {
+	final := append(decisions, f.CompletionDecision(data))
+	return CompleteOutcome{
+		data:      data,
+		decisions: final,
+	}
+}
+
+// Goto is a helper func to easily create an ErrorOutcome.
+func (f *FSMContext) Error(data interface{}, decisions []Decision) Outcome {
+	return ErrorOutcome{
+		state:     ErrorState,
+		data:      data,
+		decisions: decisions,
+	}
+}
+
 // Decide executes a decider making sure that Activity tasks are being tracked.
 func (f *FSMContext) Decide(h HistoryEvent, data interface{}, decider Decider) Outcome {
 	outcome := decider(f, h, data)
@@ -956,6 +986,17 @@ func (f *FSMContext) ContinuationDecision(continuedState string) Decision {
 				PendingActivities: ActivityCorrelator{},
 			},
 			),
+		},
+	}
+}
+
+// CompletionDecision will build a CompleteWorkflowExecutionDecision decision that has the expected SerializedState marshalled to json as its result.
+// This decision should be used when it is appropriate to Complete your workflow.
+func (f *FSMContext) CompletionDecision(data interface{}) Decision {
+	return Decision{
+		DecisionType: DecisionTypeCompleteWorkflowExecution,
+		CompleteWorkflowExecutionDecisionAttributes: &CompleteWorkflowExecutionDecisionAttributes{
+			Result: f.Serialize(data),
 		},
 	}
 }
