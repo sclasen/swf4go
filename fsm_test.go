@@ -960,3 +960,37 @@ func TestContinuationDecision(t *testing.T) {
 	}
 
 }
+
+func TestCompleteState(t *testing.T) {
+	ctx := NewFSMContext(
+		&FSM{
+			Name:       "test-fsm",
+			DataType:   TestData{},
+			Serializer: JSONStateSerializer{},
+		},
+		WorkflowType{Name: "test-workflow", Version: "1"},
+		WorkflowExecution{WorkflowID: "test-workflow-1", RunID: "123123"},
+		&ActivityCorrelator{},
+		"InitialState", &TestData{}, 0,
+	)
+
+	event := HistoryEvent{
+		EventID:   1,
+		EventType: "WorkflowExecutionStarted",
+		WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
+			Input: StartFSMWorkflowInput(ctx.fsm.Serializer, new(TestData)),
+		},
+	}
+
+	ctx.fsm.AddInitialState(ctx.fsm.DefaultCompleteState())
+	ctx.fsm.Init()
+	outcome := ctx.fsm.completeState.Decider(ctx, event, new(TestData))
+
+	if len(outcome.Decisions()) != 1 {
+		t.Fatal(outcome)
+	}
+
+	if outcome.Decisions()[0].DecisionType != DecisionTypeCompleteWorkflowExecution {
+		t.Fatal(outcome)
+	}
+}
