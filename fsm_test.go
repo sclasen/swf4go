@@ -930,14 +930,14 @@ func TestFSMContextActivityTracking(t *testing.T) {
 
 func TestContinuationDecision(t *testing.T) {
 
-	fsm := 	&FSM{
+	fsm := &FSM{
 		Name:       "test-fsm",
 		DataType:   TestData{},
 		Serializer: JSONStateSerializer{},
 	}
 
 	ctx := NewFSMContext(
-	    fsm,
+		fsm,
 		WorkflowType{Name: "test-workflow", Version: "1"},
 		WorkflowExecution{WorkflowID: "test-workflow-1", RunID: "123123"},
 		&ActivityCorrelator{},
@@ -972,7 +972,7 @@ func TestCompleteState(t *testing.T) {
 	}
 
 	ctx := NewFSMContext(
-        fsm,
+		fsm,
 		WorkflowType{Name: "test-workflow", Version: "1"},
 		WorkflowExecution{WorkflowID: "test-workflow-1", RunID: "123123"},
 		&ActivityCorrelator{},

@@ -240,7 +240,7 @@ func (m MarshalledDecider) Decide(f *FSMContext, h HistoryEvent, data interface{
 
 // FSMSerializer is the contract for de/serializing state inside an FSM, typically implemented by the FSM itself
 // but serves to break the circular dep between FSMContext and FSM.
-type FSMSerializer interface{
+type FSMSerializer interface {
 	EventData(h HistoryEvent, data interface{})
 	Serialize(data interface{}) string
 	StateSerializer() StateSerializer
@@ -250,7 +250,7 @@ type FSMSerializer interface{
 
 // FSMContext is populated by the FSM machinery and passed to Deciders.
 type FSMContext struct {
-	serialization    FSMSerializer
+	serialization FSMSerializer
 	WorkflowType
 	WorkflowExecution
 	pendingActivities *ActivityCorrelator

@@ -54,6 +54,7 @@ type FSM struct {
 	allowPanics           bool //makes testing easier
 }
 
+// StateSerializer is the implementation of FSMSerializer.StateSerializer()
 func (f *FSM) StateSerializer() StateSerializer {
 	return f.Serializer
 }
@@ -64,6 +65,7 @@ func (f *FSM) AddInitialState(state *FSMState) {
 	f.initialState = state
 }
 
+// InitialState is the implementation of FSMSerializer.InitialState()
 func (f *FSM) InitialState() string {
 	return f.initialState.Name
 }
