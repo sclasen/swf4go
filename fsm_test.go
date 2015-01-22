@@ -929,12 +929,15 @@ func TestFSMContextActivityTracking(t *testing.T) {
 }
 
 func TestContinuationDecision(t *testing.T) {
+
+	fsm := &FSM{
+		Name:       "test-fsm",
+		DataType:   TestData{},
+		Serializer: JSONStateSerializer{},
+	}
+
 	ctx := NewFSMContext(
-		&FSM{
-			Name:       "test-fsm",
-			DataType:   TestData{},
-			Serializer: JSONStateSerializer{},
-		},
+		fsm,
 		WorkflowType{Name: "test-workflow", Version: "1"},
 		WorkflowExecution{WorkflowID: "test-workflow-1", RunID: "123123"},
 		&ActivityCorrelator{},
@@ -942,7 +945,7 @@ func TestContinuationDecision(t *testing.T) {
 	)
 
 	ctx.stateData = &TestData{States: []string{"continuing"}}
-	ctx.fsm.AddInitialState(&FSMState{
+	fsm.AddInitialState(&FSMState{
 		Name: "InitialState",
 		Decider: func(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
 			return nil
@@ -962,12 +965,14 @@ func TestContinuationDecision(t *testing.T) {
 }
 
 func TestCompleteState(t *testing.T) {
+	fsm := &FSM{
+		Name:       "test-fsm",
+		DataType:   TestData{},
+		Serializer: JSONStateSerializer{},
+	}
+
 	ctx := NewFSMContext(
-		&FSM{
-			Name:       "test-fsm",
-			DataType:   TestData{},
-			Serializer: JSONStateSerializer{},
-		},
+		fsm,
 		WorkflowType{Name: "test-workflow", Version: "1"},
 		WorkflowExecution{WorkflowID: "test-workflow-1", RunID: "123123"},
 		&ActivityCorrelator{},
@@ -978,13 +983,13 @@ func TestCompleteState(t *testing.T) {
 		EventID:   1,
 		EventType: "WorkflowExecutionStarted",
 		WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
-			Input: StartFSMWorkflowInput(ctx.fsm.Serializer, new(TestData)),
+			Input: StartFSMWorkflowInput(ctx.Serializer(), new(TestData)),
 		},
 	}
 
-	ctx.fsm.AddInitialState(ctx.fsm.DefaultCompleteState())
-	ctx.fsm.Init()
-	outcome := ctx.fsm.completeState.Decider(ctx, event, new(TestData))
+	fsm.AddInitialState(fsm.DefaultCompleteState())
+	fsm.Init()
+	outcome := fsm.completeState.Decider(ctx, event, new(TestData))
 
 	if len(outcome.Decisions()) != 1 {
 		t.Fatal(outcome)
