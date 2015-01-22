@@ -235,8 +235,8 @@ func (m MarshalledDecider) Decide(f *FSMContext, h HistoryEvent, data interface{
 	if data == nil {
 		data = reflect.New(reflect.TypeOf(f.stateData)).Interface()
 	}
-	ret :=  m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0]
-	if ret.IsNil()  {
+	ret := m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0]
+	if ret.IsNil() {
 		return nil
 	}
 	return ret.Interface().(Outcome)
