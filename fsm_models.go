@@ -235,7 +235,11 @@ func (m MarshalledDecider) Decide(f *FSMContext, h HistoryEvent, data interface{
 	if data == nil {
 		data = reflect.New(reflect.TypeOf(f.stateData)).Interface()
 	}
-	return m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0].Interface().(Outcome)
+	ret :=  m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0]
+	if ret.IsNil()  {
+		return nil
+	}
+	return ret.Interface().(Outcome)
 }
 
 // FSMSerializer is the contract for de/serializing state inside an FSM, typically implemented by the FSM itself
