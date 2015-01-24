@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -183,63 +181,6 @@ func (p ProtobufStateSerializer) Deserialize(serialized string, state interface{
 	err = proto.Unmarshal(bin, state.(proto.Message))
 
 	return err
-}
-
-/*tigertonic-like marhsalling of data from interface{} to specific type*/
-
-// MarshalledDecider is used to convert a standard decider with data of type interface{} to a typed decider
-// which has data of user specified type FSM.DataType
-type MarshalledDecider struct {
-	v reflect.Value
-}
-
-// TypedDecider wraps a user specified typed decider in a standard decider.
-func TypedDecider(decider interface{}) Decider {
-	t := reflect.TypeOf(decider)
-	if reflect.Func != t.Kind() {
-		panic(fmt.Sprintf("kind was %v, not Func", t.Kind()))
-	}
-	if 3 != t.NumIn() {
-		panic(fmt.Sprintf(
-			"input arity was %v, not 3",
-			t.NumIn(),
-		))
-	}
-	if "*swf.FSMContext" != t.In(0).String() {
-		panic(fmt.Sprintf(
-			"type of first argument was %v, not *swf.FSMContext",
-			t.In(0),
-		))
-	}
-	if "swf.HistoryEvent" != t.In(1).String() {
-		panic(fmt.Sprintf(
-			"type of second argument was %v, not swf.HistoryEvent",
-			t.In(1),
-		))
-	}
-
-	if "swf.Outcome" != t.Out(0).String() {
-		panic(fmt.Sprintf(
-			"type of return value was %v, not swf.Outcome",
-			t.Out(0),
-		))
-	}
-
-	return MarshalledDecider{reflect.ValueOf(decider)}.Decide
-}
-
-// Decide uses reflection to call the user specified, typed decider.
-func (m MarshalledDecider) Decide(f *FSMContext, h HistoryEvent, data interface{}) Outcome {
-
-	// reflection will asplode if we try to use nil
-	if data == nil {
-		data = reflect.New(reflect.TypeOf(f.stateData)).Interface()
-	}
-	ret := m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0]
-	if ret.IsNil() {
-		return nil
-	}
-	return ret.Interface().(Outcome)
 }
 
 // FSMSerializer is the contract for de/serializing state inside an FSM, typically implemented by the FSM itself

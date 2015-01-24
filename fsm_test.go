@@ -17,6 +17,8 @@ import (
 
 var testActivityInfo = ActivityInfo{ActivityID: "activityId", ActivityType: ActivityType{Name: "activity", Version: "activityVersion"}}
 
+var typedFuncs = Typed(new(TestData))
+
 func TestFSM(t *testing.T) {
 
 	fsm := FSM{
@@ -48,7 +50,7 @@ func TestFSM(t *testing.T) {
 
 	fsm.AddState(&FSMState{
 		Name: "working",
-		Decider: TypedDecider(func(f *FSMContext, lastEvent HistoryEvent, testData *TestData) Outcome {
+		Decider: typedFuncs.Decider(func(f *FSMContext, lastEvent HistoryEvent, testData *TestData) Outcome {
 			testData.States = append(testData.States, "working")
 			serialized := f.Serialize(testData)
 			var decisions = f.EmptyDecisions()
@@ -200,16 +202,16 @@ type TestData struct {
 }
 
 func TestMarshalledDecider(t *testing.T) {
-	typedDecider := func(f *FSMContext, h HistoryEvent, d TestData) Outcome {
+	typedDecider := func(f *FSMContext, h HistoryEvent, d *TestData) Outcome {
 		if d.States[0] != "marshalled" {
 			t.Fail()
 		}
 		return f.Goto("ok", d, nil)
 	}
 
-	wrapped := TypedDecider(typedDecider)
+	wrapped := typedFuncs.Decider(typedDecider)
 
-	outcome := wrapped(&FSMContext{}, HistoryEvent{}, TestData{States: []string{"marshalled"}})
+	outcome := wrapped(&FSMContext{}, HistoryEvent{}, &TestData{States: []string{"marshalled"}})
 
 	if outcome.(TransitionOutcome).state != "ok" {
 		t.Fatal("NextState was not 'ok'")
@@ -308,9 +310,9 @@ func TestErrorHandling(t *testing.T) {
 	}
 	//Try with TypedDecider
 	id := fsm.initialState.Decider
-	fsm.initialState.Decider = TypedDecider(func(f *FSMContext, h HistoryEvent, d *TestData) Outcome { return id(f, h, d) })
+	fsm.initialState.Decider = typedFuncs.Decider(func(f *FSMContext, h HistoryEvent, d *TestData) Outcome { return id(f, h, d) })
 	ie := fsm.errorState.Decider
-	fsm.errorState.Decider = TypedDecider(func(f *FSMContext, h HistoryEvent, d *TestData) Outcome { return ie(f, h, d) })
+	fsm.errorState.Decider = typedFuncs.Decider(func(f *FSMContext, h HistoryEvent, d *TestData) Outcome { return ie(f, h, d) })
 
 	decisions2, _ := fsm.Tick(resp)
 	if len(decisions2) != 1 && decisions2[0].DecisionType != DecisionTypeRecordMarker {
@@ -438,8 +440,8 @@ func ExampleFSM() {
 
 	//create the FSMState by passing the decider function through TypedDecider(),
 	//which lets you use d *StateData rather than d interface{} in your decider.
-	waitForSignalState := &FSMState{Name: "waitForSignal", Decider: TypedDecider(waitForSignal)}
-	waitForTimerState := &FSMState{Name: "waitForTimer", Decider: TypedDecider(waitForTimer)}
+	waitForSignalState := &FSMState{Name: "waitForSignal", Decider: typedFuncs.Decider(waitForSignal)}
+	waitForTimerState := &FSMState{Name: "waitForTimer", Decider: typedFuncs.Decider(waitForTimer)}
 	//wire it up in an fsm
 	fsm := &FSM{
 		Name:       "example-fsm",
@@ -631,7 +633,7 @@ func TestTrackPendingActivities(t *testing.T) {
 	// Deciders should be able to retrieve info about the pending activity
 	fsm.AddState(&FSMState{
 		Name: "working",
-		Decider: TypedDecider(func(f *FSMContext, lastEvent HistoryEvent, testData *TestData) Outcome {
+		Decider: typedFuncs.Decider(func(f *FSMContext, lastEvent HistoryEvent, testData *TestData) Outcome {
 			testData.States = append(testData.States, "working")
 			serialized := f.Serialize(testData)
 			var decisions = f.EmptyDecisions()
@@ -676,7 +678,7 @@ func TestTrackPendingActivities(t *testing.T) {
 	// Pending activities are cleared after finished
 	fsm.AddState(&FSMState{
 		Name: "done",
-		Decider: TypedDecider(func(f *FSMContext, lastEvent HistoryEvent, testData *TestData) Outcome {
+		Decider: typedFuncs.Decider(func(f *FSMContext, lastEvent HistoryEvent, testData *TestData) Outcome {
 			decisions := f.EmptyDecisions()
 			if lastEvent.EventType == EventTypeTimerFired {
 				testData.States = append(testData.States, "done")
