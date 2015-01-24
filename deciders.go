@@ -6,10 +6,13 @@ import (
 	"reflect"
 )
 
+//ComposedDecider can be used to build a decider out of a number of sub Deciders
+//the sub deciders should return Pass when they dont wish to handle an event.
 type ComposedDecider struct {
 	deciders []Decider
 }
 
+//NewComposedDecider builds a Composed Decider from a list of sub Deciders
 func NewComposedDecider(deciders ...Decider) Decider {
 	c := ComposedDecider{
 		deciders: deciders,
@@ -17,6 +20,7 @@ func NewComposedDecider(deciders ...Decider) Decider {
 	return c.Decide
 }
 
+//Decide is the the Decider func for a ComosedDecider
 func (c *ComposedDecider) Decide(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
 	for _, d := range c.deciders {
 		outcome := d(ctx, h, data)
@@ -28,18 +32,26 @@ func (c *ComposedDecider) Decide(ctx *FSMContext, h HistoryEvent, data interface
 	return ctx.Stay(data, ctx.EmptyDecisions())
 }
 
+//DecisionFunc is a building block for composable deciders that returns a decision.
 type DecisionFunc func(ctx *FSMContext, h HistoryEvent, data interface{}) Decision
 
+//MultiDecisionFunc is a building block for composable deciders that returns a [] of decision.
 type MultiDecisionFunc func(ctx *FSMContext, h HistoryEvent, data interface{}) []Decision
 
+//StateFunc is a building block for composable deciders mutates the FSM stateData.
 type StateFunc func(ctx *FSMContext, h HistoryEvent, data interface{})
 
+//PredicateFunc is a building block for composable deciders, a predicate based on the FSM stateData.
 type PredicateFunc func(data interface{}) bool
 
+//Typed allows you to create Typed building blocks for composable deciders.
+//the type checking here is done on constriction at runtime, so be sure to have a unit test that constructs your funcs.
 func Typed(typed interface{}) *TypedFuncs {
 	return &TypedFuncs{typed}
 }
 
+//TypedFuncs lets you construct building block for composable deciders, that have arguments that are checked
+//against the type of your FSM stateData.
 type TypedFuncs struct {
 	typed interface{}
 }
@@ -48,36 +60,41 @@ func (t *TypedFuncs) typeArg() string {
 	return reflect.TypeOf(t.typed).String()
 }
 
+//Decider builds a Decider from your typed Decider that verifies the right typing at construction time.
 func (t *TypedFuncs) Decider(decider interface{}) Decider {
 	typeCheck(decider, []string{"*swf.FSMContext", "swf.HistoryEvent", t.typeArg()}, []string{"swf.Outcome"})
-	return MarshalledFunc{reflect.ValueOf(decider)}.Decider
+	return marshalledFunc{reflect.ValueOf(decider)}.decider
 }
 
+//DecisionFunc builds a DecisionFunc from your typed DecisionFunc that verifies the right typing at construction time.
 func (t *TypedFuncs) DecisionFunc(decisionFunc interface{}) DecisionFunc {
 	typeCheck(decisionFunc, []string{"*swf.FSMContext", "swf.HistoryEvent", t.typeArg()}, []string{"swf.Decision"})
-	return MarshalledFunc{reflect.ValueOf(decisionFunc)}.DecisionFunc
+	return marshalledFunc{reflect.ValueOf(decisionFunc)}.decisionFunc
 }
 
+//MultiDecisionFunc builds a MultiDecisionFunc from your typed MultiDecisionFunc that verifies the right typing at construction time.
 func (t *TypedFuncs) MultiDecisionFunc(decisionFunc interface{}) MultiDecisionFunc {
 	typeCheck(decisionFunc, []string{"*swf.FSMContext", "swf.HistoryEvent", t.typeArg()}, []string{"[]swf.Decision"})
-	return MarshalledFunc{reflect.ValueOf(decisionFunc)}.MultiDecisionFunc
+	return marshalledFunc{reflect.ValueOf(decisionFunc)}.multiDecisionFunc
 }
 
+//StateFunc builds a StateFunc from your typed StateFunc that verifies the right typing at construction time.
 func (t *TypedFuncs) StateFunc(stateFunc interface{}) StateFunc {
 	typeCheck(stateFunc, []string{"*swf.FSMContext", "swf.HistoryEvent", t.typeArg()}, []string{})
-	return MarshalledFunc{reflect.ValueOf(stateFunc)}.StateFunc
+	return marshalledFunc{reflect.ValueOf(stateFunc)}.stateFunc
 }
 
+//PredicateFunc builds a PredicateFunc from your typed PredicateFunc that verifies the right typing at construction time.
 func (t *TypedFuncs) PredicateFunc(stateFunc interface{}) PredicateFunc {
 	typeCheck(stateFunc, []string{t.typeArg()}, []string{"bool"})
-	return MarshalledFunc{reflect.ValueOf(stateFunc)}.PredicateFunc
+	return marshalledFunc{reflect.ValueOf(stateFunc)}.predicateFunc
 }
 
-type MarshalledFunc struct {
+type marshalledFunc struct {
 	v reflect.Value
 }
 
-func (m MarshalledFunc) Decider(f *FSMContext, h HistoryEvent, data interface{}) Outcome {
+func (m marshalledFunc) decider(f *FSMContext, h HistoryEvent, data interface{}) Outcome {
 	ret := m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0]
 	if ret.IsNil() {
 		return nil
@@ -85,21 +102,21 @@ func (m MarshalledFunc) Decider(f *FSMContext, h HistoryEvent, data interface{})
 	return ret.Interface().(Outcome)
 }
 
-func (m MarshalledFunc) DecisionFunc(f *FSMContext, h HistoryEvent, data interface{}) Decision {
+func (m marshalledFunc) decisionFunc(f *FSMContext, h HistoryEvent, data interface{}) Decision {
 	ret := m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0]
 	return ret.Interface().(Decision)
 }
 
-func (m MarshalledFunc) MultiDecisionFunc(f *FSMContext, h HistoryEvent, data interface{}) []Decision {
+func (m marshalledFunc) multiDecisionFunc(f *FSMContext, h HistoryEvent, data interface{}) []Decision {
 	ret := m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})[0]
 	return ret.Interface().([]Decision)
 }
 
-func (m MarshalledFunc) StateFunc(f *FSMContext, h HistoryEvent, data interface{}) {
+func (m marshalledFunc) stateFunc(f *FSMContext, h HistoryEvent, data interface{}) {
 	m.v.Call([]reflect.Value{reflect.ValueOf(f), reflect.ValueOf(h), reflect.ValueOf(data)})
 }
 
-func (m MarshalledFunc) PredicateFunc(data interface{}) bool {
+func (m marshalledFunc) predicateFunc(data interface{}) bool {
 	return m.v.Call([]reflect.Value{reflect.ValueOf(data)})[0].Interface().(bool)
 }
 

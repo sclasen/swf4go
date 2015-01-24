@@ -27,6 +27,9 @@ type Outcome interface {
 	State() string
 }
 
+// Pass is nil, a sentinel value to represent 'no outcome'
+var Pass Outcome
+
 // TransitionOutcome is an Outcome in which the FSM will transtion to a new state.
 type TransitionOutcome struct {
 	data      interface{}
