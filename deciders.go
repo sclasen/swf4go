@@ -166,8 +166,10 @@ func typeCheck(typedFunc interface{}, in []string, out []string) {
 // If there are no activities present in the tracker, it will continueAsNew the workflow in response
 // to a FSM.ContinueWorkflow timer or signal. If there are activities present in the tracker, it will
 // set a new FSM.ContinueWorkflow timer, that fires in timerRetrySeconds.
-// this should be last in your decider stack, as it will set a timer in response to *any* event that
-// has an id > 20000
+// It will also signal the workflow to continue when the workflow history grows beyond the
+// configured historySize.
+// this should be last in your decider stack, as it will signal in response to *any* event that
+// has an id > historySize
 func ManagedContinuations(historySize int, timerRetrySeconds int) Decider {
 	handleContinuationTimer := func(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
 		if h.EventType == EventTypeTimerFired && h.TimerFiredEventAttributes.TimerID == ContinueTimer {
