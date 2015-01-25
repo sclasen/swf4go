@@ -41,6 +41,7 @@ func TestComposedDecider(t *testing.T) {
 	typedFuncs := Typed(new(TestingType))
 	composed := NewComposedDecider(
 		typedFuncs.Decider(TestingDecider),
+		DefaultDecider(),
 	)
 	composed(new(FSMContext), HistoryEvent{}, new(TestingType))
 }
@@ -101,6 +102,7 @@ func ExampleComposedDecider() {
 	decider := NewComposedDecider(
 		retryFailedActivities("foo-activity", fooActivityDecision),
 		retryFailedActivities("bar-activity", barActivityDecision),
+		DefaultDecider(),
 	)
 
 	decider(new(FSMContext), HistoryEvent{}, new(TestData))

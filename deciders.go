@@ -11,9 +11,13 @@ import (
 //the sub deciders should return Pass when they dont wish to handle an event.
 type ComposedDecider struct {
 	deciders []Decider
+	last     bool
 }
 
-//NewComposedDecider builds a Composed Decider from a list of sub Deciders
+//NewComposedDecider builds a Composed Decider from a list of sub Deciders.
+//You can compose your fiinal composable decider from other composable deciders,
+//but you should make sure that the final decider includes a 'catch-all' decider in last place
+//you can use DefaultDecider() or your own.
 func NewComposedDecider(deciders ...Decider) Decider {
 	c := ComposedDecider{
 		deciders: deciders,
@@ -29,8 +33,16 @@ func (c *ComposedDecider) Decide(ctx *FSMContext, h HistoryEvent, data interface
 			return outcome
 		}
 	}
-	log.Printf("at=unhandled-event event=%s state=%s default=stay decisions=0", h.EventType, ctx.State)
-	return ctx.Stay(data, ctx.EmptyDecisions())
+	return Pass
+}
+
+//DefaultDecider is a 'catch-all' decider that simply logs the unhandled decision.
+//You should place this or one like it as the last decider in your top level ComposableDecider.
+func DefaultDecider() Decider {
+	return func(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
+		log.Printf("at=unhandled-event event=%s state=%s default=stay decisions=0", h.EventType, ctx.State)
+		return ctx.Stay(data, ctx.EmptyDecisions())
+	}
 }
 
 //DecisionFunc is a building block for composable deciders that returns a decision.
