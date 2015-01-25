@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"strconv"
 )
 
 //ComposedDecider can be used to build a decider out of a number of sub Deciders
@@ -156,4 +157,80 @@ func typeCheck(typedFunc interface{}, in []string, out []string) {
 			))
 		}
 	}
+}
+
+//ManagedContinuations is a composable decider that will handle most of the mechanics of autmoatically continuing workflows.
+//todo, does it ever happen that we would have a decision task that previous deciders would have created a decision that
+//breaks continuation? i.e. you get decision task that has a history containing 2 signals, etc.
+//lets assume not till we find otherwise. If we are wrong, managedcontinuations probably cant happen in userspace.
+// If there are no activities present in the tracker, it will continueAsNew the workflow in response
+// to a FSM.ContinueWorkflow timer or signal. If there are activities present in the tracker, it will
+// set a new FSM.ContinueWorkflow timer, that fires in timerRetrySeconds.
+// this should be last in your decider stack, as it will set a timer in response to *any* event that
+// has an id > 20000
+func ManagedContinuations(historySize int, timerRetrySeconds int) Decider {
+	handleContinuationTimer := func(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
+		if h.EventType == EventTypeTimerFired && h.TimerFiredEventAttributes.TimerID == ContinueTimer {
+			if len(ctx.ActivitiesInfo()) == 0 {
+				decisions := append(ctx.EmptyDecisions(), ctx.ContinuationDecision(ctx.State))
+				return ctx.Stay(data, decisions)
+			}
+			d := Decision{
+				DecisionType: DecisionTypeStartTimer,
+				StartTimerDecisionAttributes: &StartTimerDecisionAttributes{
+					StartToFireTimeout: strconv.Itoa(timerRetrySeconds),
+					TimerID:            ContinueTimer,
+				},
+			}
+			decisions := append(ctx.EmptyDecisions(), d)
+			return ctx.Stay(data, decisions)
+
+		}
+		return Pass
+	}
+
+	handleContinuationSignal := func(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
+		if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == ContinueSignal {
+
+			if len(ctx.ActivitiesInfo()) == 0 {
+				decisions := append(ctx.EmptyDecisions(), ctx.ContinuationDecision(ctx.State))
+				return ctx.Stay(data, decisions)
+			}
+
+			d := Decision{
+				DecisionType: DecisionTypeStartTimer,
+				StartTimerDecisionAttributes: &StartTimerDecisionAttributes{
+					StartToFireTimeout: strconv.Itoa(timerRetrySeconds),
+					TimerID:            ContinueTimer,
+				},
+			}
+			decisions := append(ctx.EmptyDecisions(), d)
+			return ctx.Stay(data, decisions)
+
+		}
+		return Pass
+	}
+
+	signalContinuationWhenHistoryLarge := func(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
+		if h.EventID > historySize {
+			d := Decision{
+				DecisionType: DecisionTypeSignalExternalWorkflowExecution,
+				SignalExternalWorkflowExecutionDecisionAttributes: &SignalExternalWorkflowExecutionDecisionAttributes{
+					SignalName: ContinueSignal,
+					WorkflowID: ctx.WorkflowID,
+					RunID:      ctx.RunID,
+				},
+			}
+			decisions := append(ctx.EmptyDecisions(), d)
+			return ctx.Stay(data, decisions)
+		}
+		return Pass
+	}
+
+	return NewComposedDecider(
+		handleContinuationTimer,
+		handleContinuationSignal,
+		signalContinuationWhenHistoryLarge,
+	)
+
 }
