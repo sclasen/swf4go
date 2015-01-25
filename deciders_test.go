@@ -71,8 +71,8 @@ func ExampleComposedDecider() {
 		}
 	}
 
-	//optionally a type alias for your 'typed' decision fn.
-	//if you dont do this the activityFn below will need to be
+	// optionally a type alias for your 'typed' decision fn.
+	// if you dont do this the retryFailedActivities below will need to be
 	// func(activityName string, activityFn interface{})
 	// instead of
 	// func(activityName string, activityFn TestingTypeDecisionFunc)
@@ -97,7 +97,7 @@ func ExampleComposedDecider() {
 
 	//now build a decider out of the parts.
 	//the one thing you need to be careful of is having a unit test that executes the following
-	//since the type checking can only be done at runtime here.
+	//since the type checking can only be done at initialization at runtime here.
 	decider := NewComposedDecider(
 		retryFailedActivities("foo-activity", fooActivityDecision),
 		retryFailedActivities("bar-activity", barActivityDecision),
