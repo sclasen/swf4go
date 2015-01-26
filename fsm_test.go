@@ -1001,3 +1001,60 @@ func TestCompleteState(t *testing.T) {
 		t.Fatal(outcome)
 	}
 }
+
+func TestInterceptors(t *testing.T) {
+	calledAfter := false
+	calledBefore := false
+	calledBeforeCtx := false
+
+	interceptor := &FuncInterceptor{
+		BeforeTaskFn: func(decision *PollForDecisionTaskResponse) {
+			calledBefore = true
+		},
+		BeforeDecisionFn: func(decision *PollForDecisionTaskResponse, ctx *FSMContext, outcome Outcome) {
+			calledBeforeCtx = true
+		},
+		AfterDecisionFn: func(decision *PollForDecisionTaskResponse, ctx *FSMContext, outcome Outcome) {
+			calledAfter = true
+		},
+	}
+
+	fsm := &FSM{
+		Name:                "test-fsm",
+		DataType:            TestData{},
+		DecisionInterceptor: interceptor,
+		Serializer:          JSONStateSerializer{},
+	}
+
+	fsm.AddInitialState(&FSMState{Name: "initial", Decider: func(ctx *FSMContext, e HistoryEvent, d interface{}) Outcome {
+		return &StayOutcome{data: d, decisions: []Decision{}}
+	}})
+
+	decisionTask := new(PollForDecisionTaskResponse)
+	decisionTask.WorkflowType = WorkflowType{Name: "test", Version: "1"}
+	decisionTask.WorkflowExecution.RunID = "run"
+	decisionTask.WorkflowExecution.WorkflowID = "wf"
+	decisionTask.Events = []HistoryEvent{
+		HistoryEvent{
+			EventID:   1,
+			EventType: "WorkflowExecutionStarted",
+			WorkflowExecutionStartedEventAttributes: &WorkflowExecutionStartedEventAttributes{
+				Input: StartFSMWorkflowInput(fsm.Serializer, new(TestData)),
+			},
+		},
+	}
+
+	fsm.Tick(decisionTask)
+
+	if calledBefore == false {
+		t.Fatalf("before not called")
+	}
+
+	if calledBeforeCtx == false {
+		t.Fatalf("before context not called")
+	}
+
+	if calledBefore == false {
+		t.Fatalf("after not called")
+	}
+}
