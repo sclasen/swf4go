@@ -12,6 +12,8 @@ const (
 	StateMarker       = "FSM.State"
 	ErrorSignal       = "FSM.Error"
 	SystemErrorSignal = "FSM.SystemError"
+	ContinueTimer     = "FSM.ContinueWorkflow"
+	ContinueSignal    = "FSM.ContinueWorkflow"
 	CompleteState     = "complete"
 	ErrorState        = "error"
 )
