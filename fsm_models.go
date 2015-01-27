@@ -343,6 +343,7 @@ func (f *FSMContext) CompletionDecision(data interface{}) Decision {
 // end or an activity hits your Decider.  This is missing from the SWF api.
 type ActivityCorrelator struct {
 	Activities map[string]*ActivityInfo
+	Attempts   map[string]int
 }
 
 // ActivityInfo holds the ActivityID and ActivityType for an activity
@@ -360,9 +361,8 @@ func (a *ActivityCorrelator) Track(h HistoryEvent) {
 
 // Correlate establishes a mapping of eventId to ActivityType. The HistoryEvent is expected to be of type EventTypeActivityTaskScheduled.
 func (a *ActivityCorrelator) Correlate(h HistoryEvent) {
-	if a.Activities == nil {
-		a.Activities = make(map[string]*ActivityInfo)
-	}
+	a.checkInit()
+
 	if h.EventType == EventTypeActivityTaskScheduled {
 		a.Activities[strconv.Itoa(h.EventID)] = &ActivityInfo{
 			ActivityID:   h.ActivityTaskScheduledEventAttributes.ActivityID,
@@ -373,26 +373,28 @@ func (a *ActivityCorrelator) Correlate(h HistoryEvent) {
 
 // RemoveCorrelation gcs a mapping of eventId to ActivityType. The HistoryEvent is expected to be of type EventTypeActivityTaskCompleted,EventTypeActivityTaskFailed,EventTypeActivityTaskTimedOut.
 func (a *ActivityCorrelator) RemoveCorrelation(h HistoryEvent) {
-	if a.Activities == nil {
-		a.Activities = make(map[string]*ActivityInfo)
-	}
+	a.checkInit()
+
 	switch h.EventType {
 	case EventTypeActivityTaskCompleted:
+		delete(a.Attempts, a.safeActivityID(h))
 		delete(a.Activities, strconv.Itoa(h.ActivityTaskCompletedEventAttributes.ScheduledEventID))
 	case EventTypeActivityTaskFailed:
+		a.incrementAttempts(h)
 		delete(a.Activities, strconv.Itoa(h.ActivityTaskFailedEventAttributes.ScheduledEventID))
 	case EventTypeActivityTaskTimedOut:
+		a.incrementAttempts(h)
 		delete(a.Activities, strconv.Itoa(h.ActivityTaskTimedOutEventAttributes.ScheduledEventID))
 	case EventTypeActivityTaskCanceled:
+		delete(a.Attempts, a.safeActivityID(h))
 		delete(a.Activities, strconv.Itoa(h.ActivityTaskCanceledEventAttributes.ScheduledEventID))
 	}
 }
 
 // ActivityType returns the ActivityType that is correlates with a given event. The HistoryEvent is expected to be of type EventTypeActivityTaskCompleted,EventTypeActivityTaskFailed,EventTypeActivityTaskTimedOut.
 func (a *ActivityCorrelator) ActivityType(h HistoryEvent) *ActivityInfo {
-	if a.Activities == nil {
-		a.Activities = make(map[string]*ActivityInfo)
-	}
+	a.checkInit()
+
 	switch h.EventType {
 	case EventTypeActivityTaskCompleted:
 		return a.Activities[strconv.Itoa(h.ActivityTaskCompletedEventAttributes.ScheduledEventID)]
@@ -404,4 +406,46 @@ func (a *ActivityCorrelator) ActivityType(h HistoryEvent) *ActivityInfo {
 		return a.Activities[strconv.Itoa(h.ActivityTaskCanceledEventAttributes.ScheduledEventID)]
 	}
 	return nil
+}
+
+//AttemptsForID returns the number of times a given activityID has been attempted.
+//It will return 0 if the activity has never failed, has been canceled, or has been completed successfully
+func (a *ActivityCorrelator) AttemptsForID(activityID string) int {
+	return a.Attempts[activityID]
+}
+
+func (a *ActivityCorrelator) safeActivityID(h HistoryEvent) string {
+	id := ""
+	switch h.EventType {
+	case EventTypeActivityTaskCompleted:
+		id = strconv.Itoa(h.ActivityTaskCompletedEventAttributes.ScheduledEventID)
+	case EventTypeActivityTaskFailed:
+		id = strconv.Itoa(h.ActivityTaskFailedEventAttributes.ScheduledEventID)
+	case EventTypeActivityTaskTimedOut:
+		id = strconv.Itoa(h.ActivityTaskTimedOutEventAttributes.ScheduledEventID)
+	case EventTypeActivityTaskCanceled:
+		id = strconv.Itoa(h.ActivityTaskCanceledEventAttributes.ScheduledEventID)
+	}
+
+	info := a.Activities[id]
+	if info != nil {
+		return info.ActivityID
+	}
+	return ""
+}
+
+func (a *ActivityCorrelator) checkInit() {
+	if a.Activities == nil {
+		a.Activities = make(map[string]*ActivityInfo)
+	}
+	if a.Attempts == nil {
+		a.Attempts = make(map[string]int)
+	}
+}
+
+func (a *ActivityCorrelator) incrementAttempts(h HistoryEvent) {
+	id := a.safeActivityID(h)
+	if id != "" {
+		a.Attempts[id]++
+	}
 }
