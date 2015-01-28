@@ -330,11 +330,11 @@ func (f *FSMContext) EmptyDecisions() []Decision {
 	return make([]Decision, 0)
 }
 
-// ContinuationDecision will build a ContinueAsNewWorkflow decision that has the expected SerializedState marshalled to json as its input.
+// ContinueWorkflowDecision will build a ContinueAsNewWorkflow decision that has the expected SerializedState marshalled to json as its input.
 // This decision should be used when it is appropriate to Continue your workflow.
 // You are unable to ContinueAsNew a workflow that has running activites, so you should assure there are none running before using this.
 // As such there is no need to copy over the ActivityCorrelator.
-func (f *FSMContext) ContinuationDecision(continuedState string) Decision {
+func (f *FSMContext) ContinueWorkflowDecision(continuedState string) Decision {
 	return Decision{
 		DecisionType: DecisionTypeContinueAsNewWorkflowExecution,
 		ContinueAsNewWorkflowExecutionDecisionAttributes: &ContinueAsNewWorkflowExecutionDecisionAttributes{

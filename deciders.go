@@ -205,7 +205,7 @@ func ManagedContinuations(historySize int, timerRetrySeconds int) Decider {
 	handleContinuationTimer := func(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
 		if h.EventType == EventTypeTimerFired && h.TimerFiredEventAttributes.TimerID == ContinueTimer {
 			if len(ctx.ActivitiesInfo()) == 0 {
-				decisions := append(ctx.EmptyDecisions(), ctx.ContinuationDecision(ctx.State))
+				decisions := append(ctx.EmptyDecisions(), ctx.ContinueWorkflowDecision(ctx.State))
 				return ctx.Stay(data, decisions)
 			}
 			d := Decision{
@@ -226,7 +226,7 @@ func ManagedContinuations(historySize int, timerRetrySeconds int) Decider {
 		if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == ContinueSignal {
 
 			if len(ctx.ActivitiesInfo()) == 0 {
-				decisions := append(ctx.EmptyDecisions(), ctx.ContinuationDecision(ctx.State))
+				decisions := append(ctx.EmptyDecisions(), ctx.ContinueWorkflowDecision(ctx.State))
 				return ctx.Stay(data, decisions)
 			}
 

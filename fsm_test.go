@@ -930,7 +930,7 @@ func TestFSMContextActivityTracking(t *testing.T) {
 	}
 }
 
-func TestContinuationDecision(t *testing.T) {
+func TestContinueWorkflowDecision(t *testing.T) {
 
 	fsm := &FSM{
 		Name:       "test-fsm",
@@ -955,7 +955,7 @@ func TestContinuationDecision(t *testing.T) {
 	},
 	)
 
-	cont := ctx.ContinuationDecision("InitialState")
+	cont := ctx.ContinueWorkflowDecision("InitialState")
 	testData := new(TestData)
 	serState := new(SerializedState)
 	ctx.Deserialize(cont.ContinueAsNewWorkflowExecutionDecisionAttributes.Input, serState)
