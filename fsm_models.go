@@ -411,6 +411,7 @@ func (a *ActivityCorrelator) ActivityType(h HistoryEvent) *ActivityInfo {
 //AttemptsForID returns the number of times a given activityID has been attempted.
 //It will return 0 if the activity has never failed, has been canceled, or has been completed successfully
 func (a *ActivityCorrelator) AttemptsForID(activityID string) int {
+	a.checkInit()
 	return a.Attempts[activityID]
 }
 
