@@ -30,6 +30,22 @@ type Outcome interface {
 // Pass is nil, a sentinel value to represent 'no outcome'
 var Pass Outcome
 
+// ContinueOutcome is an Outcome used to contribute decisions and data to a
+// composed Decider.
+type ContinueOutcome struct {
+	data      interface{}
+	decisions []Decision
+}
+
+// Data returns the data for this Outcome.
+func (s ContinueOutcome) Data() interface{} { return s.data }
+
+// Decisions returns the list of Decisions for this Outcome.
+func (s ContinueOutcome) Decisions() []Decision { return s.decisions }
+
+// State returns the next state for the ContinueOutcome, which is always empty.
+func (s ContinueOutcome) State() string { return "" }
+
 // TransitionOutcome is an Outcome in which the FSM will transtion to a new state.
 type TransitionOutcome struct {
 	data      interface{}
@@ -222,6 +238,14 @@ func NewFSMContext(
 		State:             state,
 		stateData:         stateData,
 		stateVersion:      stateVersion,
+	}
+}
+
+// Continue is a helper func to easily create a ContinueOutcome.
+func (f *FSMContext) Continue(data interface{}, decisions []Decision) Outcome {
+	return ContinueOutcome{
+		data:      data,
+		decisions: decisions,
 	}
 }
 
