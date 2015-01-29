@@ -244,7 +244,7 @@ func (f *FSMContext) Goto(state string, data interface{}, decisions []Decision) 
 
 // Complete is a helper func to easily create a CompleteOutcome.
 func (f *FSMContext) Complete(data interface{}, decisions ...Decision) Outcome {
-	if len(decisions) == 0 || decisions[len(decisions) -1].DecisionType != DecisionTypeCompleteWorkflowExecution {
+	if len(decisions) == 0 || decisions[len(decisions)-1].DecisionType != DecisionTypeCompleteWorkflowExecution {
 		decisions = append(decisions, f.CompletionDecision(data))
 	}
 	return CompleteOutcome{
