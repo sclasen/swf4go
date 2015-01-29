@@ -242,7 +242,7 @@ func NewFSMContext(
 }
 
 // Continue is a helper func to easily create a ContinueOutcome.
-func (f *FSMContext) Continue(data interface{}, decisions []Decision) Outcome {
+func (f *FSMContext) ContinueDecision(data interface{}, decisions []Decision) Outcome {
 	return ContinueOutcome{
 		data:      data,
 		decisions: decisions,
