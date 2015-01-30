@@ -25,15 +25,34 @@ func NewComposedDecider(deciders ...Decider) Decider {
 	return c.Decide
 }
 
-//Decide is the the Decider func for a ComosedDecider
+//Decide is the the Decider func for a ComposedDecider
 func (c *ComposedDecider) Decide(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
+	decisions := ctx.EmptyDecisions()
 	for _, d := range c.deciders {
 		outcome := d(ctx, h, data)
-		if outcome != nil {
-			return outcome
+		if outcome == Pass {
+			continue
+		}
+
+		// contribute the outcome's decisions and data
+		decisions = append(decisions, outcome.Decisions()...)
+		data = outcome.Data()
+		switch outcome.(type) {
+		case ContinueOutcome:
+			// ContinueOutcome's only job is to contribute to later outcomes
+			continue
+		default:
+			return TransitionOutcome{
+				data:      data,
+				state:     outcome.State(),
+				decisions: decisions,
+			}
 		}
 	}
-	return Pass
+	return ContinueOutcome{
+		data:      data,
+		decisions: decisions,
+	}
 }
 
 //DefaultDecider is a 'catch-all' decider that simply logs the unhandled decision.
@@ -186,7 +205,7 @@ func ManagedContinuations(historySize int, timerRetrySeconds int) Decider {
 	handleContinuationTimer := func(ctx *FSMContext, h HistoryEvent, data interface{}) Outcome {
 		if h.EventType == EventTypeTimerFired && h.TimerFiredEventAttributes.TimerID == ContinueTimer {
 			if len(ctx.ActivitiesInfo()) == 0 {
-				decisions := append(ctx.EmptyDecisions(), ctx.ContinuationDecision(ctx.State))
+				decisions := append(ctx.EmptyDecisions(), ctx.ContinueWorkflowDecision(ctx.State))
 				return ctx.Stay(data, decisions)
 			}
 			d := Decision{
@@ -207,7 +226,7 @@ func ManagedContinuations(historySize int, timerRetrySeconds int) Decider {
 		if h.EventType == EventTypeWorkflowExecutionSignaled && h.WorkflowExecutionSignaledEventAttributes.SignalName == ContinueSignal {
 
 			if len(ctx.ActivitiesInfo()) == 0 {
-				decisions := append(ctx.EmptyDecisions(), ctx.ContinuationDecision(ctx.State))
+				decisions := append(ctx.EmptyDecisions(), ctx.ContinueWorkflowDecision(ctx.State))
 				return ctx.Stay(data, decisions)
 			}
 

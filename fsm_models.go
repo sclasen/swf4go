@@ -30,6 +30,22 @@ type Outcome interface {
 // Pass is nil, a sentinel value to represent 'no outcome'
 var Pass Outcome
 
+// ContinueOutcome is an Outcome used to contribute decisions and data to a
+// composed Decider.
+type ContinueOutcome struct {
+	data      interface{}
+	decisions []Decision
+}
+
+// Data returns the data for this Outcome.
+func (s ContinueOutcome) Data() interface{} { return s.data }
+
+// Decisions returns the list of Decisions for this Outcome.
+func (s ContinueOutcome) Decisions() []Decision { return s.decisions }
+
+// State returns the next state for the ContinueOutcome, which is always empty.
+func (s ContinueOutcome) State() string { return "" }
+
 // TransitionOutcome is an Outcome in which the FSM will transtion to a new state.
 type TransitionOutcome struct {
 	data      interface{}
@@ -225,6 +241,14 @@ func NewFSMContext(
 	}
 }
 
+// ContinueDecision is a helper func to easily create a ContinueOutcome.
+func (f *FSMContext) ContinueDecision(data interface{}, decisions []Decision) Outcome {
+	return ContinueOutcome{
+		data:      data,
+		decisions: decisions,
+	}
+}
+
 // Stay is a helper func to easily create a StayOutcome.
 func (f *FSMContext) Stay(data interface{}, decisions []Decision) Outcome {
 	return StayOutcome{
@@ -306,11 +330,11 @@ func (f *FSMContext) EmptyDecisions() []Decision {
 	return make([]Decision, 0)
 }
 
-// ContinuationDecision will build a ContinueAsNewWorkflow decision that has the expected SerializedState marshalled to json as its input.
+// ContinueWorkflowDecision will build a ContinueAsNewWorkflow decision that has the expected SerializedState marshalled to json as its input.
 // This decision should be used when it is appropriate to Continue your workflow.
 // You are unable to ContinueAsNew a workflow that has running activites, so you should assure there are none running before using this.
 // As such there is no need to copy over the ActivityCorrelator.
-func (f *FSMContext) ContinuationDecision(continuedState string) Decision {
+func (f *FSMContext) ContinueWorkflowDecision(continuedState string) Decision {
 	return Decision{
 		DecisionType: DecisionTypeContinueAsNewWorkflowExecution,
 		ContinueAsNewWorkflowExecutionDecisionAttributes: &ContinueAsNewWorkflowExecutionDecisionAttributes{
