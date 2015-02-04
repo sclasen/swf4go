@@ -37,16 +37,12 @@ func (c *ComposedDecider) Decide(ctx *FSMContext, h HistoryEvent, data interface
 		// contribute the outcome's decisions and data
 		decisions = append(decisions, outcome.Decisions()...)
 		data = outcome.Data()
-		switch outcome.(type) {
+		switch o := outcome.(type) {
 		case ContinueOutcome:
 			// ContinueOutcome's only job is to contribute to later outcomes
 			continue
 		default:
-			return TransitionOutcome{
-				data:      data,
-				state:     outcome.State(),
-				decisions: decisions,
-			}
+			return o
 		}
 	}
 	return ContinueOutcome{
