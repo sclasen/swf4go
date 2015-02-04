@@ -41,6 +41,11 @@ func (c *ComposedDecider) Decide(ctx *FSMContext, h HistoryEvent, data interface
 		case ContinueOutcome:
 			// ContinueOutcome's only job is to contribute to later outcomes
 			continue
+		case StayOutcome:
+			return StayOutcome{
+				data:      data,
+				decisions: decisions,
+			}
 		default:
 			return TransitionOutcome{
 				data:      data,
