@@ -362,7 +362,8 @@ func (f *FSMContext) CompletionDecision(data interface{}) Decision {
 	}
 }
 
-func(f *FSMContext) StateVersion() uint64 {
+//StateVersion returns the current versionNumber of the stateData, equivalent to the number of decsion tasks processed by the workflow.
+func (f *FSMContext) StateVersion() uint64 {
 	return f.stateVersion
 }
 
