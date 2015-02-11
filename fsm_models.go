@@ -362,6 +362,10 @@ func (f *FSMContext) CompletionDecision(data interface{}) Decision {
 	}
 }
 
+func(f *FSMContext) StateVersion() uint64 {
+	return f.stateVersion
+}
+
 // ActivityCorrelator is a serialization-friendly struct that can be used as a field in your main StateData struct in an FSM.
 // You can use it to track the type of a given activity, so you know how to react when an event that signals the
 // end or an activity hits your Decider.  This is missing from the SWF api.
