@@ -94,6 +94,8 @@ func TestFSM(t *testing.T) {
 	first := &PollForDecisionTaskResponse{
 		Events:                 events,
 		PreviousStartedEventID: 0,
+		WorkflowExecution:      WorkflowExecution{WorkflowID: "workflow-id"},
+		WorkflowType:           WorkflowType{Name: "workflow-type", Version: "1"},
 	}
 
 	decisions, _ := fsm.Tick(first)
